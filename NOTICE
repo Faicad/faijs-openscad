@@ -1,0 +1,22 @@
+@faicad/faijs-openscad
+Copyright (c) 2026 — 许可证待项目所有者确认（建议 AGPL-3.0-only，与 faijs-cadquery 对齐）
+
+--- 外部工具 ---
+
+本包在 `.scad` 转换路径上需要调用 OpenSCAD（https://openscad.org/）作为
+**独立的外部可执行程序**。
+
+- OpenSCAD 仅在运行时通过子进程调用（argv 数组，不经 shell），不被链接、不被打包。
+- 本 npm 产物不包含 OpenSCAD 的二进制文件，也不包含其任何源码。
+- OpenSCAD 源码许可证为 GPL-2.0-or-later；其 `examples/` 目录另有 CC0 声明。
+  本包既不复制也不再分发这些内容；语料通过 `OPENSCAD_SRC` 外部引用。
+
+--- 独立实现 ---
+
+本包的 CSG 解析器（`src/csg/`）是针对 OpenSCAD 的 CSG 输出格式**独立实现**的，
+基于公开的输出格式观察结果与本仓库自带测试，未复制 OpenSCAD 的
+`lexer.l` / `parser.y` / C++ 求值器实现。
+
+--- 商标 ---
+
+OpenSCAD 名称与标识归其各自所有者所有；本项目与 OpenSCAD 官方无隶属关系。

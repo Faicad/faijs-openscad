@@ -1,0 +1,77 @@
+{
+  "name": "@faicad/faijs-openscad",
+  "version": "0.29.5",
+  "type": "module",
+  "description": "OpenSCAD -> faijs converter: OpenSCAD front-end CSG -> normalized IR -> faijs (.fai.js) code",
+  "keywords": [
+    "cad",
+    "faijs",
+    "openscad",
+    "csg",
+    "converter",
+    "transpiler",
+    "geometry",
+    "brep"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
+    },
+    "./cli": {
+      "types": "./dist/cli/main.d.ts",
+      "default": "./dist/cli/main.js"
+    }
+  },
+  "bin": {
+    "faijs-openscad": "./dist/cli/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "faijs": {
+    "autoLift": false
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "@faicad/faijs": "^0.29.0",
+    "@faicad/faijs-extra": "^0.29.0"
+  },
+  "peerDependenciesMeta": {
+    "@faicad/faijs-extra": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@faicad/faijs": "^0.29.0",
+    "@types/node": "^26.2.0",
+    "eslint": "^10.8.1",
+    "globals": "^17.11.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "8.71.0",
+    "vitest": "^3.1.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/fix-import-extensions.mjs dist",
+    "typecheck": "tsc --noEmit",
+    "pretest": "npm run build",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "cli": "node dist/cli/main.js",
+    "doctor": "node dist/cli/main.js doctor",
+    "corpus:gen": "tsx tests/gen-manifest.ts",
+    "baseline:check": "tsx tests/check-baseline.ts",
+    "coverage": "tsx tests/coverage.ts"
+  }
+}
