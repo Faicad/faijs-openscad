@@ -4,10 +4,13 @@
  * Node entry point. The browser entry (./browser) deliberately excludes
  * everything that touches `node:fs` / `node:child_process`.
  *
- * Milestone status: M1 lands the CSG layer — dialect vocabulary, lexer,
+ * Milestone status: M1 landed the CSG layer — dialect vocabulary, lexer,
  * recursive-descent parser and the span-carrying AST (`lexCsg` / `parseCsg`),
- * plus the capability table and the v0 (P0) delivery scope. `lowerCsg` /
- * `emitFaijs` land with M2.
+ * plus the capability table and the v0 (P0) delivery scope. M2 lands the
+ * conversion half: `lowerCsg` (CSG AST -> Model IR, with default-args /
+ * dimension-inference / group-normalize / matrix-fold / modifier-policy /
+ * tessellation-policy / capability-classify) and `emitFaijs` (Model IR ->
+ * deterministic `.fai.js`). The CLI that stitches them together is M3.
  */
 export {
   CONVERTER_NAME,
@@ -116,6 +119,51 @@ export type {
   ShippedPhase,
   ShippedStatus,
 } from './ir/capability'
+
+export { asPlanar, dimensionOf, lowerCsg } from './ir/lower'
+export type { LowerOptions, LowerResult } from './ir/lower'
+
+export { blockedNodes, hasBlocked, irChildren, walkIr } from './ir/model'
+export type {
+  IrBlocked,
+  IrBox,
+  IrCircle2D,
+  IrColor,
+  IrCone,
+  IrCylinder,
+  IrDifference,
+  IrDimension,
+  IrEmpty,
+  IrExtrude,
+  IrGeometry,
+  IrGeometry2D,
+  IrIntersection,
+  IrModel,
+  IrOrigin,
+  IrPassthrough,
+  IrPolygon2D,
+  IrRect2D,
+  IrSphere,
+  IrTransform,
+  IrUnion,
+  Matrix4,
+  Vec2,
+  Vec3,
+  Vec4,
+} from './ir/model'
+
+export { colorLiteral, emitFaijs } from './emit/faijs'
+export type { EmitOptions, EmitResult } from './emit/faijs'
+
+export {
+  DEFAULT_FLOAT_PRECISION,
+  degreeLiteral,
+  exactNumber,
+  formatNumber,
+  lengthLiteral,
+  radianLiteral,
+  requiredUnitImports,
+} from './emit/units'
 
 export { CsgTextFrontend, csgTextToArtifact } from './frontend/csg-text'
 export { OpenScadCliFrontend, resolveOpenScadVersion, DEFAULT_TIMEOUT_MS } from './frontend/openscad-cli'

@@ -7,9 +7,17 @@
  * rendered — this module — so a future unit-contract change is a one-line fix
  * instead of a scattered one.
  *
- * Known exception: `cad.revolve`'s `angle` and profile arc angles are RADIANS
- * (faijs 0.29.5, packages/core/src/api/revolve.ts). Those call sites must use
- * `radianLiteral()` explicitly; see rotate-extrude.probe.test.ts.
+ * Angle slots need care, and the two of them behave differently:
+ *
+ *  - `cad.revolve`'s `angle` is RADIANS in the API (faijs 0.29.5,
+ *    packages/core/src/api/revolve.ts) while faijs's base unit is DEGREE, so a
+ *    radian value there must be rendered with `radianLiteral()`
+ *    (`RADIAN === 57.29577951308232` is exactly that conversion factor).
+ *    See rotate-extrude.probe.test.ts.
+ *  - profile arc angles are also radians, but the slot takes the **raw radian
+ *    number** — `radianLiteral()` there would multiply by 57.2958 and turn π
+ *    into 180. `emit/faijs-2d-profile.probe.test.ts` pins the literal form
+ *    (`startAngle: 3.141592653589793`, no unit suffix).
  *
  * Why literals and never expressions: the emitter must not emit `Math.PI` or any
  * arithmetic into an op argument. `Math` IS a sanctioned global on the script
@@ -36,6 +44,18 @@ export function formatNumber(value: number, precision = DEFAULT_FLOAT_PRECISION)
   if (rounded === 0) return '0'
   const s = String(rounded)
   return s
+}
+
+/**
+ * 精确往返的数值字面量：不做定点舍入，直接取该 double 的最短往返表示。
+ *
+ * 只用于 emitter **自己算出**的常量（如整圆拆成两段弧的 π / 2π）。这类值没有
+ * 十进制噪声，`formatNumber` 的 12 位定点舍入反而会把它们改写成另一个数
+ * （π → 3.14159265359）。来自 CSG 文本的数值走 `formatNumber`，那里需要舍入。
+ */
+export function exactNumber(value: number): string {
+  if (!Number.isFinite(value)) return formatNumber(value)
+  return Object.is(value, -0) ? '0' : String(value)
 }
 
 /** Length literal in millimetres, e.g. `15 * MM`. */

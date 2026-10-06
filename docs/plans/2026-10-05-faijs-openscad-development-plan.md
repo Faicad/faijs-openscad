@@ -913,6 +913,22 @@ CI 分层：
 
 ### M2：IR 与 P0 emitter
 
+> **状态（2026-10-06）：T201–T208 已落地。** 实现与本文档的三处偏离，均已在
+> README「M2」一节与本仓库代码注释里记录：
+>
+> 1. 不引入独立的 `IrGroup` —— group 归一化在 lower 内一次性完成
+>    （空 → `IrEmpty`；单子 → 透传；多子 → `IrUnion`），与 pass 3 的表述一致但产物更少。
+> 2. `linear_extrude(center = true)` 用一次 `cad.applyMatrix` 平移完成，**不用** `cad.translate`：
+>    后者属 3d_editor 消费面，不在 faijs 平台面（手册 §4.9）。
+> 3. T208 的「deterministic snapshots」以**字节一致性断言**实现（同输入两次 emit 必须完全相同），
+>    没有落 golden 文件——emitter 一改就要整体重生成，维护成本高于收益。
+>
+> **G2 门禁的实测口径**：P0-only corpus **100% emit** 且 **100% 通过 faijs 静态校验**
+> （`extractMetadata`：op 名 / 字面量形态 / 变量引用）。「执行成功」需要 OCCT wasm，
+> 属 `FAIJS_PROBE_RUNTIME=1` 的运行时层，尚未在常规 CI 中开启——静态校验是它的必要条件，
+> 不是替代品。另有一个已知规模边界：`Advanced/module_recursion` 生成的程序约 1.3 MB，
+> 超过 faijs 静态校验器的 1 MiB 源码上限。
+
 | ID | 任务 | 依赖 | 验收 |
 |---|---|---|---|
 | T201 | Model IR 与维度系统 | M1 | 类型检查、节点测试 |

@@ -33,15 +33,18 @@ export const REQUIRED_PROBES: readonly { file: string; topic: string }[] = [
 
 /**
  * M1 起新增的关键测试。它们不是 probe（不依赖外部能力，因此不需要门控），
- * 但同样属于「不可静默删除」的资产 —— 每一条都守着一个一旦丢失就再也发现
- * 不了回归的不变式：词法边界、错误恢复的终止性、语料双路对账、v0 范围承诺。
+ * 但同样属于「不可静默删除」的资产 —— 每一条都守着一旦丢失就再也发现不了
+ * 回归的不变式：词法边界、错误恢复的终止性、语料双路对账、v0 范围承诺、
+ * 以及 M2 的 IR 语义裁决与生成物形态。
  */
 export const REQUIRED_TESTS: readonly { file: string; guards: string }[] = [
   { file: 'csg/lexer.test.ts', guards: '词法边界：科学计数法 / 转义 / 未闭合 / 非法字符' },
   { file: 'csg/parser.test.ts', guards: '语法与错误恢复：36 个畸形输入的终止性' },
-  { file: 'csg/corpus-parse.test.ts', guards: '语料回归 + AST/文本双路直方图对账（225 golden）' },
+  { file: 'csg/corpus-parse.test.ts', guards: '语料回归 + AST/文本双路直方图对账' },
   { file: 'ir/capability.test.ts', guards: '能力表自洽性' },
   { file: 'ir/shipped-scope.test.ts', guards: 'v0 只承诺 P0 的范围守门' },
+  { file: 'ir/lower.test.ts', guards: 'M2 七个 pass 的语义裁决：维度 / 归一化 / 修饰符 / blocked 留痕' },
+  { file: 'emit/faijs.test.ts', guards: 'M2 生成物形态、拒绝策略（blocked ⇒ 空 code）与确定性' },
 ]
 
 describe('probe inventory', () => {

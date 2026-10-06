@@ -8,6 +8,10 @@
  * capability/scope tables. All of those are pure computation, so a browser or
  * worker bundle can parse `.csg` and classify nodes without the Node-only
  * front-end or environment probes.
+ *
+ * Since M2 the conversion half is here too: `lowerCsg` (AST -> Model IR) and
+ * `emitFaijs` (IR -> `.fai.js` text) are pure string/AST work, so `.csg` can be
+ * transpiled entirely in the browser or in a worker.
  */
 export { CONVERTER_NAME, CONVERTER_VERSION, CSG_DIALECT, EMIT_PROTOCOL } from './version'
 
@@ -110,3 +114,48 @@ export type {
   ShippedPhase,
   ShippedStatus,
 } from './ir/capability'
+
+export { asPlanar, dimensionOf, lowerCsg } from './ir/lower'
+export type { LowerOptions, LowerResult } from './ir/lower'
+
+export { blockedNodes, hasBlocked, irChildren, walkIr } from './ir/model'
+export type {
+  IrBlocked,
+  IrBox,
+  IrCircle2D,
+  IrColor,
+  IrCone,
+  IrCylinder,
+  IrDifference,
+  IrDimension,
+  IrEmpty,
+  IrExtrude,
+  IrGeometry,
+  IrGeometry2D,
+  IrIntersection,
+  IrModel,
+  IrOrigin,
+  IrPassthrough,
+  IrPolygon2D,
+  IrRect2D,
+  IrSphere,
+  IrTransform,
+  IrUnion,
+  Matrix4,
+  Vec2,
+  Vec3,
+  Vec4,
+} from './ir/model'
+
+export { colorLiteral, emitFaijs } from './emit/faijs'
+export type { EmitOptions, EmitResult } from './emit/faijs'
+
+export {
+  DEFAULT_FLOAT_PRECISION,
+  degreeLiteral,
+  exactNumber,
+  formatNumber,
+  lengthLiteral,
+  radianLiteral,
+  requiredUnitImports,
+} from './emit/units'

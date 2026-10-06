@@ -11,5 +11,7 @@ tests/fixtures/mcad/build/
 tests/fixtures/mcad/csg/
 tests/fixtures/openscad-examples/csg/
 tests/fixtures/openscad-examples/build/
+# 由 tests/gen-examples-fai.ts 从 .csg 生成；emitter 一改就要整体重生成，故不入库。
+tests/fixtures/openscad-examples/**/*.fai.js
 .scratch/
 .workbuddy/
