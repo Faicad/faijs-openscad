@@ -1,14 +1,14 @@
 {
   "generatedBy": "@faicad/faijs-openscad corpus",
-  "generatedAt": "2026-10-06T14:22:02.447Z",
+  "generatedAt": "2026-10-06T16:30:24.258Z",
   "converter": {
     "name": "@faicad/faijs-openscad",
     "version": "0.29.5"
   },
   "counts": {
-    "ported": 21,
+    "ported": 22,
     "blocked": 28,
-    "skipped": 1
+    "skipped": 0
   },
   "entries": [
     {
@@ -142,10 +142,8 @@
     {
       "id": "Advanced__module_recursion.scad.csg",
       "source": "Advanced/module_recursion.scad",
-      "status": "skipped",
-      "blockedBy": [
-        "oversized-output"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
       "emittedStatements": 6140,
       "nodeHistogram": {
@@ -156,7 +154,7 @@
       },
       "blockedNodes": [],
       "errorCodes": [],
-      "notes": "Generated code is 1281 KB, exceeds faijs static checker 1 MiB limit"
+      "notes": "compact mode (auto): output reduced to fit faijs 1 MiB limit"
     },
     {
       "id": "Advanced__offset.scad.csg",
@@ -325,7 +323,7 @@
       "status": "ported",
       "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 7,
+      "emittedStatements": 13,
       "nodeHistogram": {
         "group": 1,
         "difference": 1,
@@ -1029,7 +1027,7 @@
       "status": "ported",
       "blockedBy": [],
       "parsedNodes": 4,
-      "emittedStatements": 103,
+      "emittedStatements": 105,
       "nodeHistogram": {
         "cylinder": 24,
         "multmatrix": 51,

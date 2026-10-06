@@ -188,7 +188,8 @@ async function processCsgFile(file: string, csgPath: string): Promise<CorpusMani
   }
 
   // Emit
-  const emitted = emitFaijs(lowered.model)
+  let emitted = emitFaijs(lowered.model)
+  let compactUsed = false
 
   // Check for blocked nodes
   const isBlocked = !emitted.ok
@@ -224,9 +225,21 @@ async function processCsgFile(file: string, csgPath: string): Promise<CorpusMani
     }
   }
 
-  // Success — but check if there's a known size limitation
-  const codeSize = emitted.code.length
-  if (codeSize > 1_000_000) {
+  // Success — but check if there's a known size limitation.
+  // If the normal-mode output exceeds 1 MiB, retry with compact mode
+  // (helper functions + inline formatting → ~58% size reduction).
+  const MIB = 1_000_000
+  let codeSize = emitted.code.length
+  if (codeSize > MIB) {
+    const compactEmitted = emitFaijs(lowered.model, { compact: true })
+    if (compactEmitted.ok && compactEmitted.code.length < codeSize) {
+      emitted = compactEmitted
+      compactUsed = true
+      codeSize = emitted.code.length
+    }
+  }
+
+  if (codeSize > MIB) {
     return {
       id,
       source,
@@ -251,6 +264,7 @@ async function processCsgFile(file: string, csgPath: string): Promise<CorpusMani
     nodeHistogram: histogramOf(parsed.document),
     blockedNodes: [],
     errorCodes: [],
+    ...(compactUsed ? { notes: 'compact mode (auto): output reduced to fit faijs 1 MiB limit' } : {}),
   }
 }
 

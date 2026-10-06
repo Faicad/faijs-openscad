@@ -25,6 +25,12 @@ export interface EmitOptions {
   readonly header?: boolean
   /** 几何变量名前缀。默认 `part`。 */
   readonly variablePrefix?: string
+  /**
+   * 紧凑模式：去除多行矩阵/profile 段中的多余换行与空格，
+   * 用于产出超大代码时压低于 faijs 静态校验器的 1 MiB 上限。
+   * 默认 false（保持可读）。
+   */
+  readonly compact?: boolean
 }
 
 export interface EmitResult {
@@ -49,10 +55,14 @@ class Emitter {
   private counter = 0
   private readonly prefix: string
   private readonly withHeader: boolean
+  private readonly compact: boolean
+  /** Helpers needed in compact mode (collected during emit, injected before body). */
+  private readonly neededHelpers = new Set<'rect' | 'circle'>()
 
   constructor(options: EmitOptions) {
     this.prefix = options.variablePrefix ?? 'part'
     this.withHeader = options.header ?? true
+    this.compact = options.compact ?? false
   }
 
   run(model: IrModel): EmitResult {
@@ -64,6 +74,10 @@ class Emitter {
 
     const body: string[] = []
     if (this.withHeader) body.push(...this.header(model))
+    // In compact mode, inject helper definitions before the body.
+    if (this.compact && this.neededHelpers.size > 0) {
+      body.push(...this.helperDefs())
+    }
     body.push(...this.lines)
     if (rootVar === undefined) {
       body.push('// the CSG produced no geometry (every subtree is background `%` or an empty group)')
@@ -72,6 +86,37 @@ class Emitter {
     }
 
     return { code: `${body.join('\n')}\n`, ok: true, blocked: [], statementNodes: this.statementNodes }
+  }
+
+  // ── Compact-mode helpers ─────────────────────────────────────────────────
+
+  /**
+   * Helper function definitions injected at the top of compact-mode output.
+   * These shorten repeated patterns (rectangles, circles) to well under 50 bytes
+   * per call, dramatically reducing total code size for examples like
+   * module_recursion (2047 squares → ~1.1 MB → ~250 KB).
+   */
+  private helperDefs(): string[] {
+    const defs: string[] = []
+    if (this.neededHelpers.has('rect')) {
+      defs.push(
+        'function __rect(w,h){return cad.profile({contours:[{segments:[' +
+          "{kind:'line',x1:0,y1:0,x2:w,y2:0}," +
+          "{kind:'line',x1:w,y1:0,x2:w,y2:h}," +
+          "{kind:'line',x1:w,y1:h,x2:0,y2:h}," +
+          "{kind:'line',x1:0,y1:h,x2:0,y2:0}" +
+          ']}]})}',
+      )
+    }
+    if (this.neededHelpers.has('circle')) {
+      defs.push(
+        'function __circle(r){const P=Math.PI;return cad.profile({contours:[{segments:[' +
+          "{kind:'arc',cx:0,cy:0,radius:r,startAngle:0,endAngle:P,ccw:true,x1:r,y1:0,x2:-r,y2:0}," +
+          "{kind:'arc',cx:0,cy:0,radius:r,startAngle:P,endAngle:2*P,ccw:true,x1:-r,y1:0,x2:r,y2:0}" +
+          ']}]})}',
+      )
+    }
+    return defs
   }
 
   // ── 头部 ─────────────────────────────────────────────────────────────────
@@ -137,7 +182,7 @@ class Emitter {
       case 'transform': {
         const child = this.emitNode(node.child)
         if (child === undefined) return undefined
-        return this.assign(`await cad.applyMatrix(${child}, ${matrixLiteral(node.matrix)})`, node.id)
+        return this.assign(`await cad.applyMatrix(${child}, ${matrixLiteral(node.matrix, this.compact)})`, node.id)
       }
       case 'extrude': {
         const child = this.emitNode(node.child)
@@ -148,7 +193,7 @@ class Emitter {
         // **不用 `cad.translate`** —— 该 op 属 3d_editor 消费面，不在 faijs 平台面
         // （手册 §4.9）。applyMatrix 的平移分量写裸数字，与 multmatrix 同一条约定。
         return this.assign(
-          `await cad.applyMatrix(${solid}, ${matrixLiteral(translationMatrix(0, 0, -node.length / 2))})`,
+          `await cad.applyMatrix(${solid}, ${matrixLiteral(translationMatrix(0, 0, -node.length / 2), this.compact)})`,
           node.id,
         )
       }
@@ -220,6 +265,18 @@ class Emitter {
    * 坐标加 `* MM`；弧的 `startAngle` / `endAngle` 是**裸弧度**。
    */
   private profileExpr(node: IrGeometry): string {
+    // Compact-mode fast paths: use helper functions for common shapes.
+    if (this.compact) {
+      if (node.kind === 'rect2d' && !node.centered) {
+        this.neededHelpers.add('rect')
+        return `await __rect(${lengthLiteral(node.width)}, ${lengthLiteral(node.height)})`
+      }
+      if (node.kind === 'circle2d') {
+        this.neededHelpers.add('circle')
+        return `await __circle(${lengthLiteral(node.radius)})`
+      }
+    }
+
     const contours: string[][] = []
     if (node.kind === 'rect2d') {
       contours.push(rectLoop(node.width, node.height, node.centered))
@@ -232,6 +289,10 @@ class Emitter {
       throw new Error(`profileExpr called with ${node.kind}`)
     }
 
+    if (this.compact) {
+      const rendered = contours.map((segments) => `{segments:[${segments.join(',')}]}`)
+      return `await cad.profile({contours:[${rendered.join(',')}]})`
+    }
     const rendered = contours.map(
       (segments) => `  { segments: [\n${segments.map((s) => `    ${s}`).join(',\n')}\n  ] }`,
     )
@@ -245,9 +306,9 @@ class Emitter {
  * 行主序 4×4 矩阵，元素**裸数字**（applyMatrix 的既有约定，实测见
  * emit/faijs-apply-matrix.probe.test.ts:58）。
  */
-function matrixLiteral(matrix: Matrix4): string {
-  const rows = matrix.map((row) => `  [${row.map((v) => formatNumber(v)).join(', ')}]`)
-  return `[\n${rows.join(',\n')}\n]`
+function matrixLiteral(matrix: Matrix4, compact = false): string {
+  const rows = matrix.map((row) => `[${row.map((v) => formatNumber(v)).join(compact ? ',' : ', ')}]`)
+  return compact ? `[${rows.join(',')}]` : `[\n${rows.map((r) => `  ${r}`).join(',\n')}\n]`
 }
 
 function translationMatrix(x: number, y: number, z: number): Matrix4 {

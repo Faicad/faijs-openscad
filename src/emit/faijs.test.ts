@@ -269,3 +269,57 @@ describe('emit: faijs 静态校验（需安装 @faicad/faijs）', () => {
     expect(checked?.message ?? '').toBe('')
   })
 })
+
+describe('emit: compact mode (T812)', () => {
+  it('compact mode produces smaller output with helper functions', async () => {
+    const code = body(await transpile('square(size = [10, 20]);'))
+    const { document } = parseCsg('square(size = [10, 20]);')
+    const { model } = lowerCsg(document)
+    const compact = emitFaijs(model, { compact: true, header: false })
+    // compact should use __rect helper
+    expect(compact.code).toContain('function __rect')
+    expect(compact.code).toContain('__rect(10 * MM, 20 * MM)')
+    // compact should be shorter than normal
+    expect(compact.code.length).toBeLessThan(code.length)
+  })
+
+  it('compact mode uses __circle helper for circles', async () => {
+    const { document } = parseCsg('circle(r = 5);')
+    const { model } = lowerCsg(document)
+    const compact = emitFaijs(model, { compact: true, header: false })
+    expect(compact.code).toContain('function __circle')
+    expect(compact.code).toContain('__circle(5 * MM)')
+  })
+
+  it('compact mode matrices are single-line', async () => {
+    const { document } = parseCsg('multmatrix([[1,0,0,5],[0,1,0,0],[0,0,1,0],[0,0,0,1]]) { cube(size=[1,1,1]); }')
+    const { model } = lowerCsg(document)
+    const compact = emitFaijs(model, { compact: true, header: false })
+    expect(compact.code).toContain('[[1,0,0,5],[0,1,0,0],[0,0,1,0],[0,0,0,1]]')
+  })
+
+  it('compact mode passes faijs static check', async () => {
+    const available = await staticCheckAvailable()
+    if (!available) return // skip if faijs not installed
+
+    const code = body(await transpile(`
+      union() {
+        square(size = [10, 20]);
+        circle(r = 5);
+        cube(size = [5, 5, 5]);
+      }
+    `))
+    const { document } = parseCsg(`
+      union() {
+        square(size = [10, 20]);
+        circle(r = 5);
+        cube(size = [5, 5, 5]);
+      }
+    `)
+    const { model } = lowerCsg(document)
+    const compactCode = emitFaijs(model, { compact: true, header: false }).code
+    const checked = await faijsStaticCheck(compactCode)
+    expect(checked).not.toBeNull()
+    expect(checked?.message ?? '').toBe('')
+  })
+})

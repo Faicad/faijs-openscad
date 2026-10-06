@@ -27,6 +27,7 @@ import {
 import { DiagnosticCode } from '../diagnostics/codes'
 import { DiagnosticBag, type Diagnostic, type Span } from '../diagnostics/diagnostic'
 import { capabilityOf, isInShippedScope } from './capability'
+import { circleFragments, regularPolygonPoints } from './faceted-geometry'
 import type {
   IrBlocked,
   IrGeometry,
@@ -99,7 +100,10 @@ const KNOWN_ARGS: Readonly<Record<string, readonly string[]>> = {
   intersection: [],
 }
 
-/** 显式 `$fn` 会改变 OpenSCAD 的真实棱面，而 faijs analytic BREP 保留精确曲面。 */
+/**
+ * 显式 `$fn > 0` 时 OpenSCAD 产出真实棱面实体。对于 cylinder/circle 我们可以用
+ * 正多边形 + 拉伸精确复刻；对 sphere/cone 暂时仍走 analytic（见下文）。
+ */
 const FACETING_PRIMITIVES = new Set(['sphere', 'cylinder', 'cone', 'circle'])
 
 interface Num {
@@ -229,6 +233,8 @@ class Lowerer {
     this.reportUnknownArgs(node)
     const radius = this.radiusArg(node, id)
     if (radius === undefined) return { kind: 'empty', id, origin }
+    // sphere 的棱面复刻需要 polyhedron（T810），faijs 目前没有 cad.polyhedron。
+    // 走 analytic sphere + OSC3201 信息诊断。
     this.reportFaceting(node, id)
     return { kind: 'sphere', id, origin, dimension: '3d', radius }
   }
@@ -245,12 +251,18 @@ class Lowerer {
     const centered = this.boolArg(node, 'center', false, id)
     if (centered === undefined) return { kind: 'empty', id, origin }
 
-    this.reportFaceting(node, id)
     // OpenSCAD 的 r1 在 z=0（底）、r2 在 z=h（顶）；faijs cone 的
     // radiusBottom / radiusTop 同序同向，故无需交换。
     if (bottom === top) {
+      // cylinder（r1 === r2）：显式 $fn > 0 时用正多边形 + extrude 精确复刻棱面。
+      const fn = this.readFacetingFn(node)
+      if (fn !== undefined) {
+        return this.lowerFacetedCylinder(node, id, origin, bottom, h.value, centered, fn)
+      }
       return { kind: 'cylinder', id, origin, dimension: '3d', radius: bottom, height: h.value, centered }
     }
+    // cone（r1 !== r2）：棱面复刻需要 scale-extrude（T804），暂走 analytic + OSC3201。
+    this.reportFaceting(node, id)
     return {
       kind: 'cone',
       id,
@@ -278,6 +290,18 @@ class Lowerer {
     this.reportUnknownArgs(node)
     const radius = this.radiusArg(node, id)
     if (radius === undefined) return { kind: 'empty', id, origin }
+    // 显式 $fn > 0：用正 N 边形 polygon2d 精确复刻 OpenSCAD 棱面圆。
+    const fn = this.readFacetingFn(node)
+    if (fn !== undefined) {
+      const points = regularPolygonPoints(radius, fn)
+      return {
+        kind: 'polygon2d',
+        id,
+        origin,
+        dimension: '2d',
+        points: points as readonly Vec2[],
+      }
+    }
     this.reportFaceting(node, id)
     return { kind: 'circle2d', id, origin, dimension: '2d', radius }
   }
@@ -719,6 +743,57 @@ class Lowerer {
       parts.push(item.value)
     }
     return [parts[0], parts[1], parts[2], parts[3] ?? 1] as Vec4
+  }
+
+  // ── 棱面复刻 ─────────────────────────────────────────────────────────────
+
+  /**
+   * 读取显式 `$fn`。返回 `undefined` 表示无显式 `$fn`（或 `$fn <= 0`），
+   * 此时 OpenSCAD 使用 `$fa`/`$fs` 默认值分面——但那些面足够细，faijs analytic
+   * 曲面在 STL 层面可以近似，故只对显式 `$fn > 0` 做棱面复刻。
+   */
+  private readFacetingFn(node: CsgNode): number | undefined {
+    const arg = argumentOf(node, '$fn')
+    if (!arg || arg.value.kind !== 'number' || arg.value.value <= 0) return undefined
+    return Math.floor(arg.value.value)
+  }
+
+  /**
+   * `$fn > 0` 的 cylinder → 正多边形 polygon2d + extrude。
+   *
+   * OpenSCAD 的 cylinder($fn=N) 截面是正 N 边形（内接于半径 r 的圆），
+   * 沿 Z 轴拉伸高度 h。faijs 的 `cad.profile` + `cad.extrude` 可以精确复刻。
+   *
+   * 返回的 IR 是一个 `extrude` 节点，其 child 是 `polygon2d`。
+   */
+  private lowerFacetedCylinder(
+    node: CsgNode,
+    id: number,
+    origin: IrOrigin,
+    radius: number,
+    height: number,
+    centered: boolean,
+    fn: number,
+  ): IrGeometry {
+    const segments = circleFragments(radius, fn, undefined, undefined)
+    const points = regularPolygonPoints(radius, segments)
+    const polygonId = this.nextId++
+    const polygon: IrGeometry2D = {
+      kind: 'polygon2d',
+      id: polygonId,
+      origin: { ...origin, nodeId: polygonId },
+      dimension: '2d',
+      points: points as readonly Vec2[],
+    }
+    return {
+      kind: 'extrude',
+      id,
+      origin,
+      dimension: '3d',
+      child: polygon,
+      length: height,
+      centered,
+    }
   }
 
   // ── 诊断辅助 ─────────────────────────────────────────────────────────────

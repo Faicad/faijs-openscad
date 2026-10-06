@@ -83,12 +83,12 @@ describe.skipIf(!hasCsg)('CLI corpus command (T304)', () => {
     expect(existsSync(manifestPath)).toBe(true)
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
     expect(manifest.counts.ported + manifest.counts.blocked + manifest.counts.skipped).toBe(50)
-    // P0-only examples that pass (module_recursion is skipped due to size)
-    expect(manifest.counts.ported).toBe(21)
+    // P0-only examples that pass (module_recursion uses compact mode to fit)
+    expect(manifest.counts.ported).toBe(22)
     // Examples with out-of-scope nodes are blocked
     expect(manifest.counts.blocked).toBe(28)
-    // module_recursion: oversized output exceeds faijs static checker limit
-    expect(manifest.counts.skipped).toBe(1)
+    // No skipped examples (module_recursion now fits via compact mode)
+    expect(manifest.counts.skipped).toBe(0)
   })
 
   it('every blocked/skipped entry has non-empty blockedBy', () => {
@@ -101,7 +101,7 @@ describe.skipIf(!hasCsg)('CLI corpus command (T304)', () => {
     }
   })
 
-  it('module_recursion is skipped with oversized-output reason', async () => {
+  it('module_recursion is ported via compact mode', async () => {
     // First generate the manifest
     await runCorpus({})
     const manifestPath = join(here, 'manifest.json')
@@ -110,8 +110,9 @@ describe.skipIf(!hasCsg)('CLI corpus command (T304)', () => {
       (e: { id: string }) => e.id === 'Advanced__module_recursion.scad.csg',
     )
     expect(mr).toBeDefined()
-    expect(mr.status).toBe('skipped')
-    expect(mr.blockedBy).toContain('oversized-output')
+    expect(mr.status).toBe('ported')
+    // compact mode note should be present
+    expect(mr.notes).toContain('compact mode')
   })
 })
 

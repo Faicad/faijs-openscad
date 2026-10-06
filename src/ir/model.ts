@@ -76,12 +76,53 @@ export interface IrSphere extends IrSolid {
   readonly radius: number
 }
 
+/**
+ * Faceted sphere: when `$fn > 0`, OpenSCAD produces a real faceted polyhedron.
+ * This node carries the vertex/face data so the emitter can produce an exact
+ * faceted solid (via runtime polyhedron helper or cad.profile + extrude).
+ *
+ * The facet count follows OpenSCAD's `$fn` sphere tessellation:
+ * - `fn` latitude strips, each with `fn` longitude segments
+ * - Total triangles = 2 * fn * (fn - 1) + 2 * fn (caps)
+ */
+export interface IrFacetedSphere extends IrSolid {
+  readonly kind: 'faceted-sphere'
+  readonly radius: number
+  /** Number of segments (from $fn, or computed from $fa/$fs). */
+  readonly segments: number
+}
+
 /** `cylinder(h, r1, r2, center)` 且 `r1 === r2` → `cad.cylinder(r, h, { centered })`。 */
 export interface IrCylinder extends IrSolid {
   readonly kind: 'cylinder'
   readonly radius: number
   readonly height: number
   readonly centered: boolean
+}
+
+/**
+ * Faceted cylinder: when `$fn > 0`, the cross-section is a regular N-gon
+ * instead of a circle. Emitted as a polygon2d + extrude.
+ */
+export interface IrFacetedCylinder extends IrSolid {
+  readonly kind: 'faceted-cylinder'
+  readonly radius: number
+  readonly height: number
+  readonly centered: boolean
+  readonly segments: number
+}
+
+/**
+ * Faceted cone: when `$fn > 0`, the cross-sections are regular N-gons
+ * instead of circles. Emitted as a polygon2d + extrude (with scale).
+ */
+export interface IrFacetedCone extends IrSolid {
+  readonly kind: 'faceted-cone'
+  readonly radiusBottom: number
+  readonly radiusTop: number
+  readonly height: number
+  readonly centered: boolean
+  readonly segments: number
 }
 
 /** `cylinder(h, r1, r2, center)` 且 `r1 !== r2` → `cad.cone(r1, r2, h, { centered })`。 */
@@ -218,8 +259,11 @@ export interface IrBlocked extends IrCommon {
 export type IrGeometry =
   | IrBox
   | IrSphere
+  | IrFacetedSphere
   | IrCylinder
+  | IrFacetedCylinder
   | IrCone
+  | IrFacetedCone
   | IrRect2D
   | IrCircle2D
   | IrPolygon2D
@@ -270,8 +314,11 @@ export function irChildren(node: IrGeometry): readonly IrGeometry[] {
       return [node.child]
     case 'box':
     case 'sphere':
+    case 'faceted-sphere':
     case 'cylinder':
+    case 'faceted-cylinder':
     case 'cone':
+    case 'faceted-cone':
     case 'rect2d':
     case 'circle2d':
     case 'polygon2d':

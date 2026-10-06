@@ -13,6 +13,7 @@
  */
 import type { ComparisonResult, ComparisonTolerance, ParityVerdict } from './compare-mesh'
 import { DEFAULT_TOLERANCE } from './compare-mesh'
+import type { FiveDimResult } from './five-dim'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,8 @@ export interface ParityEntry {
   readonly blockedBy?: string
   /** Comparison result (if computed). */
   readonly comparison?: ComparisonResult
+  /** Five-dimension comparison result (if computed). */
+  readonly fiveDim?: FiveDimResult
   /** $fn value used (if applicable). */
   readonly fn?: number
   /** Whether the example uses faceted primitives. */

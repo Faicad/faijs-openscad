@@ -1,0 +1,252 @@
+{
+  "generatedAt": "2026-10-06T15:22:56.587Z",
+  "openscadBin": "C:/Program Files/OpenSCAD/openscad.exe",
+  "count": 42,
+  "failures": 8,
+  "entries": [
+    {
+      "name": "Advanced/GEB.scad",
+      "hash": "bab3d42b0085656c448e8ba8cdcb75659cf4a1fecd537b6524a79ce830d7c4be",
+      "bytes": 1091842
+    },
+    {
+      "name": "Advanced/animation.scad",
+      "hash": "b0736ba1b7e90dd65dfe5ea4670fd584e0cd82ca09b3daeb82a80460f73e75d3",
+      "bytes": 537706
+    },
+    {
+      "name": "Advanced/assert.scad",
+      "hash": "5431cc667d8463e26698f9f35b6649d056b01fcc2c64bfd6a6bc3ff5cf429440",
+      "bytes": 63461
+    },
+    {
+      "name": "Advanced/children.scad",
+      "hash": "335f215273472e410e099e309b2cde641c38c675829851161dd42faa9114be60",
+      "bytes": 1767465
+    },
+    {
+      "name": "Advanced/children_indexed.scad",
+      "hash": "95b71f03237844b59021f79b9486e8f3802a098cf0dfd168864b2006a8d1cd62",
+      "bytes": 1253868
+    },
+    {
+      "name": "Advanced/offset.scad",
+      "hash": "20fa2b69dba4948673bdbde442351778fc96d66e9d53278765ea801ab2a81f24",
+      "bytes": 110545
+    },
+    {
+      "name": "Advanced/surface_image.scad",
+      "hash": "d0ec245fecfc5065e0520fb181becb1eb8760f6147f8983801bdf06296e21535",
+      "bytes": 1052895
+    },
+    {
+      "name": "Basics/CSG-modules.scad",
+      "hash": "06b3a4d8c041b7a734640b7a759743b2f2b8e8cd5d4a621e1544daa202f68648",
+      "bytes": 3030912
+    },
+    {
+      "name": "Basics/CSG.scad",
+      "hash": "f0fe1528bc44ef0f72c53916b3c1d29b22d635acd9702e385f5d9bf0429ad7f0",
+      "bytes": 560587
+    },
+    {
+      "name": "Basics/LetterBlock.scad",
+      "hash": "3bac82c13ad474d3cf4626f51b25cd6be5baa8eb517994e45567b174bcda52b0",
+      "bytes": 7589
+    },
+    {
+      "name": "Basics/hull.scad",
+      "hash": "ed280d8d3861060bbbdacc90a4d80d6b6ac2526df29d06fb05536c3261b4c043",
+      "bytes": 91443
+    },
+    {
+      "name": "Basics/linear_extrude.scad",
+      "hash": "793aef503e153000be6f3ceebf1d6bb4050be31c328db0f61e889589ef118ee7",
+      "bytes": 103914
+    },
+    {
+      "name": "Basics/logo.scad",
+      "hash": "4c45a79b17fb1d7777e71592c2084eb470db1d4e8c88fd487c3a2f257ae8f30a",
+      "bytes": 1635581
+    },
+    {
+      "name": "Basics/projection.scad",
+      "hash": "30a08e085a618f054a5756b80ed2d81713d863181b39b1eccad8176d73161fcd",
+      "bytes": 183560
+    },
+    {
+      "name": "Basics/rotate_extrude.scad",
+      "hash": "c7e7f848ce54cc88978e0714c5b9bd5d5a89fa8ccf006961877a5a70eec580ca",
+      "bytes": 2862255
+    },
+    {
+      "name": "Basics/text_on_cube.scad",
+      "hash": "c29840a645c5a59735436798f77f9908c77e05e8df0c318ffa646c66d06aea13",
+      "bytes": 239666
+    },
+    {
+      "name": "Functions/functions.scad",
+      "hash": "b2832b9b07976a7fa68eff7b64e579dd6ebf6a95f8f9378811c38673650c2d75",
+      "bytes": 268387
+    },
+    {
+      "name": "Old/example001.scad",
+      "hash": "e3495e095cc67d004b65dad7c7960f5d9d27355864cc5d41ec0a8fd432f75599",
+      "bytes": 250899
+    },
+    {
+      "name": "Old/example002.scad",
+      "hash": "df3499b8c2c2673f2f3d4160294aff2c405e15e6a69d9e399531eb3507d7d406",
+      "bytes": 61317
+    },
+    {
+      "name": "Old/example003.scad",
+      "hash": "f016966d6ca8f3fcaa282b0d98a82017e7ffdbc04999002c4a75c9236776fae3",
+      "bytes": 26495
+    },
+    {
+      "name": "Old/example004.scad",
+      "hash": "6421a85acdd3efcd85a848e14ea57e98cfc9e213abebd2a9f4854c5aacaf90a3",
+      "bytes": 158510
+    },
+    {
+      "name": "Old/example005.scad",
+      "hash": "6fbf43004e6d4fdbc2f0fe0537cfc789e9ab69ab188d0f52552eb180914e4269",
+      "bytes": 178945
+    },
+    {
+      "name": "Old/example006.scad",
+      "hash": "eb846ed6f7a6a0c6bc6a726b0b78ec0fc828d5b501da392dbcf3d69b23e771ee",
+      "bytes": 2341416
+    },
+    {
+      "name": "Old/example007.scad",
+      "hash": "1ff421f864ae7b8567385e25b25f73938f1febeb1b6efd1a7f45480a1b5de91e",
+      "bytes": 87681
+    },
+    {
+      "name": "Old/example008.scad",
+      "hash": "07ffb5181938acbe192b8fb8be4cf6bace2e2427b60cbe9df9248f36a8e82b07",
+      "bytes": 27304
+    },
+    {
+      "name": "Old/example009.scad",
+      "hash": "ada8514cdfafced0a96c3965147339ef43d8985f787e266a399ed70608de8a4f",
+      "bytes": 1400384
+    },
+    {
+      "name": "Old/example010.scad",
+      "hash": "e4743f6e5bbe28891fb763258217062c6c86dacbd426fa7f2780bf6ed5b10743",
+      "bytes": 1842504
+    },
+    {
+      "name": "Old/example011.scad",
+      "hash": "d84b5dd4d2f055b9fec273d7082ce7f8128bd20821b973f551f6c18dd89d65e2",
+      "bytes": 889
+    },
+    {
+      "name": "Old/example012.scad",
+      "hash": "4b267281da964d699d8bb24c06448ded3d19c5b037568ee5746af0b2a31295e9",
+      "bytes": 177139
+    },
+    {
+      "name": "Old/example013.scad",
+      "hash": "8bc29e989cc2ff162c1cd5e64963d5e45f844b8da5ad3a1cda9bf2701f3df84c",
+      "bytes": 23763
+    },
+    {
+      "name": "Old/example014.scad",
+      "hash": "dbd71fa28c27be4bbae7bbc0fc153a14361a81930f90f50a94a334011425210c",
+      "bytes": 16253
+    },
+    {
+      "name": "Old/example016.scad",
+      "hash": "11e632dfbb161835f277950e9d050f1d328c4804f43c7b433b95a598b3fa7436",
+      "bytes": 91624
+    },
+    {
+      "name": "Old/example017.scad",
+      "hash": "10d94bfbdb7af475662413a56c429c0a9860f80fa11a3ca4332f29870a1ec82d",
+      "bytes": 217768
+    },
+    {
+      "name": "Old/example018.scad",
+      "hash": "607ed9888a1445e57bc2ccf4c4a7604f9770b61056052f1489d566e0edf874ae",
+      "bytes": 944331
+    },
+    {
+      "name": "Old/example019.scad",
+      "hash": "17627e5b3db8d8e9bef4cca6cb00ce93bd21f537a67619deddfda631086df331",
+      "bytes": 742398
+    },
+    {
+      "name": "Old/example020.scad",
+      "hash": "ca4183b3c1fedf0c00207b11516f50166a29bb61880b7da9beaee5c898232093",
+      "bytes": 1650002
+    },
+    {
+      "name": "Old/example021.scad",
+      "hash": "73abd3f1168af4c4d81acf0a571969527cba617c5614fefa40687eefe7e098f8",
+      "bytes": 255008
+    },
+    {
+      "name": "Old/example022.scad",
+      "hash": "20afaae112d4b94aa4b2533c5c9697c65c52e93043ea250a8f797655cd61df04",
+      "bytes": 243201
+    },
+    {
+      "name": "Old/example023.scad",
+      "hash": "c88f045d6807df3ed74f36b1d462151ff04540e5bba91b71053e5b581e2f15bc",
+      "bytes": 466002
+    },
+    {
+      "name": "Old/example024.scad",
+      "hash": "df44a36f28f26abc5f8e0aac23e07954ec4c937b92360ac3bc9918ee1550350c",
+      "bytes": 2382027
+    },
+    {
+      "name": "Parametric/candleStand.scad",
+      "hash": "aa5497277326eee539ddbdfc938295805f3bc8e6e05b6ab35e31993bdf637345",
+      "bytes": 1440446
+    },
+    {
+      "name": "Parametric/sign.scad",
+      "hash": "29739fd9a18804348319484f7e12d36497406b0919ea22041d8c3caac6d06ac0",
+      "bytes": 620476
+    }
+  ],
+  "failedExamples": [
+    {
+      "name": "Advanced/module_recursion.scad",
+      "error": "Command failed: C:/Program Files/OpenSCAD/openscad.exe -o C:\\my\\Faicad\\faijs-openscad\\tests\\fixtures\\openscad-examples\\stl\\Advanced__module_recursion.scad.stl C:\\my\\Faicad\\faijs-openscad\\tests\\fixtures\\openscad-examples\\Advanced\\module_recursion.scad\nECHO: version = [2021, 1, 0]\r\nGeometries in cache: 8186\r\nGeometry cache size in bytes: 3158768\r\nCGAL Polyhedrons in cache: 0\r\nCGAL cache size in bytes: 0\r\nTotal rendering time: 0:00:00.276\r\n   Top level object is a 2D object:\r\n   Contours:      576\r\nCurrent top level object is not a 3D object.\r\n"
+    },
+    {
+      "name": "Basics/logo_and_text.scad",
+      "error": "WARNING: Viewall and autocenter disabled in favor of $vp*\r"
+    },
+    {
+      "name": "Basics/roof.scad",
+      "error": "WARNING: Ignoring unknown module 'roof' in file roof.scad, line 23\r WARNING: Ignoring unknown module 'roof' in file roof.scad, line 27\r"
+    },
+    {
+      "name": "Functions/echo.scad",
+      "error": "Command failed: C:/Program Files/OpenSCAD/openscad.exe -o C:\\my\\Faicad\\faijs-openscad\\tests\\fixtures\\openscad-examples\\stl\\Functions__echo.scad.stl C:\\my\\Faicad\\faijs-openscad\\tests\\fixtures\\openscad-examples\\Functions\\echo.scad\nECHO: \"f1: \", 3, 5\r\nECHO: \"f2: \", 64\r\nECHO: \"f3: \", 20\r\nECHO: \"f4: \", x = 5\r\nECHO: \"f4: \", x = 4\r\nECHO: \"f4: \", x = 3\r\nECHO: \"f4: \", x = 2\r\nECHO: \"f4: \", x = 1\r\nECHO: \"f4: \", y = 1\r\nECHO: \"f4: \", y = 2\r\nECHO: \"f4: \", y = 6\r\nECHO: \"f4: \", y = 24\r\nECHO: \"f4: \", y = 120\r\nECHO: version = [2021, 1, 0]\r\nGeometries in cache: 1\r\nGeometry cache size in bytes: 0\r\nCGAL Polyhedrons in cache: 0\r\nCGAL cache size in bytes: 0\r\nTotal rendering time: 0:00:00.000\r\nCurrent top level object is empty.\r\n"
+    },
+    {
+      "name": "Functions/list_comprehensions.scad",
+      "error": "Command failed: C:/Program Files/OpenSCAD/openscad.exe -o C:\\my\\Faicad\\faijs-openscad\\tests\\fixtures\\openscad-examples\\stl\\Functions__list_comprehensions.scad.stl C:\\my\\Faicad\\faijs-openscad\\tests\\fixtures\\openscad-examples\\Functions\\list_comprehensions.scad\nECHO: version = [2021, 1, 0]\r\nGeometries in cache: 18\r\nGeometry cache size in bytes: 58720\r\nCGAL Polyhedrons in cache: 0\r\nCGAL cache size in bytes: 0\r\nTotal rendering time: 0:00:00.002\r\n   Top level object is a 2D object:\r\n   Contours:        9\r\nCurrent top level object is not a 3D object.\r\n"
+    },
+    {
+      "name": "Functions/polygon_areas.scad",
+      "error": "Command failed: C:/Program Files/OpenSCAD/openscad.exe -o C:\\my\\Faicad\\faijs-openscad\\tests\\fixtures\\openscad-examples\\stl\\Functions__polygon_areas.scad.stl C:\\my\\Faicad\\faijs-openscad\\tests\\fixtures\\openscad-examples\\Functions\\polygon_areas.scad\nECHO: version = [2021, 1, 0]\r\nGeometries in cache: 34\r\nGeometry cache size in bytes: 146688\r\nCGAL Polyhedrons in cache: 0\r\nCGAL cache size in bytes: 0\r\nTotal rendering time: 0:00:00.022\r\n   Top level object is a 2D object:\r\n   Contours:       38\r\nCurrent top level object is not a 3D object.\r\n"
+    },
+    {
+      "name": "Functions/recursion.scad",
+      "error": "Command failed: C:/Program Files/OpenSCAD/openscad.exe -o C:\\my\\Faicad\\faijs-openscad\\tests\\fixtures\\openscad-examples\\stl\\Functions__recursion.scad.stl C:\\my\\Faicad\\faijs-openscad\\tests\\fixtures\\openscad-examples\\Functions\\recursion.scad\nECHO: version = [2021, 1, 0]\r\nGeometries in cache: 2\r\nGeometry cache size in bytes: 9536\r\nCGAL Polyhedrons in cache: 0\r\nCGAL cache size in bytes: 0\r\nTotal rendering time: 0:00:00.023\r\n   Top level object is a 2D object:\r\n   Contours:       10\r\nCurrent top level object is not a 3D object.\r\n"
+    },
+    {
+      "name": "Old/example015.scad",
+      "error": "Command failed: C:/Program Files/OpenSCAD/openscad.exe -o C:\\my\\Faicad\\faijs-openscad\\tests\\fixtures\\openscad-examples\\stl\\Old__example015.scad.stl C:\\my\\Faicad\\faijs-openscad\\tests\\fixtures\\openscad-examples\\Old\\example015.scad\nECHO: version = [2021, 1, 0]\r\nGeometries in cache: 17\r\nGeometry cache size in bytes: 11376\r\nCGAL Polyhedrons in cache: 0\r\nCGAL cache size in bytes: 0\r\nTotal rendering time: 0:00:00.073\r\n   Top level object is a 2D object:\r\n   Contours:        8\r\nCurrent top level object is not a 3D object.\r\n"
+    }
+  ]
+}

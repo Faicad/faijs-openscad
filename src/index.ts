@@ -252,3 +252,15 @@ export type {
   ParityEntry,
   ParityReport,
 } from './parity/report'
+
+// Parity five-dimensional comparison (M8, T800)
+export {
+  compareFiveDim,
+  compareFiveDimAsync,
+  FIVE_DIM_TOLERANCE,
+} from './parity/five-dim'
+export type {
+  FiveDimResult,
+  FiveDimTolerance,
+  DimResult,
+} from './parity/five-dim'

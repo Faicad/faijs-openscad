@@ -37,6 +37,8 @@ export interface TranspileOptions {
   readonly json?: boolean
   /** Extra args for OpenSCAD (rarely needed). */
   readonly extraArgs?: readonly string[]
+  /** Use compact mode (helper functions + inline formatting) to reduce output size. */
+  readonly compact?: boolean
 }
 
 export interface TranspileReport {
@@ -153,7 +155,15 @@ export async function transpileFile(
   diags.push(...lowered.diagnostics)
 
   // ── Step 4: Emit IR → .fai.js ──────────────────────────────────────────
-  const emitted = emitFaijs(lowered.model)
+  // If compact mode is requested, use it directly. Otherwise, if the output
+  // exceeds 1 MiB, retry with compact mode (auto-fallback).
+  let emitted = emitFaijs(lowered.model, options.compact ? { compact: true } : {})
+  if (!options.compact && emitted.ok && emitted.code.length > 1_000_000) {
+    const compactEmitted = emitFaijs(lowered.model, { compact: true })
+    if (compactEmitted.ok && compactEmitted.code.length < emitted.code.length) {
+      emitted = compactEmitted
+    }
+  }
 
   // Determine ok/fail
   const errors = diags.filter((d) => d.severity === 'error')

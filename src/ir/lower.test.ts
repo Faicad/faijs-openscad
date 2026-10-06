@@ -352,3 +352,66 @@ describe('lower: 参数诊断', () => {
     expect(result.model.root.kind).toBe('sphere')
   })
 })
+
+describe('lower: 棱面复刻（T802, $fn > 0）', () => {
+  it('circle($fn=6) → polygon2d（正六边形），不报 OSC3201', () => {
+    const result = lower('circle(r = 10, $fn = 6);')
+    expect(result.model.root.kind).toBe('polygon2d')
+    expect(result.diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.OSC3201)
+    if (result.model.root.kind === 'polygon2d') {
+      expect(result.model.root.points).toHaveLength(6)
+      // 首顶点在角度 0 处: [r, 0]
+      expect(result.model.root.points[0]![0]).toBeCloseTo(10, 6)
+      expect(result.model.root.points[0]![1]).toBeCloseTo(0, 6)
+    }
+  })
+
+  it('circle($fn=0) → circle2d（analytic），不报 OSC3201', () => {
+    const result = lower('circle(r = 10, $fn = 0);')
+    expect(result.model.root.kind).toBe('circle2d')
+    expect(result.diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.OSC3201)
+  })
+
+  it('circle 无 $fn → circle2d（analytic）', () => {
+    const result = lower('circle(r = 10);')
+    expect(result.model.root.kind).toBe('circle2d')
+  })
+
+  it('cylinder($fn=6) → extrude(polygon2d)，不报 OSC3201', () => {
+    const result = lower('cylinder(h = 20, r = 5, $fn = 6);')
+    expect(result.model.root.kind).toBe('extrude')
+    expect(result.diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.OSC3201)
+    if (result.model.root.kind === 'extrude') {
+      expect(result.model.root.length).toBe(20)
+      expect(result.model.root.child.kind).toBe('polygon2d')
+      if (result.model.root.child.kind === 'polygon2d') {
+        expect(result.model.root.child.points).toHaveLength(6)
+      }
+    }
+  })
+
+  it('cylinder($fn=6, center=true) → extrude(polygon2d, centered)', () => {
+    const result = lower('cylinder(h = 20, r = 5, $fn = 6, center = true);')
+    expect(result.model.root.kind).toBe('extrude')
+    if (result.model.root.kind === 'extrude') {
+      expect(result.model.root.centered).toBe(true)
+    }
+  })
+
+  it('cylinder 无 $fn → cylinder（analytic）', () => {
+    const result = lower('cylinder(h = 20, r = 5);')
+    expect(result.model.root.kind).toBe('cylinder')
+  })
+
+  it('cone（r1≠r2）$fn=6 → 仍走 analytic cone + OSC3201（需 T804 scale-extrude）', () => {
+    const result = lower('cylinder(h = 20, r1 = 5, r2 = 3, $fn = 6);')
+    expect(result.model.root.kind).toBe('cone')
+    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3201)
+  })
+
+  it('sphere $fn=12 → 仍走 analytic sphere + OSC3201（需 T810 polyhedron）', () => {
+    const result = lower('sphere(r = 10, $fn = 12);')
+    expect(result.model.root.kind).toBe('sphere')
+    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3201)
+  })
+})
