@@ -6,54 +6,16 @@
  * pinned OpenSCAD checkout and fails when a new node name appears — that is the
  * signal to review the dialect, not to silently ignore the node.
  */
-import { readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { CSG_NODE_VOCABULARY, isKnownCsgNode } from './dialect'
 import { coverageOf } from '../ir/capability'
 import { corpusRoot, hasCorpus } from '../__probe__/env'
+import { scanVocabulary } from '../__probe__/corpus-scan'
 
-const NODE_LINE = /^\s*[%#!*]?([A-Za-z_][A-Za-z0-9_]*)\s*\(/
-const MODIFIER_LINE = /^\s*([%#!*])/
-
-function corpusFiles(root: string): string[] {
-  const dump = join(root, 'tests', 'regression', 'dump')
-  const dumpExamples = join(root, 'tests', 'regression', 'dump-examples')
-  const out: string[] = []
-  for (const dir of [dump, dumpExamples]) {
-    let names: string[]
-    try {
-      names = readdirSync(dir)
-    } catch {
-      continue
-    }
-    for (const n of names) {
-      if (n.endsWith('-expected.csg')) out.push(join(dir, n))
-    }
-  }
-  return out.sort()
-}
-
-export function scanVocabulary(root: string): {
-  nodes: Map<string, number>
-  modifiers: Map<string, number>
-  files: number
-} {
-  const nodes = new Map<string, number>()
-  const modifiers = new Map<string, number>()
-  let files = 0
-  for (const file of corpusFiles(root)) {
-    files++
-    const text = readFileSync(file, 'utf8')
-    for (const line of text.split(/\r?\n/)) {
-      const m = NODE_LINE.exec(line)
-      if (m) nodes.set(m[1], (nodes.get(m[1]) ?? 0) + 1)
-      const mod = MODIFIER_LINE.exec(line)
-      if (mod) modifiers.set(mod[1], (modifiers.get(mod[1]) ?? 0) + 1)
-    }
-  }
-  return { nodes, modifiers, files }
-}
+// 扫描实现已抽到 `../__probe__/corpus-scan`，与 v0 范围守门（`ir/shipped-scope.test.ts`）
+// 和覆盖率报告（`tests/coverage.ts`）共用同一份，避免三处数字漂移。此处重新导出，
+// 保持既有引用路径可用。
+export { scanVocabulary }
 
 describe('probe: CSG node vocabulary', () => {
   it.skipIf(!hasCorpus())('corpus vocabulary is a subset of the dialect table', () => {
@@ -87,10 +49,12 @@ describe('probe: CSG node vocabulary', () => {
     const { nodes } = scanVocabulary(corpusRoot() as string)
     const report = coverageOf(nodes)
 
-    // Pinned 2026-10-06 over the 225 goldens (17624 nodes, 26 kinds): ~97% of the
+    // Pinned 2026-10-06 over the 225 goldens (17653 nodes, 26 kinds): ~97% of the
     // node mass is `direct` (incl. appearance-by-instance-method), and the
-    // `unsupported` remainder is ~2.3% across 401 nodes. `resize` is `helper`
+    // `unsupported` remainder is ~2.4% across 422 nodes. `resize` is `helper`
     // (bbox + scale), so it is NOT in the blocked set.
+    // 17653 而非更早的 17624：旧扫描正则漏了 29 个「修饰符后有空白 / 多修饰符」
+    // 的节点，详见 src/__probe__/corpus-scan.ts 的 NODE_LINE 注释。
     expect(report.total).toBeGreaterThan(10_000)
     expect(nodes.size).toBe(26)
     expect(report.byClass.direct.share).toBeGreaterThan(0.8)

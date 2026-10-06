@@ -4,9 +4,10 @@
  * Node entry point. The browser entry (./browser) deliberately excludes
  * everything that touches `node:fs` / `node:child_process`.
  *
- * Milestone status: M0 exposes identity, diagnostics, the front-end
- * abstraction and environment inspection. `parseCsg` / `lowerCsg` /
- * `emitFaijs` land with M1-M2.
+ * Milestone status: M1 lands the CSG layer — dialect vocabulary, lexer,
+ * recursive-descent parser and the span-carrying AST (`lexCsg` / `parseCsg`),
+ * plus the capability table and the v0 (P0) delivery scope. `lowerCsg` /
+ * `emitFaijs` land with M2.
  */
 export {
   CONVERTER_NAME,
@@ -40,6 +41,81 @@ export {
   explainCode,
   explainAllCodes,
 } from './diagnostics/format'
+
+export {
+  CSG_MODIFIERS,
+  CSG_NODE_SPECS,
+  CSG_NODE_VOCABULARY,
+  csgNodeSpec,
+  isCsgModifier,
+  isKnownCsgNode,
+} from './csg/dialect'
+export type { CsgModifier, CsgNodeCategory, CsgNodeSpec } from './csg/dialect'
+
+export {
+  argumentAt,
+  argumentOf,
+  countCsgNodes,
+  countCsgNodesByName,
+  describeCsgValue,
+  firstPositionalValue,
+  joinSpans,
+  positionalArguments,
+  walkCsg,
+} from './csg/ast'
+export type {
+  CsgArgument,
+  CsgBooleanValue,
+  CsgDocument,
+  CsgInfinityValue,
+  CsgModifierToken,
+  CsgNode,
+  CsgNodeTerminator,
+  CsgNumberValue,
+  CsgStringValue,
+  CsgUndefValue,
+  CsgValue,
+  CsgValueKind,
+  CsgVectorValue,
+} from './csg/ast'
+
+export { lexCsg, PUNCTUATION } from './csg/lexer'
+export type {
+  EofToken,
+  IdentifierToken,
+  LexOptions,
+  LexResult,
+  ModifierToken,
+  NumberToken,
+  Punctuation,
+  PunctuationToken,
+  StringToken,
+  Token,
+} from './csg/lexer'
+
+export { parseCsg, parseCsgTokens } from './csg/parser'
+export type { ParseOptions, ParseResult } from './csg/parser'
+
+export {
+  CAPABILITY_TABLE,
+  capabilityClassOf,
+  capabilityOf,
+  coverageOf,
+  isInShippedScope,
+  nodesWithCapability,
+  outOfShippedScope,
+  shippedStatusOf,
+  SHIPPED_NODES,
+  SHIPPED_PHASE,
+  unclassifiedNodes,
+} from './ir/capability'
+export type {
+  CapabilityClass,
+  CapabilityEntry,
+  CoverageReport,
+  ShippedPhase,
+  ShippedStatus,
+} from './ir/capability'
 
 export { CsgTextFrontend, csgTextToArtifact } from './frontend/csg-text'
 export { OpenScadCliFrontend, resolveOpenScadVersion, DEFAULT_TIMEOUT_MS } from './frontend/openscad-cli'

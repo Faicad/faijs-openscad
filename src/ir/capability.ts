@@ -32,7 +32,17 @@ export const CAPABILITY_TABLE: readonly CapabilityEntry[] = [
   { node: 'union', capability: 'direct', phase: 'P0', note: 'cad.union(...children)' },
   { node: 'difference', capability: 'direct', phase: 'P0', note: 'cad.subtract(base, ...tools)' },
   { node: 'intersection', capability: 'direct', phase: 'P0', note: 'cad.intersect(...children)' },
-  { node: 'multmatrix', capability: 'direct', phase: 'P0', note: 'cad.applyMatrix(shape, m); invertible affine only' },
+  // 2026-10-06 实测（emit/faijs-apply-matrix.probe.test.ts）：applyMatrix 是
+  // multmatrix 的**逐字映射** —— 行主序 4×4、底行 [0,0,0,1]，与 OpenSCAD 的
+  // 参数形状完全一致，矩阵写裸数字即可（旋转分量无量纲，逐元素加 `* MM` 在
+  // 语义上反而是错的）。语料 4790 个 multmatrix（最高频节点）里 4785 个可
+  // 表达；无落点的只有 5 个 det≈0 的退化矩阵（applyMatrix 拒绝奇异矩阵），
+  // 集中在 scale2D-tests / scale3D-tests。见 ir/matrix-shape.probe.test.ts。
+  //
+  // ⛔ 一度准备写「矩阵 → 四元数 + 缩放」的分解器（place/scale3d/mirror 组合），
+  // 依据是 ops-api-inventory 的 §3–§7 手册里没有 applyMatrix。**那个手册不全**，
+  // 权威是 dist/lang/symbol-table.generated.js。判断 op 存不存在只能读符号表。
+  { node: 'multmatrix', capability: 'direct', phase: 'P0', note: 'cad.applyMatrix(shape, m) 1:1；行主序 4×4，裸数字；仅 det≈0 无落点' },
   { node: 'group', capability: 'direct', phase: 'P0', note: 'implicit union; compound NOT assumed (see group-semantics probe)' },
   { node: 'square', capability: 'direct', phase: 'P0', note: 'cad.profile rectangle' },
   { node: 'circle', capability: 'direct', phase: 'P0', note: 'cad.profile circle; arc angles in radians' },
@@ -105,11 +115,54 @@ export interface CoverageReport {
  *
  * Rationale (2026-10-06): raw node-kind counts hide the shape of the work. The
  * OpenSCAD CSG corpus is dominated by a handful of node kinds — `multmatrix`
- * (4783), `group` (4626), `square` (2454), `color` (2431) — so "11 of 26 node
+ * (4790), `group` (4632), `square` (2454), `color` (2431) — so "11 of 26 node
  * kinds are unsupported" sounds alarming while the *mass* they represent is
  * small. This report answers the question that actually drives scheduling:
  * how much of the corpus can land today, by weight.
  */
+/**
+ * 首版交付范围（决策 2026-10-06：**首版只承诺 P0**）。
+ *
+ * 这条决策把两件事钉死在代码里，而不是留在文档里：
+ *
+ *  1. `SHIPPED_NODES` 之外的节点，v0 一律按 BLOCKED 处理（报 OSC3002），
+ *     **不产出任何「近似」代码**。`approximate` 类在 v0 里是空集。
+ *  2. P0 集合内**全部是 `direct`** —— 也就是说 v0 不需要任何运行时 helper 库，
+ *     生成物只依赖 `@faicad/faijs` 的 ① TS 兼容面。`helper` 类（`rotate_extrude`
+ *     / `resize`）是 P1 的事，写进 v0 就等于暗中扩大了承诺。
+ *
+ * 这两条由 `src/ir/shipped-scope.test.ts` 断言，漂移会让测试失败。
+ */
+export const SHIPPED_PHASE = 'P0' as const
+
+export type ShippedPhase = typeof SHIPPED_PHASE
+
+/** v0 承诺落地的节点集合（按能力表 phase 派生，不手工维护第二份名单）。 */
+export const SHIPPED_NODES: readonly string[] = CAPABILITY_TABLE.filter(
+  (e) => e.phase === SHIPPED_PHASE,
+).map((e) => e.node)
+
+const SHIPPED_INDEX = new Set(SHIPPED_NODES)
+
+export function isInShippedScope(node: string): boolean {
+  return SHIPPED_INDEX.has(node)
+}
+
+/**
+ * v0 对某个节点的处置结果。`blocked-out-of-scope` 不是失败，而是**明确且可报告**
+ * 的未交付状态：它必须带诊断码进入 manifest，绝不能静默跳过。
+ */
+export type ShippedStatus = 'shipped' | 'blocked-out-of-scope'
+
+export function shippedStatusOf(node: string): ShippedStatus {
+  return SHIPPED_INDEX.has(node) ? 'shipped' : 'blocked-out-of-scope'
+}
+
+/** 语料词表里超出 v0 范围的节点（v0 必须报 BLOCKED）。 */
+export function outOfShippedScope(): string[] {
+  return CSG_NODE_VOCABULARY.filter((n) => !SHIPPED_INDEX.has(n)).sort()
+}
+
 export function coverageOf(histogram: ReadonlyMap<string, number>): CoverageReport {
   const byClass = {
     direct: { nodes: 0, count: 0, share: 0 },

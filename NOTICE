@@ -1,5 +1,9 @@
 @faicad/faijs-openscad
-Copyright (c) 2026 — 许可证待项目所有者确认（建议 AGPL-3.0-only，与 faijs-cadquery 对齐）
+Copyright (c) 2026 — SPDX-License-Identifier: AGPL-3.0-only
+
+本包以 GNU Affero 通用公共许可证第 3 版（AGPL-3.0-only）授权，全文见根目录 LICENSE。
+该 LICENSE 文本与 faijs-cadquery 使用的文本逐字节一致
+（sha256 0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0）。
 
 --- 外部工具 ---
 

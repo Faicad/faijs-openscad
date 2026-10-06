@@ -1,44 +1,23 @@
 /**
- * Weighted corpus coverage report.
+ * 加权语料覆盖率报告。
  *
- * Answers the scheduling question: how much of the pinned OpenSCAD CSG corpus
- * can land today, by node mass — not by node-kind count. See
- * `src/ir/capability.ts` `coverageOf` for why the distinction matters
- * (`multmatrix` alone is 4783 nodes while `roof` is 5).
+ * 回答排期问题：按节点**质量**（而非节点**种类**）衡量，锁定的 OpenSCAD CSG 语料
+ * 有多少能落地。为什么这个区分重要见 `src/ir/capability.ts` 的 `coverageOf`
+ * ——`multmatrix` 一个节点就是 4783 个，而 `roof` 只有 5 个。
  *
- * Usage:  OPENSCAD_SRC=C:/git/OpenSCAD/openscad npx tsx tests/coverage.ts
+ * 同时输出 **v0 范围**口径（决策 2026-10-06：首版只承诺 P0）：首版承诺的节点集合
+ * 及其覆盖的语料质量，以及范围外必须报 BLOCKED 的节点。
+ *
+ * 用法：OPENSCAD_SRC=C:/git/OpenSCAD/openscad npx tsx tests/coverage.ts
  */
-import { readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
-import { coverageOf, type CapabilityClass } from '../src/ir/capability'
+import {
+  coverageOf,
+  isInShippedScope,
+  SHIPPED_NODES,
+  type CapabilityClass,
+} from '../src/ir/capability'
 import { corpusRoot } from '../src/__probe__/env'
-
-const NODE_LINE = /^\s*[%#!*]?([A-Za-z_][A-Za-z0-9_]*)\s*\(/
-
-function histogram(root: string): { nodes: Map<string, number>; files: number } {
-  const nodes = new Map<string, number>()
-  let files = 0
-  for (const dir of [
-    join(root, 'tests', 'regression', 'dump'),
-    join(root, 'tests', 'regression', 'dump-examples'),
-  ]) {
-    let names: string[]
-    try {
-      names = readdirSync(dir)
-    } catch {
-      continue
-    }
-    for (const name of names) {
-      if (!name.endsWith('-expected.csg')) continue
-      files++
-      for (const line of readFileSync(join(dir, name), 'utf8').split(/\r?\n/)) {
-        const m = NODE_LINE.exec(line)
-        if (m) nodes.set(m[1], (nodes.get(m[1]) ?? 0) + 1)
-      }
-    }
-  }
-  return { nodes, files }
-}
+import { scanVocabulary } from '../src/__probe__/corpus-scan'
 
 const root = corpusRoot()
 if (!root) {
@@ -46,7 +25,7 @@ if (!root) {
   process.exit(1)
 }
 
-const { nodes, files } = histogram(root)
+const { nodes, files } = scanVocabulary(root)
 const report = coverageOf(nodes)
 
 console.log(`corpus: ${files} CSG goldens, ${nodes.size} node kinds, ${report.total} nodes`)
@@ -57,6 +36,25 @@ for (const key of ['direct', 'helper', 'approximate', 'unsupported'] as Capabili
   )
 }
 console.log(`  blocked      ${report.blockedNodes.join(' ')}`)
+
+// v0 范围口径：首版只承诺 P0，其余一律 BLOCKED。
+let shippedCount = 0
+const outOfScope = new Map<string, number>()
+for (const [node, count] of nodes) {
+  if (isInShippedScope(node)) shippedCount += count
+  else outOfScope.set(node, count)
+}
+const shippedShare = shippedCount / report.total
+console.log('')
+console.log(
+  `v0 scope: ${SHIPPED_NODES.length} node kinds, ${shippedCount}/${report.total} nodes = ${(shippedShare * 100).toFixed(2)}%`,
+)
+console.log(
+  `  out-of-scope (BLOCKED in v0): ${[...outOfScope.keys()].sort().join(' ')}`,
+)
+console.log(
+  `  out-of-scope mass: ${report.total - shippedCount} nodes = ${((1 - shippedShare) * 100).toFixed(2)}%`,
+)
 
 const top = [...nodes.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12)
 console.log(`top nodes: ${top.map(([k, v]) => `${k}:${v}`).join(' ')}`)

@@ -3,6 +3,7 @@
   "version": "0.29.5",
   "type": "module",
   "description": "OpenSCAD -> faijs converter: OpenSCAD front-end CSG -> normalized IR -> faijs (.fai.js) code",
+  "license": "AGPL-3.0-only",
   "keywords": [
     "cad",
     "faijs",
@@ -33,7 +34,9 @@
     "faijs-openscad": "./dist/cli/main.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE",
+    "NOTICE"
   ],
   "faijs": {
     "autoLift": false
