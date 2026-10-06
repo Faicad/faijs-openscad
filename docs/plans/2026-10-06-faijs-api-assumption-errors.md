@@ -11,6 +11,7 @@
 > - `src/__probe__/script-globals-scan.ts`（§5：`Math` 拦截的分层取证）
 >
 > 修订：2026-10-06 追加 §5（`Math` 拦截的分层取证），原 §5/§6 顺延为 §6/§7。
+> 修订：2026-10-06 撤回 §3.3 第 2 条（「分号静默截断」）——实测推翻，详见该条。
 
 ---
 
@@ -200,9 +201,19 @@ v1 的「布尔默认不可用」「球差 0.22%」「volume 静默 NaN」三条
 - 仍然成立。补充两条实测：
   1. `cad.profile` 需要 `{ contours: [{ segments: [...] }] }`，不是点数组
      （点数组报 `E_PROFILE_NO_CONTOURS`）。
-  2. `.fai.js` 语句是**换行分隔**，写在一行用 `;` 会在首条语句后静默停止
-     （本探针 v2 的全部 `NOOUT` 即由此产生，`failedAt` 也是 `undefined`——
-     这是**静默截断**，值得在语言契约里点名）。
+  2. ~~`.fai.js` 语句是**换行分隔**，写在一行用 `;` 会在首条语句后静默停止~~
+     —— **【2026-10-06 撤回】实测推翻**：`;` 与换行在语法层**完全等价**，不存在静默截断。
+     ```
+     DirectExecutor.unitRanges('let a=cad.box(1,1,1); let b=cad.box(2,2,2); let c=cad.box(3,3,3)')
+       → ranges.length = 3   [{1,1},{1,1},{1,1}]
+     DirectExecutor.unitRanges('let a=cad.box(1,1,1)\nlet b=cad.box(2,2,2)\nlet c=cad.box(3,3,3)')
+       → ranges.length = 3   [{1,1},{2,2},{3,3}]
+     单行【无】分隔符 → 抛 SyntaxError: Unexpected token  ← 正确 JS 行为
+     ```
+     语句切分由 `acorn` 完成（`metadata-extractor.ts` 顶部 `import { parse as acornParse } from 'acorn'`），
+     `;` 与换行在语法层本就等价。0.29.5 与 0.29.6 实测一致。
+     **本探针 v2 的 `NOOUT` 不是 faijs 的静默截断，而是探针自身的写法问题**——
+     原结论对 faijs 不成立，撤回。
 
 ### 3.4 执行 `.fai.js` 没有一等 API（v1 第 8 条 → 保留 P1）
 
