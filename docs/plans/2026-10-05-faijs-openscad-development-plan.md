@@ -1097,10 +1097,62 @@ CI 分层：
 
 - 常规 CI 全绿；
 - OpenSCAD examples 验证语料全部进入 manifest；
-- 不存在“未运行但记为 ported”；
+- 不存在"未运行但记为 ported"；
 - 诊断和报告可复现；
 - 包内不含 OpenSCAD 二进制或上游 GPL 源码；
 - README 明确版本、能力和保真级别。
+
+**M6 完成状态（2026-10-06）**：
+
+- **T601 ✅ twist/scale extrude spike**：调研结论——twist 和 non-uniform scale 保持 BLOCKED。
+  - faijs 有 `twistExtrude(wire, angleDegrees, center, normal)`，但接受 **1D wire**（非 2D face），
+    不支持负角度（`TWIST_NEGATIVE_ANGLE_UNSUPPORTED`），不支持 ExtrusionProfile scaling law
+    （`TWIST_EXTRUDE_LAW_UNSUPPORTED`）。
+  - 语义不等价：OpenSCAD twist 是「渐进扭转拉伸」，twistExtrude 是「螺旋线扫掠」。
+  - 语料 5 个有 twist 的用例中 2 个是负 twist（不支持），3 个有 non-uniform scale（不支持）。
+  - probe 测试：`src/ir/twist-extrude.probe.test.ts`。
+
+- **T602 ✅ projection spike**：cut=true 和 cut=false 都保持 BLOCKED。
+  - cut=true：`sectionByPlane` 返回 **1D compound（交线）**，不是 2D face。
+  - cut=false：`projectView` / `projectSheet` 返回 **SVG 字符串**，不是 2D 几何体。
+  - probe 测试：`src/ir/projection.probe.test.ts`。
+
+- **T603 ✅ offset2d spike**：cad.offset 不适用 2D，保持 BLOCKED。
+  - faijs `cad.offset` 是 **3D 全表面偏移**（box+2 → 2610.5mm³），对 2D profile 是 **NO-OP**。
+  - 名字碰撞是陷阱，不是映射。OpenSCAD offset 有 r/delta/chamfer 等 2D 专属语义。
+  - probe 测试：`src/ir/offset2d.probe.test.ts`。
+
+- **T604 ✅ minkowski spike**：无精确方案，保持 BLOCKED。
+  - faijs 三个面（① TS 兼容面、② 脚本面、③ 库边界面）均无 minkowski op。
+  - arg-spec.ts 标记为 skip，symbol-table 不包含。
+  - 不得用 `cad.offset` 近似（语义完全不同）。
+  - probe 测试：`src/ir/minkowski.probe.test.ts`。
+
+- **T605 ✅ surface/fill 评估**：两者保持 BLOCKED。
+  - surface：需要图像/数据文件读取 + 高度图网格生成，是独立子项目。faijs 无 heightmap op。
+  - fill：faijs 无 2D 孔洞填充 op，语料中未使用。
+  - probe 测试：`src/ir/surface-fill.probe.test.ts`。
+
+- **T606 ✅ package/browser/runtime exports**：npm pack 内容审计通过。
+  - 152 个文件，872.7 kB 解压后。
+  - 不含测试文件、fixtures、OpenSCAD 二进制、GPL 源码。
+  - `__probe__` 是 CLI check 命令的运行时依赖（非纯测试代码），正确包含。
+  - 修复了 `IrRevolve` 类型未从 index.ts/browser.ts 导出的遗漏（M5 残留）。
+  - 三个导出路径：`.`（Node）、`./browser`（浏览器）、`./cli`（CLI）。
+  - `./runtime` 导出暂不需要（无 runtime helper 库）。
+
+- **T607 ✅ 全量 corpus 与 examples 报告**：50 个入口全部有状态。
+  - 21 ported、28 blocked、1 skipped（module_recursion 超出 1MiB 源码上限）。
+  - 所有 blocked 条目都有 `blockedBy` 原因。
+  - Blocked 原因分布：text(9)、import(7)、projection(4)、linear_extrude(4)、hull(3)、offset(2)、surface(1)、polyhedron(1)。
+  - 所有 P2 节点（twist/scale、projection、offset、minkowski、surface、fill）都有专属 probe 测试记录调研结论。
+
+**G6 门禁实测**：
+- 常规 CI：338 passed / 49 skipped（5 个运行时探针需 `FAIJS_PROBE_RUNTIME=1`，44 个语料测试需 CSG fixtures）。
+- 50 个 examples 全部进入 manifest，无「未运行但记为 ported」。
+- 诊断和报告可复现（`npm run corpus:gen` 重新生成 manifest）。
+- 包内不含 OpenSCAD 二进制或 GPL 源码（npm pack 审计通过）。
+- README 需更新版本、能力和保真级别（M6 后更新）。
 
 ### M7：可选纯 TypeScript `.scad` 前端
 

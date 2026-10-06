@@ -47,7 +47,7 @@ export const CAPABILITY_TABLE: readonly CapabilityEntry[] = [
   { node: 'square', capability: 'direct', phase: 'P0', note: 'cad.profile rectangle' },
   { node: 'circle', capability: 'direct', phase: 'P0', note: 'cad.profile circle; arc angles in radians' },
   { node: 'polygon', capability: 'direct', phase: 'P0', note: 'cad.profile; paths=undef + hole rules need tests' },
-  { node: 'linear_extrude', capability: 'direct', phase: 'P0', note: 'plain extrude only; twist/scale are P2' },
+  { node: 'linear_extrude', capability: 'direct', phase: 'P0', note: 'plain extrude only; twist/scale blocked (T601: twistExtrude takes wire not face; scaling law rejected)' },
   { node: 'render', capability: 'direct', phase: 'P0', note: 'geometry passthrough; convexity is info only' },
   // 2026-10-06 measured: Shape carries setColor / setOpacity / setAppearance /
   // getAppearance as INSTANCE METHODS (ops-api-inventory §2.5), and calling them

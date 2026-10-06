@@ -143,6 +143,7 @@ export type {
   IrPassthrough,
   IrPolygon2D,
   IrRect2D,
+  IrRevolve,
   IrSphere,
   IrTransform,
   IrUnion,

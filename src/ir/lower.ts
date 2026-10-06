@@ -78,11 +78,16 @@ const KNOWN_ARGS: Readonly<Record<string, readonly string[]>> = {
   polygon: ['points', 'paths', 'convexity'],
   linear_extrude: ['height', 'center', 'twist', 'scale', 'slices', 'convexity'],
   rotate_extrude: ['angle', 'fa', 'fs', 'fn', 'convexity'],
-  // P1 blocked 节点：参数名登记后不再报 OSC1004（让 blocked 诊断更干净）
+  // P1/P2 blocked 节点：参数名登记后不再报 OSC1004（让 blocked 诊断更干净）
   polyhedron: ['points', 'faces', 'convexity', 'triangles'],
   text: ['text', 'size', 'spacing', 'font', 'direction', 'language', 'script', 'halign', 'valign'],
   resize: ['newsize', 'auto', 'convexity'],
   import: ['file', 'convexity', 'layer', 'origin', 'scale'],
+  projection: ['cut'],
+  offset: ['r', 'delta', 'chamfer', 'segments'],
+  surface: ['file', 'center', 'invert', 'convexity'],
+  fill: [],
+  roof: ['convexity'],
   hull: [],
   minkowski: [],
   color: [],
@@ -443,7 +448,12 @@ class Lowerer {
     const height = this.numArg(node, 'height', id, { required: true })
     if (!height) return { kind: 'empty', id, origin }
 
-    // pass 6 tessellation-policy + P0 边界：twist / 非等比 scale 属 P2。
+    // pass 6 tessellation-policy + P2 裁决（T601 spike）：
+    // twist 和 non-uniform scale 保持 BLOCKED，因为 faijs 0.29.5 无精确实现：
+    // - twistExtrude(wire, angleDeg, center, normal) 接受 1D wire（非 2D face），
+    //   不支持负角度，且语义是螺旋扫掠而非渐进扭转（见 twist-extrude.probe.test.ts）。
+    // - complexExtrude / twistExtrude 均拒绝 ExtrusionProfile scaling law
+    //   (COMPLEX_EXTRUDE_LAW_UNSUPPORTED / TWIST_EXTRUDE_LAW_UNSUPPORTED)。
     const twist = this.numArg(node, 'twist', id)
     const scale = this.scaleArg(node, id)
     const unsupported: string[] = []
@@ -454,7 +464,7 @@ class Lowerer {
         node,
         id,
         origin,
-        `linear_extrude with ${unsupported.join(' / ')} is P2 (plain extrude only in v0)`,
+        `linear_extrude with ${unsupported.join(' / ')} — faijs has no exact equivalent (twistExtrude takes wire not face; scaling law unsupported)`,
       )
     }
 
