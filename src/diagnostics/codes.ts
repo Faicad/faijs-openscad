@@ -32,6 +32,7 @@ export const DiagnosticCode = {
   OSC3003: 'OSC3003', // runtime helper required but output mode is `direct`
   OSC3101: 'OSC3101', // external resource dependency, unresolvable path
   OSC3201: 'OSC3201', // analytic mode did not preserve explicit faceting
+  OSC3202: 'OSC3202', // mesh-only geometry: STEP export is approximate (not exact BREP)
 
   // --- 4xxx: emitted runtime ------------------------------------------------
   OSC4001: 'OSC4001', // runtime helper execution failed
@@ -145,6 +146,13 @@ export const DIAGNOSTIC_CODES: readonly DiagnosticCodeMeta[] = [
     defaultSeverity: 'warning',
     title: 'Faceting not preserved in analytic mode',
     hint: 'OpenSCAD $fn/$fa/$fs produced real faceted geometry; faijs analytic BREP keeps exact surfaces. Reported as PASS-ANALYTIC, never as strict PASS.',
+    downgradable: false,
+  },
+  {
+    code: DiagnosticCode.OSC3202,
+    defaultSeverity: 'warning',
+    title: 'Mesh-only geometry: STEP export is approximate',
+    hint: 'This operation produces triangle-mesh geometry (e.g. polyhedron, surface, import STL). STL export is exact; STEP export uses OCCT mesh→BREP reconstruction and is not analytically precise.',
     downgradable: false,
   },
   {

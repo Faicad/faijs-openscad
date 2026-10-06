@@ -454,6 +454,61 @@ OpenSCAD 的 `$fn/$fa/$fs` 会改变圆柱、圆锥、球等实体的实际棱�
 
 必须先建立 `$fn=3/4/6/12/0` 的 sphere/cylinder/cone 探针，再决定哪些节点能够从 `analytic` 晋级为严格 PASS。
 
+### 5.6 导出格式能力矩阵：STL 与 STEP
+
+> **背景**：OpenSCAD 只能导出 STL（三角网格），不能导出 STEP（BREP）。
+> 本项目生成的 `.fai.js` 通过 faijs 运行时**既能导出 STL，也能导出 STEP**。
+> 但并非所有几何操作都产出精确 BREP——只产出三角网格的操作在导出 STEP 时
+> 需经 OCCT mesh→BREP 重建（`reconstructSolidFromMesh`），结果不是精确解析曲面。
+>
+> **原则：生成代码默认同时支持 STL 和 STEP 导出；不能导出精确 STEP 的操作必须明确标注。**
+
+#### faijs 导出管线（`exportModel`，`packages/core/src/brep/export/export-model.ts`）
+
+| 格式 | 输入 | 行为 |
+|---|---|---|
+| STL | `ExportEntry.mesh` | 直接序列化三角网格（binary STL） |
+| STEP | `ExportEntry.solid`（BREP 句柄） | 精确导出：OCCT XCAF → ADVANCED_FACE（解析曲面） |
+| STEP | `ExportEntry.mesh`（无 solid） | 近似导出：`reconstructSolidFromMesh` 重建为 BREP 后导出 |
+| 3MF | `ExportEntry.mesh` | XML 格式三角网格 + 单位声明 |
+
+`ExportEntry` 优先使用 `solid`（BREP），缺省时回退到 `mesh`。
+当 BREP 引擎装配后（`initOcctWasm` + `registerOcctBrepEngine`），绝大多数 op 产出
+精确 BREP solid，因此导出的 STEP 是精确解析曲面。
+
+#### 操作级导出能力
+
+| 操作（CSG 节点） | 几何产出 | STL | 精确 STEP | 备注 |
+|---|---|---|---|---|
+| `cube` | BREP solid | ✅ | ✅ | `cad.box` → 精确平面 BREP |
+| `sphere` | BREP solid | ✅ | ✅ | `cad.sphere` → 解析球面；`$fn` 不影响 BREP |
+| `cylinder` | BREP solid | ✅ | ✅ | `cad.cylinder` → 解析柱面 |
+| `cone` | BREP solid | ✅ | ✅ | `cad.cone` → 解析锥面 |
+| `square` / `circle` / `polygon` | 2D profile | ✅ | ✅ | `cad.profile` → 精确 2D 轮廓 |
+| `linear_extrude` | BREP solid | ✅ | ✅ | `cad.extrude` → 精确拉伸 BREP |
+| `union` / `difference` / `intersection` | BREP solid | ✅ | ✅ | 布尔运算后产出精确 BREP |
+| `multmatrix` | BREP solid | ✅ | ✅ | `cad.applyMatrix` → 仿射变换不改变曲面类型 |
+| `color` / `render` | 几何透传 | ✅ | ✅ | 不改变几何 |
+| `rotate_extrude` (P1) | BREP solid | ✅ | ✅ | `cad.revolve` → 旋转体 BREP |
+| `polyhedron` (P1) | **mesh only** | ✅ | ⚠️ 近似 | 三角面片几何；STEP 导出经 mesh→BREP 重建 |
+| `hull` (P1) | BREP solid（如可用） | ✅ | ✅ | 取决于实现路径 |
+| `surface` (P2) | **mesh only** | ✅ | ⚠️ 近似 | 高度图采样为三角网格 |
+| `import(stl)` (P1) | **mesh only** | ✅ | ⚠️ 近似 | 导入的 STL 本身是网格 |
+| `import(step/brep)` (P1) | BREP solid | ✅ | ✅ | 精确 BREP 导入 |
+| `minkowski` (P2) | 无精确实现 | — | — | 当前 blocked |
+| `projection` (P2) | 取决于实现 | — | — | 当前 blocked |
+
+**图例**：✅ = 精确导出；⚠️ 近似 = STEP 导出经 OCCT mesh→BREP 重建，非精确解析曲面；— = 不适用
+
+#### 标注规则
+
+1. 生成代码的头部注释中，如包含 `polyhedron` / `surface` / `import(stl)` 等
+   mesh-only 操作，必须添加 `// ⚠️ mesh-only: STEP export is approximate` 警告。
+2. CLI `run` 命令的 `--mode brep` 对 mesh-only 几何产出 `OSC3202` 诊断
+   （STEP 导出为近似重建，非精确 BREP）。
+3. `corpus` manifest 的每个条目携带 `stepExport: 'exact' | 'approximate' | 'n/a'` 字段。
+4. 文档与 README 中必须如实区分「精确 STEP 导出」与「近似 STEP 导出」。
+
 ---
 
 ## 6. 项目目录建议
@@ -710,6 +765,7 @@ interface Diagnostic {
 | `OSC3003` | 需要 runtime helper，但当前输出模式为 direct |
 | `OSC3101` | 依赖外部资源，路径不可解析 |
 | `OSC3201` | analytic 模式未保留 OpenSCAD 显式棱面语义 |
+| `OSC3202` | mesh-only 几何：STEP 导出为近似重建（非精确 BREP） |
 | `OSC4001` | runtime helper 执行失败 |
 | `OSC5001` | 未找到 OpenSCAD 二进制 |
 | `OSC5002` | OpenSCAD 版本与 baseline 不匹配 |
