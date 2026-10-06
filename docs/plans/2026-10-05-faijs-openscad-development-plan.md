@@ -1065,6 +1065,22 @@ CI 分层：
 
 **G5 门禁**：P1 节点分别达到各自 feature corpus 的 100% 有状态覆盖；未实现项保持 blocked，不能静默通过。
 
+**M5 完成状态（2026-10-06）**：
+
+- **T501 ✅ 已实现**：`rotate_extrude(angle=N)` → `cad.revolve(profile, { axis:[0,0,1], at:[0,0,0], angle })`。
+  - OpenSCAD `angle` 是度，faijs `revolve.angle` 是**裸弧度数字**（不乘 `RADIAN`，否则单位折叠后变成 57 倍错误）。
+  - IR 新增 `IrRevolve` 节点；lower 把度转弧度存储；emitter 对完整旋转（2π）省略 angle 字段。
+  - shipped scope 从 P0 扩展到 P0+P1 direct；`rotate_extrude` 从 `helper` 升级为 `direct`。
+  - 单测覆盖：默认 360°、angle=180°、angle=-90°、多子 union、3D 子节点报错、无子节点报错。
+
+- **T502-T506 ✅ 保持 BLOCKED + 有状态覆盖**：faijs 0.29.5 侧的能力缺口导致这些节点无法实现：
+  - **T502 polyhedron**：faijs ①/② 面均无 `polyhedron` op（57 个探测 op 中唯一缺失）。参数名（points/faces/convexity/triangles）已登记到 KNOWN_ARGS，避免 OSC1004 噪音。
+  - **T503 hull**：faijs `convexHull` 只接受点集（kernel `hullFromPoints`），不接受 Shape。实现需要 vertex-extraction 层或 `defineOp` runtime helper。
+  - **T504 resize**：需要运行时 bbox 测量 + scale3d 组合（scale/scale3d 标记为 3d_editor 消费面，非平台面）。CSG 语料中未出现 resize 节点（OpenSCAD 在 dump 前已求值）。
+  - **T505 text**：需要 `@faicad/faijs-extra` 字体渲染库 + 字体解析。参数名已登记。
+  - **T506 import**：需要外部资源路径解析 + STL/STEP 读取。参数名已登记。
+  - 每个 blocked 节点都有 OSC3002 诊断 + 专属 blocked 测试（验证不静默通过、不报 OSC1004）。
+
 ### M6：P2 与发布准备
 
 | ID | 任务 | 依赖 | 验收 |

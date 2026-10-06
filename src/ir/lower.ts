@@ -77,6 +77,14 @@ const KNOWN_ARGS: Readonly<Record<string, readonly string[]>> = {
   circle: ['r', 'd'],
   polygon: ['points', 'paths', 'convexity'],
   linear_extrude: ['height', 'center', 'twist', 'scale', 'slices', 'convexity'],
+  rotate_extrude: ['angle', 'fa', 'fs', 'fn', 'convexity'],
+  // P1 blocked 节点：参数名登记后不再报 OSC1004（让 blocked 诊断更干净）
+  polyhedron: ['points', 'faces', 'convexity', 'triangles'],
+  text: ['text', 'size', 'spacing', 'font', 'direction', 'language', 'script', 'halign', 'valign'],
+  resize: ['newsize', 'auto', 'convexity'],
+  import: ['file', 'convexity', 'layer', 'origin', 'scale'],
+  hull: [],
+  minkowski: [],
   color: [],
   render: ['convexity'],
   multmatrix: [],
@@ -180,6 +188,8 @@ class Lowerer {
         return this.lowerMultmatrix(node, id, origin)
       case 'linear_extrude':
         return this.lowerLinearExtrude(node, id, origin)
+      case 'rotate_extrude':
+        return this.lowerRotateExtrude(node, id, origin)
       case 'color':
         return this.lowerColor(node, id, origin)
       case 'render':
@@ -473,6 +483,41 @@ class Lowerer {
     // linear_extrude 的 $fn 作用于其轮廓上的弧（如圆），与图元同一条政策。
     this.reportFaceting(node, id)
     return { kind: 'extrude', id, origin, dimension: '3d', child: planar, length: height.value, centered }
+  }
+
+  /**
+   * `rotate_extrude(angle=360)` → `cad.revolve(profile, { angle })`。
+   *
+   * OpenSCAD 的 `rotate_extrude` 绕 Z 轴旋转 XY 轮廓，`angle` 是度（默认 360）。
+   * faijs `cad.revolve` 的 `angle` 是**裸弧度**（不乘 RADIAN）。
+   * 这里把度转成弧度存储在 IR 里，emitter 直接输出裸数字。
+   */
+  private lowerRotateExtrude(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
+    this.reportUnknownArgs(node)
+    const angleArg = this.numArg(node, 'angle', id)
+    // OpenSCAD 默认 360 度 = 2π 弧度
+    const angleDeg = angleArg?.value ?? 360
+    const angleRad = (angleDeg * Math.PI) / 180
+
+    const children = this.lowerChildren(node).filter((c) => c.kind !== 'empty')
+    if (children.length === 0) {
+      return this.missing(node, id, 'rotate_extrude needs exactly one 2D child')
+    }
+    // 多子：OpenSCAD 先对子节点取并集再旋转。
+    const merged =
+      children.length === 1 ? children[0] : this.combine('union', children, node.span, 'rotate_extrude')
+
+    const mergedDim = dimensionOf(merged)
+    if (mergedDim !== '2d') {
+      if (mergedDim === '3d') {
+        return this.typeError(node, id, 'rotate_extrude requires a 2D child (got 3D geometry)')
+      }
+      return merged
+    }
+    const planar = merged as IrGeometry2D
+
+    this.reportFaceting(node, id)
+    return { kind: 'revolve', id, origin, dimension: '3d', child: planar, angle: angleRad }
   }
 
   /** pass 5 modifier-policy（外观）：RGBA → setColor / setOpacity。 */

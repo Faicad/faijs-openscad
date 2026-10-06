@@ -152,6 +152,51 @@ describe('lower: 维度推断（pass 2）', () => {
   })
 })
 
+describe('lower: rotate_extrude（T501）', () => {
+  it('rotate_extrude 默认 angle=360 → revolve, angle = 2π', () => {
+    const node = root('rotate_extrude() { circle(r = 5); }')
+    expect(node.kind).toBe('revolve')
+    if (node.kind === 'revolve') {
+      expect(node.dimension).toBe('3d')
+      expect(node.angle).toBeCloseTo(2 * Math.PI, 12)
+    }
+  })
+
+  it('rotate_extrude(angle=180) → revolve, angle = π', () => {
+    const node = root('rotate_extrude(angle = 180) { circle(r = 5); }')
+    expect(node.kind).toBe('revolve')
+    if (node.kind === 'revolve') {
+      expect(node.angle).toBeCloseTo(Math.PI, 12)
+    }
+  })
+
+  it('rotate_extrude(angle=-90) → revolve, negative angle preserved', () => {
+    const node = root('rotate_extrude(angle = -90) { circle(r = 5); }')
+    expect(node.kind).toBe('revolve')
+    if (node.kind === 'revolve') {
+      expect(node.angle).toBeCloseTo(-Math.PI / 2, 12)
+    }
+  })
+
+  it('rotate_extrude 多子节点 → 先 union 再 revolve', () => {
+    const node = root(
+      'rotate_extrude() { union() { square(size = [1,1]); circle(r = 2); } }',
+    )
+    expect(node.kind).toBe('revolve')
+    if (node.kind === 'revolve') expect(node.dimension).toBe('3d')
+  })
+
+  it('rotate_extrude 收到 3D 子节点 → OSC2002', () => {
+    expect(codes('rotate_extrude() { cube(size = [1,1,1]); }')).toContain(
+      DiagnosticCode.OSC2002,
+    )
+  })
+
+  it('rotate_extrude 无子节点 → OSC2001', () => {
+    expect(codes('rotate_extrude();')).toContain(DiagnosticCode.OSC2001)
+  })
+})
+
 describe('lower: matrix-fold（pass 4）', () => {
   const IDENTITY = '[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]'
 
@@ -229,6 +274,49 @@ describe('lower: capability-classify（pass 7）', () => {
     expect(
       lower('linear_extrude(height = 10, scale = [1,1]) { square(size = [1,1]); }').model.root.kind,
     ).toBe('extrude')
+  })
+})
+
+describe('lower: P1 blocked 节点（T502-T506）', () => {
+  it('polyhedron(points, faces) → blocked + OSC3002，不报 OSC1004', () => {
+    const result = lower(
+      'polyhedron(points = [[0,0,0],[1,0,0],[0,1,0],[0,0,1]], faces = [[0,1,2],[0,1,3],[0,2,3],[1,2,3]]);',
+    )
+    expect(result.model.root.kind).toBe('blocked')
+    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3002)
+    // 参数名已登记，不应产生 OSC1004
+    expect(result.diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.OSC1004)
+  })
+
+  it('text(text, size, font) → blocked + OSC3002，不报 OSC1004', () => {
+    const result = lower(
+      'text(text = "Hello", size = 10, font = "Liberation Sans", halign = "center", valign = "center");',
+    )
+    expect(result.model.root.kind).toBe('blocked')
+    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3002)
+    expect(result.diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.OSC1004)
+  })
+
+  it('hull() → blocked + OSC3002', () => {
+    const result = lower('hull() { cube(size=[1,1,1]); sphere(r=1); }')
+    expect(result.model.root.kind).toBe('blocked')
+    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3002)
+  })
+
+  it('resize(newsize, auto) → blocked + OSC3002，不报 OSC1004', () => {
+    const result = lower(
+      'resize(newsize = [10, 20, 30], auto = [true, false, true]) { cube(size=[1,1,1]); }',
+    )
+    expect(result.model.root.kind).toBe('blocked')
+    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3002)
+    expect(result.diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.OSC1004)
+  })
+
+  it('import(file) → blocked + OSC3002，不报 OSC1004', () => {
+    const result = lower('import(file = "part.stl");')
+    expect(result.model.root.kind).toBe('blocked')
+    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3002)
+    expect(result.diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.OSC1004)
   })
 })
 

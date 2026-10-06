@@ -1,6 +1,6 @@
 {
   "generatedBy": "@faicad/faijs-openscad corpus",
-  "generatedAt": "2026-10-06T13:04:33.269Z",
+  "generatedAt": "2026-10-06T13:50:26.970Z",
   "converter": {
     "name": "@faicad/faijs-openscad",
     "version": "0.29.5"
@@ -405,7 +405,7 @@
       "source": "Basics/rotate_extrude.scad",
       "status": "blocked",
       "blockedBy": [
-        "rotate_extrude"
+        "text"
       ],
       "parsedNodes": 4,
       "emittedStatements": 0,
@@ -418,7 +418,7 @@
         "polygon": 1
       },
       "blockedNodes": [
-        "rotate_extrude"
+        "text"
       ],
       "errorCodes": [
         "OSC3002"
@@ -650,8 +650,7 @@
       "source": "Old/example007.scad",
       "status": "blocked",
       "blockedBy": [
-        "import",
-        "rotate_extrude"
+        "import"
       ],
       "parsedNodes": 1,
       "emittedStatements": 0,
@@ -665,8 +664,7 @@
         "linear_extrude": 4
       },
       "blockedNodes": [
-        "import",
-        "rotate_extrude"
+        "import"
       ],
       "errorCodes": [
         "OSC3002"
@@ -700,8 +698,8 @@
       "source": "Old/example009.scad",
       "status": "blocked",
       "blockedBy": [
-        "linear_extrude",
-        "rotate_extrude"
+        "import",
+        "linear_extrude"
       ],
       "parsedNodes": 3,
       "emittedStatements": 0,
@@ -714,8 +712,8 @@
         "rotate_extrude": 1
       },
       "blockedNodes": [
-        "linear_extrude",
-        "rotate_extrude"
+        "import",
+        "linear_extrude"
       ],
       "errorCodes": [
         "OSC3002"

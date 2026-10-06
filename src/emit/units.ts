@@ -10,10 +10,15 @@
  * Angle slots need care, and the two of them behave differently:
  *
  *  - `cad.revolve`'s `angle` is RADIANS in the API (faijs 0.29.5,
- *    packages/core/src/api/revolve.ts) while faijs's base unit is DEGREE, so a
- *    radian value there must be rendered with `radianLiteral()`
- *    (`RADIAN === 57.29577951308232` is exactly that conversion factor).
- *    See rotate-extrude.probe.test.ts.
+ *    packages/core/src/api/revolve.ts:134-135). However, the script-face
+ *    dimension checker has NO paramDims declaration for revolve (no @param
+ *    with dimension in the JSDoc), so a bare number passes unchecked and is
+ *    passed through as-is. Using `radianLiteral()` (`N * RADIAN`) here would
+ *    be WRONG: `RADIAN = 180/PI`, so `2π * RADIAN` folds to `360` (degrees),
+ *    and revolve internally does `(360 * 180) / PI = 20626°` — a full spin
+ *    becomes 57 turns. The emitter therefore outputs revolve angles as **bare
+ *    numbers** (via `exactNumber`), not via `radianLiteral()`.
+ *    See rotate-extrude.probe.test.ts and emit/faijs.ts (revolve case).
  *  - profile arc angles are also radians, but the slot takes the **raw radian
  *    number** — `radianLiteral()` there would multiply by 57.2958 and turn π
  *    into 180. `emit/faijs-2d-profile.probe.test.ts` pins the literal form

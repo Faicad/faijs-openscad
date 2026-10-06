@@ -161,6 +161,29 @@ describe('emit: linear_extrude', () => {
   })
 })
 
+describe('emit: rotate_extrude（T501）', () => {
+  it('默认 360° → cad.revolve(profile, { axis, at }) without angle', async () => {
+    const code = body(await transpile('rotate_extrude() { circle(r = 5); }'))
+    expect(code).toContain('await cad.revolve(part0, { axis: [0, 0, 1], at: [0, 0, 0] })')
+    // full turn must NOT include an angle field (revolve defaults to 2π)
+    expect(code).not.toContain('angle:')
+  })
+
+  it('angle=180 → cad.revolve with bare radian angle (not * RADIAN)', async () => {
+    const code = body(await transpile('rotate_extrude(angle = 180) { circle(r = 5); }'))
+    expect(code).toContain('await cad.revolve(part0, { axis: [0, 0, 1], at: [0, 0, 0], angle:')
+    // angle must be bare number (π = 3.141592653589793), NOT * RADIAN
+    expect(code).toContain('angle: 3.141592653589793')
+    expect(code).not.toContain('RADIAN')
+  })
+
+  it('angle=-90 → negative bare radian', async () => {
+    const code = body(await transpile('rotate_extrude(angle = -90) { circle(r = 5); }'))
+    expect(code).toContain('angle: -1.5707963267948966')
+    expect(code).not.toContain('RADIAN')
+  })
+})
+
 describe('emit: 外观', () => {
   it('color → setColor([r,g,b])，alpha = 1 时不调用 setOpacity', async () => {
     const code = body(await transpile('color([0.9, 0.2, 0.2, 1]) { cube(size=[1,1,1]); }'))

@@ -15,7 +15,6 @@ import { describe, expect, it } from 'vitest'
 import {
   CAPABILITY_TABLE,
   SHIPPED_NODES,
-  SHIPPED_PHASE,
   coverageOf,
   isInShippedScope,
   nodesWithCapability,
@@ -26,18 +25,21 @@ import {
 import { scanVocabulary } from '../__probe__/corpus-scan'
 import { corpusRoot, hasCorpus } from '../__probe__/env'
 
-describe('shipped scope: v0 只承诺 P0', () => {
-  it('I1: P0 范围内没有 helper / approximate / unsupported', () => {
+describe('shipped scope: v0 承诺 P0 + P1 direct', () => {
+  it('I1: shipped 范围内没有 helper / approximate / unsupported', () => {
     const notDirect = CAPABILITY_TABLE.filter(
-      (e) => e.phase === SHIPPED_PHASE && e.capability !== 'direct',
+      (e) => SHIPPED_NODES.includes(e.node) && e.capability !== 'direct',
     )
     // 失败意味着 v0 要么需要写 runtime helper，要么要交付近似几何 ——
-    // 两者都是对「只承诺 P0」的扩大，必须显式改这条测试并同步 README。
+    // 两者都是对承诺范围的扩大，必须显式改这条测试并同步 README。
     expect(notDirect.map((e) => `${e.node}:${e.capability}`)).toEqual([])
   })
 
-  it('I2: v0 范围恰好等于 direct 全集', () => {
-    expect([...SHIPPED_NODES].sort()).toEqual([...nodesWithCapability('direct')].sort())
+  it('I2: shipped 范围恰好等于 direct 且 phase ≤ P1 的全集', () => {
+    expect([...SHIPPED_NODES].sort()).toEqual([...nodesWithCapability('direct')].filter((n) => {
+      const entry = CAPABILITY_TABLE.find((e) => e.node === n)!
+      return entry.phase === 'P0' || entry.phase === 'P1'
+    }).sort())
   })
 
   it('v0 不做任何近似交付（approximate 是空集）', () => {
@@ -46,7 +48,9 @@ describe('shipped scope: v0 只承诺 P0', () => {
   })
 
   it('范围名单由能力表派生，没有第二份手工维护的清单', () => {
-    const derived = CAPABILITY_TABLE.filter((e) => e.phase === SHIPPED_PHASE).map((e) => e.node)
+    const derived = CAPABILITY_TABLE.filter(
+      (e) => e.capability === 'direct' && (e.phase === 'P0' || e.phase === 'P1'),
+    ).map((e) => e.node)
     expect([...SHIPPED_NODES]).toEqual(derived)
     expect(new Set(SHIPPED_NODES).size).toBe(SHIPPED_NODES.length)
     expect(SHIPPED_NODES.length).toBeGreaterThan(0)
@@ -109,7 +113,7 @@ describe('shipped scope: 语料加权覆盖（需 OPENSCAD_SRC）', () => {
 
     // 固化「范围外的节点是哪些」，让变化必须被看见。
     expect([...blockedNodes].sort()).toEqual(
-      ['fill', 'hull', 'import', 'minkowski', 'offset', 'polyhedron', 'projection', 'resize', 'roof', 'rotate_extrude', 'surface', 'text'].sort(),
+      ['fill', 'hull', 'import', 'minkowski', 'offset', 'polyhedron', 'projection', 'resize', 'roof', 'surface', 'text'].sort(),
     )
     expect(blocked).toBeGreaterThan(0)
   })

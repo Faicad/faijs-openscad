@@ -56,7 +56,11 @@ export const CAPABILITY_TABLE: readonly CapabilityEntry[] = [
   // this was mis-classified as `approximate` before.
   { node: 'color', capability: 'direct', phase: 'P0', note: 'Shape.setColor / setOpacity instance methods (not an op)' },
 
-  { node: 'rotate_extrude', capability: 'helper', phase: 'P1', note: 'cad.revolve; plane/axis/angle-direction must be verified first' },
+  // 2026-10-06 verified: cad.revolve(profile, { axis, at, angle }) is the
+  // direct mapping. OpenSCAD angle is degrees; revolve angle is bare radians
+  // (not * RADIAN — that would fold to degrees and break the geometry by 57x).
+  // The axis defaults to [0,0,1] matching OpenSCAD's Z-axis rotate_extrude.
+  { node: 'rotate_extrude', capability: 'direct', phase: 'P1', note: 'cad.revolve(profile, { axis:[0,0,1], at:[0,0,0], angle }); angle is bare radians (deg→rad in lower)' },
   { node: 'polyhedron', capability: 'unsupported', phase: 'P1', note: 'only absent op of 57 probed on the ① face (2026-10-06); BREP/mesh rebuild spike required' },
   { node: 'hull', capability: 'unsupported', phase: 'P1', note: 'cad.convexHull takes points (kernel hullFromPoints), not shapes — no shape-hull equivalent' },
   { node: 'minkowski', capability: 'unsupported', phase: 'P2', note: 'no exact kernel capability; must stay BLOCKED, never approximate silently' },
@@ -128,18 +132,21 @@ export interface CoverageReport {
  *  1. `SHIPPED_NODES` 之外的节点，v0 一律按 BLOCKED 处理（报 OSC3002），
  *     **不产出任何「近似」代码**。`approximate` 类在 v0 里是空集。
  *  2. P0 集合内**全部是 `direct`** —— 也就是说 v0 不需要任何运行时 helper 库，
- *     生成物只依赖 `@faicad/faijs` 的 ① TS 兼容面。`helper` 类（`rotate_extrude`
- *     / `resize`）是 P1 的事，写进 v0 就等于暗中扩大了承诺。
+ *     生成物只依赖 `@faicad/faijs` 的 ① TS 兼容面。`helper` 类（`resize`）
+ *     是 P1 的事，写进 v0 就等于暗中扩大了承诺。
  *
  * 这两条由 `src/ir/shipped-scope.test.ts` 断言，漂移会让测试失败。
  */
-export const SHIPPED_PHASE = 'P0' as const
+export const SHIPPED_PHASE = 'P1' as const
 
 export type ShippedPhase = typeof SHIPPED_PHASE
 
-/** v0 承诺落地的节点集合（按能力表 phase 派生，不手工维护第二份名单）。 */
+/** phase 排序值，用于比较。 */
+const PHASE_ORDER: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 }
+
+/** v0 承诺落地的节点集合：direct 且 phase ≤ SHIPPED_PHASE。 */
 export const SHIPPED_NODES: readonly string[] = CAPABILITY_TABLE.filter(
-  (e) => e.phase === SHIPPED_PHASE,
+  (e) => e.capability === 'direct' && (PHASE_ORDER[e.phase] ?? 99) <= (PHASE_ORDER[SHIPPED_PHASE] ?? 99),
 ).map((e) => e.node)
 
 const SHIPPED_INDEX = new Set(SHIPPED_NODES)

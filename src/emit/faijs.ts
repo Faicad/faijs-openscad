@@ -152,6 +152,27 @@ class Emitter {
           node.id,
         )
       }
+      case 'revolve': {
+        const child = this.emitNode(node.child)
+        if (child === undefined) return undefined
+        // cad.revolve(profile, { axis, at, angle })
+        // angle 是**裸弧度数字**——不乘 RADIAN。
+        // RADIAN = 180/PI = 57.2958，乘上去会把 2π 变成 360（度），然后 revolve
+        // 内部再 (360*180)/PI = 20626 度，几何完全错误。
+        // 裸弧度数字在脚本面不做 dimension 检查（revolve 无 paramDims 声明）。
+        const TWO_PI = 2 * Math.PI
+        if (Math.abs(node.angle - TWO_PI) < 1e-12) {
+          // 完整旋转：省略 angle，使用 revolve 默认 2π
+          return this.assign(
+            `await cad.revolve(${child}, { axis: [0, 0, 1], at: [0, 0, 0] })`,
+            node.id,
+          )
+        }
+        return this.assign(
+          `await cad.revolve(${child}, { axis: [0, 0, 1], at: [0, 0, 0], angle: ${exactNumber(node.angle)} })`,
+          node.id,
+        )
+      }
       case 'color': {
         const child = this.emitNode(node.child)
         if (child === undefined) return undefined

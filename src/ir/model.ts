@@ -167,6 +167,21 @@ export interface IrExtrude extends IrSolid {
   readonly centered: boolean
 }
 
+/**
+ * `rotate_extrude(angle)` → `cad.revolve(profile, { axis, at, angle })`。
+ *
+ * OpenSCAD 的 `rotate_extrude` 绕 Z 轴旋转 XY 轮廓，`angle` 参数是**度**。
+ * faijs `cad.revolve` 的 `angle` 是**裸弧度**（不乘 RADIAN；详见 emitter 注释）。
+ * 这里 IR 在 lower 时把度转成弧度存储，emitter 直接输出裸数字。
+ */
+export interface IrRevolve extends IrSolid {
+  readonly kind: 'revolve'
+  /** 被旋转的 2D 轮廓。 */
+  readonly child: IrGeometry2D
+  /** 旋转角度，弧度。完整旋转 = 2π。 */
+  readonly angle: number
+}
+
 /** `color([r,g,b,a])` → `setColor([r,g,b])` +（a<1 时）`setOpacity(a)`。 */
 export interface IrColor extends IrCommon {
   readonly kind: 'color'
@@ -213,6 +228,7 @@ export type IrGeometry =
   | IrIntersection
   | IrTransform
   | IrExtrude
+  | IrRevolve
   | IrColor
   | IrPassthrough
   | IrEmpty
@@ -248,6 +264,7 @@ export function irChildren(node: IrGeometry): readonly IrGeometry[] {
       return node.children
     case 'transform':
     case 'extrude':
+    case 'revolve':
     case 'color':
     case 'passthrough':
       return [node.child]
