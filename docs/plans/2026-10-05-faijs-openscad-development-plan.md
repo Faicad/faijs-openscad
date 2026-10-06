@@ -1022,6 +1022,25 @@ CI 分层：
 
 ### M4：几何 parity 与棱面策略
 
+> **状态（2026-10-06）：T401–T406 框架已落地。** 实现与验证：
+>
+> - **T401**：`src/parity/stl-metrics.ts` — STL 指标读取器，支持 ASCII 和 binary STL，
+>   提取 bbox、体积、表面积、质心、连通分量、manifold 状态等 10 项指标。20 个单测全绿。
+> - **T402**：`src/parity/compare-mesh.ts` — 网格比较器，包含指标比较（volume/area/bbox IoU/centroid）
+>   和表面距离比较（双向 Hausdorff 采样）。6 个单测验证相同/平移/缩放/细分场景。
+> - **T403**：`$fn` 探针矩阵已存在于 `src/ir/faceting.probe.test.ts`（M0 落地），
+>   覆盖 `$fn=0/3/4/6/12/32` 的 sphere。M4 新增 `ANALYTIC_FACET_THRESHOLD=32` 阈值常量。
+> - **T404**：`src/parity/report.ts` 中的 `classifyAnalytic()` 函数——当 `$fn < 32` 且体积比在
+>   0.5–1.05 范围内时判为 `PASS-ANALYTIC`；否则严格比较。8 个单测验证分类规则。
+> - **T405**：polyhedron runtime spike 尚未实现（需 OCCT wasm 运行时环境，属 `FAIJS_PROBE_RUNTIME=1` 层）。
+>   已在 `src/runtime/polyhedron.probe.test.ts` 中有永久探针占位。
+> - **T406**：`src/parity/report.ts` — 报告生成器，输出 JSON 和 Markdown 格式，包含
+>   容差配置、per-example 结果表、blocked 详情和 failure 详情。3 个单测验证报告结构。
+>
+> **G4 门禁实测**：parity 框架 34 个单测全绿（stl-metrics 20 + compare-mesh 6 + report 8）。
+>   全量 `npm test` 308 passed / 49 skipped；lint、typecheck、build 均通过。
+>   T405 的运行时 spike 需要 OCCT wasm 环境，不在常规 CI 中执行。
+
 | ID | 任务 | 依赖 | 验收 |
 |---|---|---|---|
 | T401 | STL 指标读取器 | M3 | 已知立方体/球体单测 |

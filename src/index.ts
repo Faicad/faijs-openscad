@@ -215,3 +215,39 @@ export type {
   CorpusManifestEntry,
   CorpusManifest,
 } from './cli/commands/corpus'
+
+// Parity (M4)
+export {
+  parseStl,
+  computeMetrics,
+  readStlMetrics,
+} from './parity/stl-metrics'
+export type {
+  BoundingBox,
+  MeshMetrics,
+  MetricsOptions,
+  StlTriangle,
+} from './parity/stl-metrics'
+
+export {
+  compareMetrics,
+  compareSurfaces,
+  DEFAULT_TOLERANCE,
+} from './parity/compare-mesh'
+export type {
+  ComparisonResult,
+  ComparisonTolerance,
+  ParityVerdict,
+} from './parity/compare-mesh'
+
+export {
+  classifyAnalytic,
+  buildReport,
+  renderMarkdown,
+  renderJson,
+  ANALYTIC_FACET_THRESHOLD,
+} from './parity/report'
+export type {
+  ParityEntry,
+  ParityReport,
+} from './parity/report'
