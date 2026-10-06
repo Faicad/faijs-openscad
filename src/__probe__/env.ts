@@ -81,7 +81,7 @@ export interface LoadedFaijs {
  * exported. It is neither the ① TS compat face (205 flat functions on the
  * package root) nor the ② cad script face (95 ops, `dist/lang/symbol-table.generated.js`).
  * Measuring capability against it produced five retracted findings — see
- * `outputs/2026-10-06-faijs-api-assumption-errors.md` §0.
+ * `docs/plans/2026-10-06-faijs-api-assumption-errors.md` §0.
  * Use `tsCompatFaceSymbols()` for the ① face and `scriptFaceSymbols()` for the ② face.
  *
  * Unit constants are also not on the package root — they come from `/units`.
@@ -139,7 +139,7 @@ export const P0_REQUIRED_OPS = [
  * the retracted claim "the TS layer cannot call mirror/profile/extrude/revolve".
  * They are all present on the ① face; the 38-key object is an internal BREP
  * namespace (`boxBrep`/`fuseBrep`/…), not the library surface. See
- * `outputs/2026-10-06-faijs-api-assumption-errors.md` §0.
+ * `docs/plans/2026-10-06-faijs-api-assumption-errors.md` §0.
  */
 export const INTERNAL_CAD_MISSING_OPS = [
   'mirror',

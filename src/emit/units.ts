@@ -10,6 +10,14 @@
  * Known exception: `cad.revolve`'s `angle` and profile arc angles are RADIANS
  * (faijs 0.29.5, packages/core/src/api/revolve.ts). Those call sites must use
  * `radianLiteral()` explicitly; see rotate-extrude.probe.test.ts.
+ *
+ * Why literals and never expressions: the emitter must not emit `Math.PI` or any
+ * arithmetic into an op argument. `Math` IS a sanctioned global on the script
+ * face (S4_SAFE_GLOBALS) and both exec backends evaluate it — but the pre-exec
+ * static checker (metadata-extractor.collectExprIdentifiers) does not list S4 in
+ * its identifier whitelist, so a bare `Math` inside an op argument is rejected
+ * with E_REFERENCE before execution. Precomputing here sidesteps that entirely.
+ * Full layered evidence: emit/faijs-script-globals.probe.test.ts.
  */
 
 /** Default significant formatting: deterministic, no exponent, no trailing junk. */

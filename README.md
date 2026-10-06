@@ -232,7 +232,7 @@ tests/
    实测可用（`setColor('#e53935')` + `setOpacity(0.5)` 经 `getAppearance()` 往返成功）。
 11. **单位常量在 `@faicad/faijs/units`**（`MM=1`、`DEGREE=1`、`RADIAN=180/π`），主入口不导出。
 12. **`.fai.js` 语句是换行分隔**，不是 `;` 分隔；写在一行会在首条语句后**静默截断**。
-13. 详细勘误与对 faijs 的文档/设计建议见 `outputs/2026-10-06-faijs-api-assumption-errors.md`。
+13. 详细勘误与对 faijs 的文档/设计建议见 `docs/plans/2026-10-06-faijs-api-assumption-errors.md`。
 14. **许可证 `AGPL-3.0-only`**（与 faijs-cadquery 对齐，2026-10-06 落盘）。OpenSCAD 仅作外部
     进程调用（其 GPL-2.0-or-later 不影响本包分发）；`src/csg/` 的解析器是针对 CSG 输出格式的
     独立实现，未复制上游 `lexer.l` / `parser.y` / C++ 求值器。

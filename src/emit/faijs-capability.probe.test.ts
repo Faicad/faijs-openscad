@@ -1,7 +1,7 @@
 /**
  * PROBE (permanent, plan §9.1 #4): faijs capability surface — the THREE API FACES.
  *
- * ⛔ CORRECTION (2026-10-06, see outputs/2026-10-06-faijs-api-assumption-errors.md §0):
+ * ⛔ CORRECTION (2026-10-06, see docs/plans/2026-10-06-faijs-api-assumption-errors.md §0):
  * this probe used to be built on a wrong mental model — that `import { cad }` from
  * the package root was "the faijs API", and that the script face was the only
  * surface the emitter could target. Both were wrong. faijs has three faces

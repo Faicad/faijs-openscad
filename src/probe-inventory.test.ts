@@ -20,6 +20,8 @@ export const REQUIRED_PROBES: readonly { file: string; topic: string }[] = [
   { file: 'emit/faijs-capability.probe.test.ts', topic: 'faijs three API faces capability' },
   { file: 'emit/faijs-face-measurements.probe.test.ts', topic: '① face under Host assembly (measurements)' },
   { file: 'emit/faijs-apply-matrix.probe.test.ts', topic: 'applyMatrix = multmatrix 落点（含裸数字/剪切/奇异）' },
+  { file: 'emit/faijs-script-globals.probe.test.ts', topic: '脚本全局标识符：Math 免 import，op 实参被静态校验拦' },
+  { file: 'emit/faijs-2d-profile.probe.test.ts', topic: '2D 落点：profile 线段表 → extrude' },
   { file: 'emit/units.probe.test.ts', topic: 'units + literal policy' },
   { file: 'ir/group-semantics.probe.test.ts', topic: 'group/root vs union vs compound' },
   { file: 'ir/faceting.probe.test.ts', topic: '$fn/$fa/$fs faceting fidelity' },
