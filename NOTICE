@@ -12,14 +12,19 @@ Copyright (c) 2026 — SPDX-License-Identifier: AGPL-3.0-only
 
 - OpenSCAD 仅在运行时通过子进程调用（argv 数组，不经 shell），不被链接、不被打包。
 - 本 npm 产物不包含 OpenSCAD 的二进制文件，也不包含其任何源码。
-- OpenSCAD 源码许可证为 GPL-2.0-or-later；其 `examples/` 目录另有 CC0 声明。
-  本包既不复制也不再分发这些内容；语料通过 `OPENSCAD_SRC` 外部引用。
+- OpenSCAD 源码许可证为 GPL-2.0-or-later；本包既不复制也不再分发其任何内容。
 
 --- 独立实现 ---
 
 本包的 CSG 解析器（`src/csg/`）是针对 OpenSCAD 的 CSG 输出格式**独立实现**的，
-基于公开的输出格式观察结果与本仓库自带测试，未复制 OpenSCAD 的
-`lexer.l` / `parser.y` / C++ 求值器实现。
+基于公开的输出格式观察结果与本仓库自带测试，未复制 OpenSCAD 的语法分析、词法分析与求值器实现。
+
+--- 随附的 OpenSCAD examples（CC0-1.0） ---
+
+本包在 `tests/fixtures/openscad-examples/` 下包含了 OpenSCAD 官方的 `examples/`
+目录，其以 **CC0 1.0**（公共领域，见同目录 `COPYING-CC0.txt`）发布，可自由复制与再分发，
+因此整目录随本 AGPL 包一同提供。这些 `.scad` 仅作为转换器正确性验证的语料，由
+`tests/verify-examples.ts` 经 OpenSCAD 二进制求值为 `.csg` 后解析；OpenSCAD 的 `src/`（GPL）源码并未包含。
 
 --- 商标 ---
 

@@ -7,3 +7,9 @@ ci.log
 tests/reports/*.json
 tests/reports/*.md
 !tests/reports/.gitkeep
+tests/fixtures/mcad/build/
+tests/fixtures/mcad/csg/
+tests/fixtures/openscad-examples/csg/
+tests/fixtures/openscad-examples/build/
+.scratch/
+.workbuddy/

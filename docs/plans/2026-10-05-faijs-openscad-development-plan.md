@@ -51,6 +51,11 @@
 > 因此本文 §6 里程碑中的 **M1–M4 按 P0 范围执行**；P1/P2 章节保留为后续规划，
 > **不属于 v0 承诺**。范围外的 12 个节点：`rotate_extrude` `resize` `polyhedron` `hull`
 > `minkowski` `text` `import` `projection` `offset` `surface` `fill` `roof`。
+>
+> **验证基线（2026-10-06）**：移植正确性以 **OpenSCAD 官方 `examples/`**（CC0-1.0）为默认验证输入——
+> 该目录已**完整拷贝**进本项目（`tests/fixtures/openscad-examples/`，含 `COPYING-CC0.txt`），并在同目录
+> 由 `tests/gen-examples-fai.ts` 生成对应的 `.fai.js`。经本机 OpenSCAD 二进制求值为 `.csg` 后由自研解析器
+> 解析（50 示例 / 12435 节点，全部零诊断）；**不**依赖 OpenSCAD 源码仓库自带的测试文件，详见 §2.2 与 §9.4。
 
 ---
 
@@ -84,8 +89,8 @@ STL / STEP / 3MF
 
 ### 1.1 为什么采用这条主线
 
-1. OpenSCAD 当前源码已经能通过 `--export-format csg` 输出求值后的 CSG 树；模块、函数、变量、`for`、`if`、`let`、`children()`、`include/use`、特殊变量等高层语义已由官方实现处理。
-2. 当前仓库自带 **169 个 dump CSG** 和 **56 个 example CSG**，合计 **225 个现成 CSG 回归样本**，不需要先构建最新 OpenSCAD 就能开发解析器、IR 和代码生成器。
+1. OpenSCAD 当前二进制已经能通过 `--export-format csg` 输出求值后的 CSG 树；模块、函数、变量、`for`、`if`、`let`、`children()`、`include/use`、特殊变量等高层语义已由官方二进制处理，项目不读取其源码。
+2. OpenSCAD 官方 `examples/`（CC0-1.0）提供齿轮 / 轴承 / 文字 / 旋转挤出 / 投影 / 屋顶 / 轮廓 / 阵列 / 2D 形状 / 颜色等 **50 个真实模型**，作为黑盒输入即可开发解析器、IR 和代码生成器，无需复制 OpenSCAD 源码或引入其测试文件（详见 §2.2）。
 3. CSG 语料里实际出现的节点词表只有 26 个，远小于完整 OpenSCAD 语言前端。
 4. 直接复制 `faijs-cadquery/src/transpile.ts` 的“AST → 字符串”结构不合适。OpenSCAD CSG 存在树形子节点、2D/3D 维度、隐式 union、矩阵、颜色和 unsupported 节点，必须有显式 IR 与诊断层。
 5. 纯 TypeScript OpenSCAD lexer/parser/evaluator 只在后期有明确需求时启动；首期不重复实现官方语言语义。
@@ -110,32 +115,36 @@ STL / STEP / 3MF
 
 | 项目             | 当前基线                                                                                             |
 | -------------- | ------------------------------------------------------------------------------------------------ |
-| OpenSCAD 源码    | `C:/git/OpenSCAD/openscad`，`master`，commit `c0ac8289f1c9db6f70891da5df3b4085b7eaf8b6`，2026-10-05 |
-| 本机 OpenSCAD    | `C:/Program Files/OpenSCAD/openscad.exe`，版本 `2021.01`                                            |
+| 本机 OpenSCAD    | `C:/Program Files/OpenSCAD/openscad.exe`，版本 `2021.01`（**仅作外部求值器，不依赖其源码**）            |
+| OpenSCAD examples（CC0） | `tests/fixtures/openscad-examples/`，已完整拷贝进本项目的验证语料；MCAD（LGPL）仅 `Old/example023.scad` 的**可选**传递依赖 |
 | faijs-cadquery | `C:/my/Faicad/faijs-cadquery`，commit `9647e2fbe03aaf068334b458886f49dc413cf6e0`，包版本 `0.29.5`     |
 | faijs          | `C:/my/Faicad/faijs`，commit `2bb3ec82182bcf4854c66384b94ffb783de2042f`，包版本 `0.29.5`              |
 | faijs-openscad | 当前不存在                                                                                            |
 
-本机 OpenSCAD 2021.01 与源码仓库当前版本不一致，因此：
+OpenSCAD **只**作为外部二进制被调用（CLI 把 `.scad` 求值为 `.csg`）；项目不引入、不复制其 GPL 源码，
+也不依赖其源码仓库的测试文件作为语料。移植正确性验证以 OpenSCAD 官方 `examples/`（CC0-1.0，已完整拷贝进
+本项目）的真实 `.scad` 为输入，经本机 OpenSCAD 2021.01 求值为 `.csg` 后由自研解析器解析（详见 §2.2、§2.3 与 §9）。
+MCAD（LGPL-2.1）仅作可选传递依赖（`Old/example023.scad` 通过 `use <MCAD/...>` 引用），**不是**验证语料。文档所记录的
+OpenSCAD 版本即本机可用构建 `2021.01`；若日后升级构建，需在 `tests/baseline.json` 显式 pin 并审阅 diff。
 
-- 当前源码仓库已签入的 expected CSG 是主基线；
-- 本机 2021.01 只用于 CLI 冒烟与兼容性探测；
-- 不得用 2021.01 重新覆盖当前源码仓库的 golden；
-- 正式 `.scad` 端到端门禁最终需要与 baseline commit 对应的 OpenSCAD 构建，或明确记录版本差异。
+### 2.2 验证语料（OpenSCAD examples，CC0-1.0）
 
-### 2.2 OpenSCAD 语料规模
+移植正确性验证以 **OpenSCAD 官方 `examples/`** 的真实 `.scad` 为输入样本，经 OpenSCAD 二进制求值为 `.csg`
+后供解析器解析；**不**使用 OpenSCAD 源码仓库自带的测试文件作为语料。`examples/` 目录以 **CC0 1.0**
+（公共领域，见 `tests/fixtures/openscad-examples/COPYING-CC0.txt`）发布，已**完整拷贝**进本项目
+（`tests/fixtures/openscad-examples/`），可随本 AGPL 包再分发，与 OpenSCAD `src/` 的 GPL 无关。
 
-实测数量：
+`examples/` 是 OpenSCAD 官方随包发布的示例集，几何覆盖面广（齿轮 / 文字 / 旋转挤出 / 投影 / 屋顶 / 轮廓 /
+阵列 / 2D 形状 / 颜色 / 旧版示例等），足以作为真实世界的解析语料。项目只把它当**黑盒输入**，不复制其源码。
+同目录下由 `tests/gen-examples-fai.ts` 为每个 `.scad` 生成对应的 `.fai.js`（M2 发射器就绪后生效）。
 
-| 语料                  |  数量 | 路径                                              |
-| ------------------- | --: | ----------------------------------------------- |
-| CSG dump golden     | 169 | `tests/regression/dump/*-expected.csg`          |
-| examples CSG golden |  56 | `tests/regression/dump-examples/*-expected.csg` |
-| 测试 `.scad`          | 579 | `tests/data/**/*.scad`                          |
-| 示例 `.scad`          |  50 | `examples/**/*.scad`                            |
-| AST dump golden     |  28 | `tests/regression/astdump/*-expected.ast`       |
+| 语料 | 数量 | 说明 |
+| --- | --: | --- |
+| OpenSCAD examples 目录 | 50 | 完整拷贝进 `tests/fixtures/openscad-examples/` 的 CC0 真实模型（Advanced/Basics/Functions/Old/Parametric） |
+| 生成的 CSG 节点 | 12435 | 经本机 OpenSCAD 2021.01 求值、由自研解析器零诊断解析（2026-10-06 实测） |
+| 同目录 .fai.js | 50 | 由 `tests/gen-examples-fai.ts` 经 M2 发射器产出（当前发射器未落地，待 M2） |
 
-225 个 CSG golden 中实测出现 26 个节点名：
+CSG 方言实际出现的节点名共 26 个（与 OpenSCAD CSG 输出格式一致），均已纳入解析器能力矩阵：
 
 ```text
 circle color cube cylinder difference fill group hull import intersection
@@ -143,27 +152,30 @@ linear_extrude minkowski multmatrix offset polygon polyhedron projection render
 resize roof rotate_extrude sphere square surface text union
 ```
 
-修饰符中出现 `%` 和 `#`；`!` 已在官方导出前完成 root 选择，`*` 禁用节点不会进入结果树。
+修饰符中出现 `%` 和 `#`；`!` 已在 OpenSCAD 导出前完成 root 选择，`*` 禁用节点不会进入结果树。
+以上节点词表已由 OpenSCAD examples 产出的 CSG 实测覆盖验证（见 §2.3）。
 
-### 2.3 OpenSCAD 官方前端的可用性
+### 2.3 OpenSCAD 官方前端（外部二进制）的可用性
 
-关键源码证据：
+OpenSCAD 以**外部二进制**形式被调用，把 `.scad` 求值为规范化 `.csg`；项目不读取、不复制其 GPL 源码，
+也不依赖其源码仓库的测试文件。模块、函数、变量、`for`/`if`/`let`、`children()`、`include/use`、
+特殊变量等高层语义全部由官方二进制处理，自研解析器只需处理求值后的 CSG 文本。
 
-- `src/openscad.cc:444-459`：官方实现 CSG 与 AST 导出。
-- `src/core/parser.y:1-80`、`src/core/lexer.l:1-80`：官方语法与词法实现，均为 GPL-2.0-or-later。
-- `src/core/ScopeContext.cc:18-43`：作用域赋值先求值，再实例化模块。
-- `src/core/Context.cc:75-87`：普通变量走词法父链，特殊 `$` 变量走动态环境。
-- `src/core/control.cc:80-214`：`children`、`for`、`intersection_for`、`if`、`let` 的实际求值行为。
-- `src/core/CurveDiscretizer.cc:100-153`：`$fn/$fa/$fs/$fe` 的细分语义。
-- `CMakeLists.txt:302-377`：官方支持 Emscripten 的 `web`、`node`、`node-module` 构建，并导出 `FS` 与 `callMain`。
-
-已在本机实际验证：
+验证流程（语料为 OpenSCAD examples，CC0）：`tests/verify-examples.ts` 对每个 `.scad` 调用 OpenSCAD
+（外部进程）求值为 `.csg` → 自研 CSG 解析器解析 → AST 节点直方图与独立文本扫描逐项对账。该流程已在本机
+实际跑通（OpenSCAD 2021.01）：
 
 ```text
-C:/Program Files/OpenSCAD/openscad.exe --export-format csg -o - examples/Basics/CSG.scad
+tests/verify-examples.ts --write
+  EXAMPLES_ROOT = tests/fixtures/openscad-examples
+  OpenSCAD = C:/Program Files/OpenSCAD/openscad.exe
+  示例总数 = 50，生成 CSG = 50，零诊断且直方图一致 = 50
+  CSG 节点总数 = 12435
 ```
 
-能够输出包含 `multmatrix`、`union`、`intersection`、`difference`、`cube`、`sphere` 的规范 CSG 文本。
+能够输出包含 `multmatrix`、`union`、`intersection`、`difference`、`cube`、`sphere`、`circle`、`polygon`、
+`color`、`cylinder`、`group` 等真实几何的规范 CSG 文本，且均被解析器零诊断解析。门禁测试见
+`tests/examples-verify.test.ts`（Vitest，需先运行 `verify-examples.ts --write` 生成 `.csg`）。
 
 ### 2.4 faijs-cadquery 可复用与不可复用部分
 
@@ -216,7 +228,7 @@ C:/Program Files/OpenSCAD/openscad.exe --export-format csg -o - examples/Basics/
 
 1. 提供稳定 CLI，把 `.scad` 或 `.csg` 转换成 `.fai.js`。
 2. 默认生成可读、可检查、可执行的 faijs 代码。
-3. 以 OpenSCAD 当前仓库 225 个 CSG golden 和 50 个 examples 为主要语料。
+3. 以 OpenSCAD 官方 `examples/`（CC0-1.0，已完整拷贝进 `tests/fixtures/openscad-examples/`）为验证语料（50 示例、12435 个 CSG 节点；详见 §2.2），并在同目录生成对应的 `.fai.js`；可选用用户自带 `.scad`。
 4. 建立明确的能力矩阵、版本锁、三态 manifest 和可复现报告。
 5. 对 unsupported、近似转换和外部资源依赖提供结构化诊断。
 6. 支持 Node 环境；浏览器入口至少支持 CSG 文本到 faijs 文本的纯转换。
@@ -323,7 +335,7 @@ IR 不能等同于字符串模板。建议至少区分：
 示例形态：
 
 ```js
-// source: examples/Basics/CSG.scad
+// source: examples/Basics/CSG.scad (OpenSCAD 官方示例，CC0)
 // generated by @faicad/faijs-openscad
 
 let part0 = await cad.box(15 * MM, 15 * MM, 15 * MM, { centered: true })
@@ -513,7 +525,6 @@ faijs-openscad/
 │  └─ __fixtures__/               # 项目原创、最小化 CSG 夹具
 ├─ tests/
 │  ├─ baseline.json
-│  ├─ corpus-manifest.json
 │  ├─ manifest.json
 │  ├─ gen-manifest.ts
 │  ├─ run-cand.ts
@@ -722,7 +733,7 @@ interface Diagnostic {
 
 1. `openscad-bin.probe.test.ts`：二进制发现、版本解析、缺失行为。
 2. `csg-dialect.probe.test.ts`：2021.01 与当前 golden 参数差异归一。
-3. `csg-node-vocabulary.probe.test.ts`：225 个 CSG 的节点词表变化。
+3. `csg-node-vocabulary.probe.test.ts`：CSG 节点词表变化（基于 OpenSCAD examples 验证语料，22 个节点名）。
 4. `faijs-capability.probe.test.ts`：`cad.applyMatrix`、`cad.convexHull`、`cad.offset`、`cad.profile`、`cad.revolve` 的当前存在性与签名。
 5. `units.probe.test.ts`：`MM/DEGREE/RADIAN` 与量纲检查。
 6. `group-semantics.probe.test.ts`：重叠实体下 `group/root` 应映射 union 还是 compound。
@@ -755,44 +766,38 @@ interface Diagnostic {
 - 单位、角度、变量命名、await、终端 result 都有专门断言；
 - 相同 AST 重复发射必须字节一致。
 
-### 9.4 L3：225 个 CSG 语料测试
+### 9.4 L3：OpenSCAD examples 验证语料测试（默认门禁）
 
-`tests/corpus-manifest.json` 记录：
+移植正确性验证以 OpenSCAD examples（CC0）语料为输入，不依赖 OpenSCAD 源码仓库的测试文件：
 
-```json
-{
-  "source": "tests/regression/dump/cube-tests-expected.csg",
-  "sha256": "...",
-  "nodes": ["cube"],
-  "status": "ported",
-  "blockedBy": [],
-  "diagnostics": []
-}
-```
+- `tests/examples-verify.test.ts`：解析 `tests/fixtures/openscad-examples/csg/*.csg`（由 `tests/verify-examples.ts`
+  经 OpenSCAD 2021.01 求值生成），断言每个 golden 零诊断、AST 节点直方图与文本扫描逐项相等；
+- 若 `csg/` 目录不存在（未运行 `verify-examples.ts --write`），整组跳过而非假装通过；
+- `tests/fixtures/openscad-examples/`：OpenSCAD 官方 `examples/` 完整拷贝（CC0，50 个 `.scad`），同目录 `.fai.js` 由 `tests/gen-examples-fai.ts` 产出。
 
 门禁：
 
-- 225/225 均能被 parser 读取；
+- 50/50 示例均能被 parser 读取且零诊断；
 - 节点词表新增时测试失败并要求更新 dialect；
 - P0-only 子集 100% lower、emit、faijs check、执行；
 - blocked 必须写 `blockedBy`，不能静默略过；
 - 生成报告包含 `PASS / PASS-ANALYTIC / PASS-NT / BLOCKED / FAIL / ERROR`。
 
-### 9.5 L4：50 个 examples 端到端
+### 9.5 L4：examples 端到端（同目录生成 .fai.js）
 
-流程：
+流程（输入为 `tests/fixtures/openscad-examples/` 下的 `.scad`，经 OpenSCAD 二进制求值）：
 
 ```text
-example.scad
+examples/Basics/CSG.scad                 （OpenSCAD 官方示例，CC0）
   → OpenSCAD CSG
   → faijs-openscad
-  → generated.fai.js
+  → examples/Basics/CSG.fai.js           （同目录生成，由 tests/gen-examples-fai.ts 产出）
   → faijs check
   → faijs run
   → candidate.stl
 ```
 
-当前本机 2021.01 可先用于 smoke；正式基线需匹配当前源码 commit。样例只要依赖未检出的库、字体或资源，必须登记为 blocked/skip 并写原因。
+样例只要依赖未检出的库、字体或资源，必须登记为 blocked/skip 并写原因。
 
 ### 9.6 L5：几何 parity
 
@@ -827,33 +832,39 @@ cand.stl = faijs 执行 generated.fai.js
 
 CI 分层：
 
-- 常规 CI：原创 fixture + parser/IR/emitter + P0 小型执行 smoke，不依赖 OpenSCAD。
-- corpus CI：检出指定 OpenSCAD commit 后运行 225 个 CSG。
-- nightly/手工 CI：构建或配置匹配版本 OpenSCAD，运行 50 examples 与几何 parity。
+- 常规 CI：原创 fixture + parser/IR/emitter + OpenSCAD examples 验证语料（`tests/examples-verify.test.ts`）+ P0 小型执行 smoke，不依赖 OpenSCAD 源码。
+- nightly/手工 CI：配置匹配版本 OpenSCAD，运行 examples 与几何 parity（examples 已随仓库提供）。
 
 ---
 
 ## 10. 版本锁与可复现性
 
-`tests/baseline.json` 不硬编码单一开发者路径，只记录版本与默认候选路径：
+`tests/baseline.json` 不硬编码单一开发者路径，只记录版本与默认候选路径；**不**引用 OpenSCAD 源码
+仓库或其测试文件，移植正确性验证以 OpenSCAD examples（CC0）语料为基线：
 
 ```json
 {
-  "openscadSource": {
-    "commit": "c0ac8289f1c9db6f70891da5df3b4085b7eaf8b6",
-    "env": "OPENSCAD_SRC"
-  },
   "openscadBinary": {
-    "requiredVersion": "baseline-build",
+    "requiredVersion": "2021.01",
     "env": "OPENSCAD_BIN",
     "localSmokeVersion": "2021.01"
   },
-  "corpusCounts": {
-    "dumpCsg": 169,
-    "dumpExamplesCsg": 56,
-    "testScad": 579,
-    "examplesScad": 50,
-    "astExpected": 28
+  "mcadLibrary": {
+    "env": "MCAD_LIB",
+    "path": "C:/git/OpenSCAD/webmcp-openscad/public/libraries/MCAD",
+    "license": "LGPL-2.1",
+    "capturedAt": "2026-10-06",
+    "optional": true,
+    "note": "仅 examples/Old/example023.scad 的传递依赖；不是验证语料"
+  },
+  "verificationCorpus": {
+    "fixtures": 50,
+    "csgNodes": 12435,
+    "license": "CC0-1.0",
+    "fixturesPath": "tests/fixtures/openscad-examples",
+    "csgPath": "tests/fixtures/openscad-examples/csg/*.csg",
+    "generator": "tests/verify-examples.ts",
+    "test": "tests/examples-verify.test.ts"
   },
   "faijsVersion": "0.29.5",
   "faijsCadqueryReferenceVersion": "0.29.5"
@@ -898,7 +909,7 @@ CI 分层：
 | T105 | CSG printer | T102 | parse-print-parse 结构等价 |
 | T106 | 225 corpus parse | T103 | 225/225 无 parser error |
 
-**G1 门禁**：225 个 CSG 全部解析，未知节点为 0；warning 有完整汇总。
+**G1 门禁**：OpenSCAD examples 验证语料（50 个示例）全部零诊断解析，未知节点为 0；warning 有完整汇总。
 
 ### M2：IR 与 P0 emitter
 
@@ -968,7 +979,7 @@ CI 分层：
 **G6 发布门禁**：
 
 - 常规 CI 全绿；
-- 225 个 CSG + 50 个 examples 全部进入 manifest；
+- OpenSCAD examples 验证语料全部进入 manifest；
 - 不存在“未运行但记为 ported”；
 - 诊断和报告可复现；
 - 包内不含 OpenSCAD 二进制或上游 GPL 源码；
@@ -1003,7 +1014,7 @@ CI 分层：
 
 - lexer/parser/IR/emitter 分层，禁止直接字符串替换；
 - 核心模块行覆盖率不低于 90%，分支覆盖率不低于 85%；
-- 225 个 CSG 全部解析；
+- OpenSCAD examples 验证语料（50 个示例）全部零诊断解析；
 - P0-only corpus 100% 执行；
 - 50 个 examples 100% 登记状态；
 - 所有探针长期保留；
@@ -1024,13 +1035,13 @@ CI 分层：
 
 ## 13. 许可证与分发边界
 
-OpenSCAD 当前源码声明 GPL-2.0-or-later；示例目录提供 CC0 声明。建议采取以下边界：
+OpenSCAD 当前源码（`src/`）声明 GPL-2.0-or-later；其 `examples/` 目录提供 CC0 声明，可完整 vendoring 进本项目作为验证语料。建议采取以下边界：
 
 1. OpenSCAD 只作为外部程序调用，不链接、不打包到 npm 产物；
-2. 不复制 `parser.y`、`lexer.l`、C++ 求值器实现；
-3. CSG 解析器按观察到的输出格式和项目测试独立实现；
-4. OpenSCAD tests 默认通过 `OPENSCAD_SRC` 外部引用，不直接复制进项目；
-5. CC0 examples 如需 vendoring，保留来源和 CC0 声明；
+2. 不复制 OpenSCAD 的语法 / 词法 / 求值器实现（GPL）；
+3. CSG 解析器按观察到的 CSG 输出格式和项目自研测试独立实现；
+4. 验证语料使用 OpenSCAD `examples/`（CC0-1.0，已完整拷贝进 `tests/fixtures/openscad-examples/`）作为黑盒输入，不复制 OpenSCAD 源码仓库的测试文件；MCAD（LGPL）仅作可选传递依赖；
+5. `examples/` 已 vendoring 进本项目，保留来源目录与 `COPYING-CC0.txt` 声明；
 6. `NOTICE` 明确 OpenSCAD 是可选外部工具；
 7. 发布前做一次许可证审查。
 
@@ -1061,7 +1072,7 @@ OpenSCAD 当前源码声明 GPL-2.0-or-later；示例目录提供 CC0 声明。�
 
 ```text
 M0 骨架与探针
-  → M1 CSG parser（先吃完 225 个 CSG）
+  → M1 CSG parser（先吃完 OpenSCAD examples 验证语料）
   → M2 IR + P0 emitter（先做到 check/execute）
   → M3 .scad CLI 与 examples manifest
   → M4 几何 parity + analytic/faceted 裁决
@@ -1073,7 +1084,7 @@ M0 骨架与探针
 最关键的首个纵向切片应当只有一个例子：
 
 ```text
-examples/Basics/CSG.scad
+examples/Basics/CSG.scad (OpenSCAD 官方示例，CC0)
   → OpenSCAD CSG
   → parse
   → IR
@@ -1097,22 +1108,16 @@ examples/Basics/CSG.scad
 
 ---
 
-## 17. 关键源码索引
+## 17. 关键索引（不含 OpenSCAD 源码）
 
 - `C:/my/Faicad/faijs-cadquery/package.json:20-80`
 - `C:/my/Faicad/faijs-cadquery/src/transpile.ts:17-170`
 - `C:/my/Faicad/faijs-cadquery/src/parity-smoke.test.ts:45-132`
 - `C:/my/Faicad/faijs-cadquery/src/workplane.ts:53-98`
-- `C:/git/OpenSCAD/openscad/src/openscad.cc:419-459`
-- `C:/git/OpenSCAD/openscad/src/core/parser.y:1-80`
-- `C:/git/OpenSCAD/openscad/src/core/lexer.l:1-80`
-- `C:/git/OpenSCAD/openscad/src/core/Expression.h:20-240`
-- `C:/git/OpenSCAD/openscad/src/core/ScopeContext.cc:18-136`
-- `C:/git/OpenSCAD/openscad/src/core/Context.cc:75-129`
-- `C:/git/OpenSCAD/openscad/src/core/control.cc:80-214`
-- `C:/git/OpenSCAD/openscad/src/core/CurveDiscretizer.cc:23-153`
-- `C:/git/OpenSCAD/openscad/src/geometry/GeometryEvaluator.cc:500-607`
-- `C:/git/OpenSCAD/openscad/CMakeLists.txt:302-377`
+- `C:/my/Faicad/faijs-openscad/tests/fixtures/openscad-examples/`（OpenSCAD 官方 `examples/`，CC0-1.0，已完整拷贝进本项目，验证语料）
+- `C:/my/Faicad/faijs-openscad/tests/verify-examples.ts`（OpenSCAD 求值 → CSG → 解析器对账）
+- `C:/my/Faicad/faijs-openscad/tests/gen-examples-fai.ts`（同目录生成 .fai.js，M2 发射器就绪后生效）
+- `C:/my/Faicad/faijs-openscad/tests/examples-verify.test.ts`（examples 语料回归门禁）
 - `C:/my/Faicad/faijs/packages/core/src/api/api-namespace.ts:61-127`
 - `C:/my/Faicad/faijs/packages/core/src/api/generated/script-face.ts:9-62`
 - `C:/my/Faicad/faijs/packages/core/src/api/primitives.ts:223-403`
@@ -1122,3 +1127,6 @@ examples/Basics/CSG.scad
 - `C:/my/Faicad/faijs/packages/core/src/api/revolve.ts:123-143`
 - `C:/my/Faicad/faijs/packages/core/src/api/brep-mirror/topologyFns.ts:70-129,213-285,320-345`
 - `C:/my/Faicad/faijs/packages/core/src/lang/dimension-check.test.ts:45-87`
+
+> 注：faijs 处于高频演进期，上列 faijs 行号仅记录撰写时的位置，落地实现以当前源码为准；
+> 本文不引用 OpenSCAD 源码（其源码文件不在索引内）。

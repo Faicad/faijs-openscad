@@ -1,7 +1,7 @@
 /**
  * Observed CSG node vocabulary (plan §2.2).
  *
- * Source of truth: the 225 `*-expected.csg` goldens in the OpenSCAD checkout
+ * Source of truth: the 26-node CSG vocabulary (container/leaf classes) derived from the MCAD verification corpus
  * pinned by `src/baseline.ts`, cross-checked by
  * `src/csg/csg-node-vocabulary.probe.test.ts`. This is an *observation*, not a
  * promise: if the corpus grows a new node name, that probe fails on purpose so

@@ -81,9 +81,15 @@ describe('probe: CSG dialect', () => {
     expect(artifact.csgText).toMatch(/(cube|sphere|cylinder|union|multmatrix)/)
   })
 
-  it('baseline pins a required build, not the local smoke binary', () => {
-    expect(BASELINE.openscadBinary.requiredVersion).toBe('baseline-build')
-    expect(BASELINE.openscadSource.commit).toMatch(/^[0-9a-f]{40}$/)
+  it('baseline pins the OpenSCAD examples verification corpus (CC0), not an OpenSCAD source commit', () => {
+    expect(BASELINE.openscadBinary.requiredVersion).toBe('2021.01')
+    // 默认验证语料是 OpenSCAD examples（CC0），不是 GPL 源码 commit。
+    expect(BASELINE.verificationCorpus.license).toBe('CC0-1.0')
+    expect(BASELINE.verificationCorpus.fixtures).toBe(50)
+    expect(BASELINE.verificationCorpus.csgNodes).toBe(12435)
+    // MCAD 仅为可选补充（example023 的传递依赖）。
+    expect(BASELINE.mcadLibrary.license).toBe('LGPL-2.1')
+    expect(BASELINE.mcadLibrary.optional).toBe(true)
   })
 
   it.skipIf(!bin.available)('records the local binary version for drift analysis', () => {

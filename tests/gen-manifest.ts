@@ -1,9 +1,13 @@
 /**
- * Corpus manifest generator (plan §9.4 / T005).
+ * OpenSCAD upstream corpus manifest generator (plan §9.4 / T005) — **optional**.
  *
  * Emits a three-state manifest (`ported` / `blocked` / `skipped`) over the
- * OpenSCAD corpus. Hard rule: an entry may only be `blocked` or `skipped` with
- * a non-empty `blockedBy` — silence is not an acceptable corpus state.
+ * OpenSCAD upstream corpus, used only as a supplementary breadth check. The
+ * default verification baseline is the OpenSCAD `examples/` corpus
+ * (`tests/examples-verify.test.ts`, CC0-1.0), which does NOT use OpenSCAD's own
+ * test files or GPL source. Hard rule: an entry may only be
+ * `blocked` or `skipped` with a non-empty `blockedBy` — silence is not an
+ * acceptable corpus state.
  *
  * Usage:
  *   tsx tests/gen-manifest.ts [--src <openscad-root>] [--out <file>] [--kind csg|examples]
@@ -13,7 +17,7 @@
 import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs'
 import { join, resolve, relative } from 'node:path'
 import { sha256Hex } from '../src/util/hash'
-import { BASELINE } from '../src/baseline'
+import { BASELINE, OPENSCAD_SRC_ENV } from '../src/baseline'
 import { resolveCorpusRoot } from '../src/environment'
 
 export type ManifestStatus = 'ported' | 'blocked' | 'skipped'
@@ -116,7 +120,7 @@ export function buildManifest(corpusRoot: string): CorpusManifest {
     generatedBy: 'faijs-openscad/tests/gen-manifest.ts',
     generatedAt: new Date().toISOString(),
     baseline: {
-      openscadCommit: BASELINE.openscadSource.commit,
+      verificationCorpus: BASELINE.verificationCorpus.fixturesPath,
       faijsVersion: BASELINE.faijsVersion,
     },
     counts,
@@ -133,7 +137,7 @@ function main(): number {
   const corpusRoot = resolveCorpusRoot(get('--src'))
   if (!corpusRoot) {
     process.stderr.write(
-      `${BASELINE.openscadSource.env} is not set (or does not exist) — cannot generate corpus manifest.\n`,
+      `${OPENSCAD_SRC_ENV} is not set (or does not exist) — cannot generate the OpenSCAD upstream corpus manifest.\n`,
     )
     return 3
   }

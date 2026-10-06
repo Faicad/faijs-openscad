@@ -6,11 +6,12 @@
  * entry deliberately does not export this module.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { Diagnostic } from './diagnostics/diagnostic'
 import { DiagnosticBag } from './diagnostics/diagnostic'
 import { DiagnosticCode } from './diagnostics/codes'
-import { BASELINE } from './baseline'
+import { BASELINE, OPENSCAD_SRC_ENV } from './baseline'
 import { discoverOpenScadBinary } from './frontend/discover-openscad'
 import { CONVERTER_NAME, CONVERTER_VERSION, FAIJS_TARGET_VERSION } from './version'
 
@@ -65,33 +66,48 @@ export function probeFaijs(cwd = process.cwd()): FaijsProbe {
   }
 }
 
-/** Locate the OpenSCAD source corpus root. */
+const REPO_ROOT = dirname(fileURLToPath(import.meta.url)) + '/..'
+const EXAMPLES_CSG_DIR = join(REPO_ROOT, 'tests', 'fixtures', 'openscad-examples', 'csg')
+
+/** Locate the optional OpenSCAD upstream corpus root (skipped by default). */
 export function resolveCorpusRoot(override?: string): string | undefined {
-  const fromEnv = process.env[BASELINE.openscadSource.env]
+  const fromEnv = process.env[OPENSCAD_SRC_ENV]
   const root = override ?? (fromEnv && fromEnv.trim() !== '' ? fromEnv : undefined)
   if (!root) return undefined
   return existsSync(root) ? root : undefined
 }
 
-/** Count the corpus globs. Kept tiny: only `*-expected.csg` style suffixes. */
+/** Count the optional OpenSCAD upstream corpus: `*-expected.csg` files (recursive). */
 export function countCorpus(root: string): Record<string, number> {
-  const counts: Record<string, number> = {}
-  for (const key of ['dumpCsg', 'dumpExamplesCsg', 'astExpected'] as const) {
-    const rel = BASELINE.corpusPaths[key]
-    const dirEnd = rel.lastIndexOf('/')
-    const dir = join(root, rel.slice(0, dirEnd))
-    const suffix = rel.slice(dirEnd + 1).replace(/\*/g, '')
-    let n = 0
+  const counts: Record<string, number> = { csg: 0 }
+  const walk = (dir: string): void => {
+    let entries
     try {
-      for (const name of readdirSync(dir)) {
-        if (name.endsWith(suffix)) n++
-      }
+      entries = readdirSync(dir, { withFileTypes: true })
     } catch {
-      n = 0
+      return
     }
-    counts[key] = n
+    for (const e of entries) {
+      const p = join(dir, e.name)
+      if (e.isDirectory()) walk(p)
+      else if (e.name.endsWith('-expected.csg')) counts.csg++
+    }
   }
+  walk(root)
   return counts
+}
+
+/** Whether the OpenSCAD `examples/` verification corpus on disk matches the pinned fixture count. */
+export function examplesCorpusMatchesBaseline(): boolean {
+  let n = 0
+  try {
+    for (const name of readdirSync(EXAMPLES_CSG_DIR)) {
+      if (name.endsWith('.csg')) n++
+    }
+  } catch {
+    return false
+  }
+  return n === BASELINE.verificationCorpus.fixtures
 }
 
 export async function inspectEnvironment(options: InspectOptions = {}): Promise<EnvironmentReport> {
@@ -108,8 +124,8 @@ export async function inspectEnvironment(options: InspectOptions = {}): Promise<
       code: DiagnosticCode.OSC5002,
       message:
         `OpenSCAD ${found.version} differs from the baseline build ` +
-        `(${BASELINE.openscadBinary.requiredVersion}, source commit ${BASELINE.openscadSource.commit}). ` +
-        `Use it for smoke only — do NOT regenerate corpus goldens with it.`,
+        `(${BASELINE.openscadBinary.requiredVersion}). ` +
+        `Use it for smoke only — do NOT regenerate the examples verification corpus with it.`,
     })
   }
 
@@ -135,7 +151,7 @@ export async function inspectEnvironment(options: InspectOptions = {}): Promise<
         root: corpusRoot,
         ...(options.skipCorpusCount
           ? {}
-          : { counts: countCorpus(corpusRoot), matchesBaseline: corpusCountsMatch(countCorpus(corpusRoot)) }),
+          : { counts: countCorpus(corpusRoot), matchesBaseline: examplesCorpusMatchesBaseline() }),
       }
     : { configured: false }
 
@@ -143,7 +159,7 @@ export async function inspectEnvironment(options: InspectOptions = {}): Promise<
     bag.add({
       code: DiagnosticCode.OSC5001,
       severity: 'info',
-      message: `${BASELINE.openscadSource.env} is not set (or does not exist) — corpus + example gates are skipped.`,
+      message: `${OPENSCAD_SRC_ENV} is not set (or does not exist) — OpenSCAD upstream corpus + example gates are skipped; OpenSCAD examples verification corpus is the default baseline.`,
     })
   }
 
@@ -161,15 +177,6 @@ export async function inspectEnvironment(options: InspectOptions = {}): Promise<
     corpus,
     diagnostics: bag.all(),
   }
-}
-
-export function corpusCountsMatch(counts: Record<string, number>): boolean {
-  const expected = BASELINE.corpusCounts
-  return (
-    counts.dumpCsg === expected.dumpCsg &&
-    counts.dumpExamplesCsg === expected.dumpExamplesCsg &&
-    counts.astExpected === expected.astExpected
-  )
 }
 
 export const FAIJS_TARGET = FAIJS_TARGET_VERSION
