@@ -1,7 +1,7 @@
 # faijs-openscad 开发计划
 
 > 日期：2026-10-05  
-> 目标项目：`C:/my/Faicad/faijs-openscad`  
+> 目标项目：`faijs-openscad`  
 > 本文只制定计划，不创建项目代码。  
 > 事实基线：仅依据 2026-10-05 的当前源码、仓库自带测试和本机可执行程序；未使用历史 `docs/plans` 作为现状依据。
 
@@ -117,8 +117,8 @@ STL / STEP / 3MF
 | -------------- | ------------------------------------------------------------------------------------------------ |
 | 本机 OpenSCAD    | `C:/Program Files/OpenSCAD/openscad.exe`，版本 `2021.01`（**仅作外部求值器，不依赖其源码**）            |
 | OpenSCAD examples（CC0） | `tests/fixtures/openscad-examples/`，已完整拷贝进本项目的验证语料；MCAD（LGPL）仅 `Old/example023.scad` 的**可选**传递依赖 |
-| faijs-cadquery | `C:/my/Faicad/faijs-cadquery`，commit `9647e2fbe03aaf068334b458886f49dc413cf6e0`，包版本 `0.29.5`     |
-| faijs          | `C:/my/Faicad/faijs`，commit `2bb3ec82182bcf4854c66384b94ffb783de2042f`，包版本 `0.29.5`              |
+| faijs-cadquery | `faijs-cadquery`，commit `9647e2fbe03aaf068334b458886f49dc413cf6e0`，包版本 `0.29.5`     |
+| faijs          | `faijs`，commit `2bb3ec82182bcf4854c66384b94ffb783de2042f`，包版本 `0.29.5`              |
 | faijs-openscad | 当前不存在                                                                                            |
 
 OpenSCAD **只**作为外部二进制被调用（CLI 把 `.scad` 求值为 `.csg`）；项目不引入、不复制其 GPL 源码，
@@ -944,6 +944,16 @@ CI 分层：
 
 ### M3：CLI 与完整样例流水线
 
+> **状态（2026-10-06）：T301–T305 已落地。** 实现与验证：
+>
+> - **T301**：`OpenScadCliFrontend`（M0 落地）已支持路径、stdout、timeout、stderr（`execFile`，不经 shell 拼接）。M3 把它接入 `transpile` / `dump` / `check` / `run` 命令。
+> - **T302**：`transpile` / `dump` / `check` / `run` / `corpus` / `run-cand` 命令全部实现（`src/cli/commands/`）。CLI `main.ts` 路由全部命令，支持 `-o` / `--out` / `--openscad-bin` / `--timeout` / `--json` / `--strict` / `--dump-csg` 等选项。
+> - **T303**：`run-cand` 支持按单文件/目录批量转换、`--filter-node`（按 CSG 节点类型筛选）、`--filter-name`（按文件名筛选）、`--cache`（JSON 缓存，未改动的文件跳过重算）、`--write-fai`。
+> - **T304**：`corpus` 命令生成三态 manifest（`ported` / `blocked` / `skipped`），写入 `tests/manifest.json`。50 个 example 的实测结果：21 ported、28 blocked、1 skipped（module_recursion 超出 faijs 静态校验器 1 MiB 源码上限）。每个 blocked/skipped 条目都带 `blockedBy`（manifest 不变量由代码和测试双重断言）。
+> - **T305**：Windows 路径/中文/空格/shell 注入测试全部通过（`tests/cli-commands.test.ts`），验证 `execFile` 不经 shell 拼接。
+>
+> **G3 门禁实测**：所有不含 P1-P3 节点且不依赖缺失资源的 examples 全部 `ported`（21/21）；含范围外节点的 28 个全部 `blocked` 且原因可枚举；`module_recursion` 因规模限制 `skipped`（不是转换错误）。`npm test` 全绿 274 passed / 49 skipped；lint、typecheck、build 均通过。
+
 | ID | 任务 | 依赖 | 验收 |
 |---|---|---|---|
 | T301 | `.scad → CSG` CLI adapter | M1 | 支持路径、stdout、timeout、stderr |
@@ -1124,25 +1134,25 @@ examples/Basics/CSG.scad (OpenSCAD 官方示例，CC0)
 
 ---
 
-## 17. 关键索引（不含 OpenSCAD 源码）
+## 17. 关键索引
 
-- `C:/my/Faicad/faijs-cadquery/package.json:20-80`
-- `C:/my/Faicad/faijs-cadquery/src/transpile.ts:17-170`
-- `C:/my/Faicad/faijs-cadquery/src/parity-smoke.test.ts:45-132`
-- `C:/my/Faicad/faijs-cadquery/src/workplane.ts:53-98`
-- `C:/my/Faicad/faijs-openscad/tests/fixtures/openscad-examples/`（OpenSCAD 官方 `examples/`，CC0-1.0，已完整拷贝进本项目，验证语料）
-- `C:/my/Faicad/faijs-openscad/tests/verify-examples.ts`（OpenSCAD 求值 → CSG → 解析器对账）
-- `C:/my/Faicad/faijs-openscad/tests/gen-examples-fai.ts`（同目录生成 .fai.js，M2 发射器就绪后生效）
-- `C:/my/Faicad/faijs-openscad/tests/examples-verify.test.ts`（examples 语料回归门禁）
-- `C:/my/Faicad/faijs/packages/core/src/api/api-namespace.ts:61-127`
-- `C:/my/Faicad/faijs/packages/core/src/api/generated/script-face.ts:9-62`
-- `C:/my/Faicad/faijs/packages/core/src/api/primitives.ts:223-403`
-- `C:/my/Faicad/faijs/packages/core/src/primitives/brep-primitives.ts:110-159`
-- `C:/my/Faicad/faijs/packages/core/src/api/profile.ts:33-120`
-- `C:/my/Faicad/faijs/packages/core/src/api/transform.ts:221-368`
-- `C:/my/Faicad/faijs/packages/core/src/api/revolve.ts:123-143`
-- `C:/my/Faicad/faijs/packages/core/src/api/brep-mirror/topologyFns.ts:70-129,213-285,320-345`
-- `C:/my/Faicad/faijs/packages/core/src/lang/dimension-check.test.ts:45-87`
+- `faijs-cadquery/package.json:20-80`
+- `faijs-cadquery/src/transpile.ts:17-170`
+- `faijs-cadquery/src/parity-smoke.test.ts:45-132`
+- `faijs-cadquery/src/workplane.ts:53-98`
+- `faijs-openscad/tests/fixtures/openscad-examples/`（OpenSCAD 官方 `examples/`，CC0-1.0，已完整拷贝进本项目，验证语料）
+- `faijs-openscad/tests/verify-examples.ts`（OpenSCAD 求值 → CSG → 解析器对账）
+- `faijs-openscad/tests/gen-examples-fai.ts`（同目录生成 .fai.js，M2 发射器就绪后生效）
+- `faijs-openscad/tests/examples-verify.test.ts`（examples 语料回归门禁）
+- `faijs/packages/core/src/api/api-namespace.ts:61-127`
+- `faijs/packages/core/src/api/generated/script-face.ts:9-62`
+- `faijs/packages/core/src/api/primitives.ts:223-403`
+- `faijs/packages/core/src/primitives/brep-primitives.ts:110-159`
+- `faijs/packages/core/src/api/profile.ts:33-120`
+- `faijs/packages/core/src/api/transform.ts:221-368`
+- `faijs/packages/core/src/api/revolve.ts:123-143`
+- `faijs/packages/core/src/api/brep-mirror/topologyFns.ts:70-129,213-285,320-345`
+- `faijs/packages/core/src/lang/dimension-check.test.ts:45-87`
 
 > 注：faijs 处于高频演进期，上列 faijs 行号仅记录撰写时的位置，落地实现以当前源码为准；
 > 本文不引用 OpenSCAD 源码（其源码文件不在索引内）。

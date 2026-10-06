@@ -13,18 +13,27 @@
  */
 import { runDoctor } from './commands/doctor'
 import { runExplain } from './commands/explain'
+import { runTranspile } from './commands/transpile'
+import { runDump } from './commands/dump'
+import { runCheck } from './commands/check'
+import { runRun } from './commands/run'
+import { runRunCand } from './commands/run-cand'
+import { runCorpus } from './commands/corpus'
 import { CONVERTER_NAME, CONVERTER_VERSION, EMIT_PROTOCOL } from '../version'
 
 const USAGE = `${CONVERTER_NAME} ${CONVERTER_VERSION}
 
 Usage:
-  faijs-openscad doctor [--json]
+  faijs-openscad transpile <input.scad|input.csg> [-o output.fai.js] [--openscad-bin <path>] [--timeout <ms>] [--dump-csg] [--json]
+  faijs-openscad check <input.scad|input.csg> [--openscad-bin <path>] [--strict] [--json]
+  faijs-openscad run <input.scad|input.csg> [-o output.stl] [--mode brep|mesh] [--openscad-bin <path>] [--json]
+  faijs-openscad dump <input.scad> [-o output.csg] [--openscad-bin <path>]
+  faijs-openscad run-cand [path] [--filter-node <name>] [--filter-name <substr>] [--cache <file>] [--json] [--write-fai]
+  faijs-openscad corpus [--check] [--json]
+  faijs-openscad doctor [--json] [--openscad-bin <path>]
   faijs-openscad explain [CODE]
   faijs-openscad version
   faijs-openscad help
-
-Not implemented yet (planned milestones M1-M4):
-  transpile, dump, check, run, corpus, report
 `
 
 interface ParsedArgs {
@@ -61,7 +70,20 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
       continue
     }
     if (a.startsWith('-') && a.length > 1) {
-      flags[a.slice(1)] = true
+      // Single-dash flags: -o value or -o=value (like --out)
+      const body = a.slice(1)
+      const eq = body.indexOf('=')
+      if (eq === -1) {
+        const next = argv[i + 1]
+        if (next !== undefined && !next.startsWith('-')) {
+          flags[body] = next
+          i++
+        } else {
+          flags[body] = true
+        }
+      } else {
+        flags[body.slice(0, eq)] = body.slice(eq + 1)
+      }
       continue
     }
     if (command === undefined) command = a
@@ -75,6 +97,22 @@ export function notImplemented(name: string): number {
     `faijs-openscad: command "${name}" is not implemented yet (see the development plan, milestone M1-M4).\n`,
   )
   return 1
+}
+
+function flagString(flags: Record<string, string | boolean>, name: string): string | undefined {
+  const v = flags[name]
+  return typeof v === 'string' ? v : undefined
+}
+
+function flagNumber(flags: Record<string, string | boolean>, name: string): number | undefined {
+  const v = flags[name]
+  if (typeof v !== 'string') return undefined
+  const n = parseInt(v, 10)
+  return Number.isNaN(n) ? undefined : n
+}
+
+function flagBool(flags: Record<string, string | boolean>, name: string): boolean {
+  return flags[name] === true || flags[name] === 'true'
 }
 
 export async function main(argv: readonly string[]): Promise<number> {
@@ -97,19 +135,93 @@ export async function main(argv: readonly string[]): Promise<number> {
       return 0
     case 'doctor':
       return runDoctor({
-        json: flags.json === true,
-        ...(typeof flags['openscad-bin'] === 'string' ? { openscadBin: flags['openscad-bin'] } : {}),
-        ...(typeof flags['openscad-src'] === 'string' ? { openscadSrc: flags['openscad-src'] } : {}),
+        json: flagBool(flags, 'json'),
+        ...flagString(flags, 'openscad-bin') !== undefined ? { openscadBin: flagString(flags, 'openscad-bin') } : {},
+        ...flagString(flags, 'openscad-src') !== undefined ? { openscadSrc: flagString(flags, 'openscad-src') } : {},
       })
     case 'explain':
       return runExplain(positional[0])
-    case 'transpile':
-    case 'dump':
-    case 'check':
-    case 'run':
+    case 'transpile': {
+      const input = positional[0]
+      if (!input) {
+        process.stderr.write('transpile: missing input file\n')
+        return 1
+      }
+      return runTranspile(input, {
+        ...flagString(flags, 'o') !== undefined || flagString(flags, 'out') !== undefined
+          ? { out: flagString(flags, 'o') ?? flagString(flags, 'out') }
+          : {},
+        ...flagString(flags, 'openscad-bin') !== undefined ? { openscadBin: flagString(flags, 'openscad-bin') } : {},
+        ...flagNumber(flags, 'timeout') !== undefined ? { timeoutMs: flagNumber(flags, 'timeout') } : {},
+        dumpCsg: flagBool(flags, 'dump-csg'),
+        allowPartial: flagBool(flags, 'allow-partial'),
+        json: flagBool(flags, 'json'),
+      })
+    }
+    case 'dump': {
+      const input = positional[0]
+      if (!input) {
+        process.stderr.write('dump: missing input file\n')
+        return 1
+      }
+      return runDump(input, {
+        ...flagString(flags, 'o') !== undefined || flagString(flags, 'out') !== undefined
+          ? { out: flagString(flags, 'o') ?? flagString(flags, 'out') }
+          : {},
+        ...flagString(flags, 'openscad-bin') !== undefined ? { openscadBin: flagString(flags, 'openscad-bin') } : {},
+        ...flagNumber(flags, 'timeout') !== undefined ? { timeoutMs: flagNumber(flags, 'timeout') } : {},
+      })
+    }
+    case 'check': {
+      const input = positional[0]
+      if (!input) {
+        process.stderr.write('check: missing input file\n')
+        return 1
+      }
+      return runCheck(input, {
+        ...flagString(flags, 'openscad-bin') !== undefined ? { openscadBin: flagString(flags, 'openscad-bin') } : {},
+        ...flagNumber(flags, 'timeout') !== undefined ? { timeoutMs: flagNumber(flags, 'timeout') } : {},
+        strict: flagBool(flags, 'strict'),
+        json: flagBool(flags, 'json'),
+      })
+    }
+    case 'run': {
+      const input = positional[0]
+      if (!input) {
+        process.stderr.write('run: missing input file\n')
+        return 1
+      }
+      const mode = flagString(flags, 'mode')
+      return runRun(input, {
+        ...flagString(flags, 'o') !== undefined || flagString(flags, 'out') !== undefined
+          ? { out: flagString(flags, 'o') ?? flagString(flags, 'out') }
+          : {},
+        ...mode !== undefined ? { mode: mode as 'brep' | 'mesh' } : {},
+        ...flagString(flags, 'openscad-bin') !== undefined ? { openscadBin: flagString(flags, 'openscad-bin') } : {},
+        ...flagNumber(flags, 'timeout') !== undefined ? { timeoutMs: flagNumber(flags, 'timeout') } : {},
+        json: flagBool(flags, 'json'),
+      })
+    }
+    case 'run-cand': {
+      const path = positional[0] ?? '.'
+      return runRunCand(path, {
+        ...flagString(flags, 'filter-node') !== undefined ? { filterNode: flagString(flags, 'filter-node') } : {},
+        ...flagString(flags, 'filter-name') !== undefined ? { filterName: flagString(flags, 'filter-name') } : {},
+        ...flagString(flags, 'cache') !== undefined ? { cache: flagString(flags, 'cache') } : {},
+        json: flagBool(flags, 'json'),
+        ...flagString(flags, 'openscad-bin') !== undefined ? { openscadBin: flagString(flags, 'openscad-bin') } : {},
+        ...flagNumber(flags, 'timeout') !== undefined ? { timeoutMs: flagNumber(flags, 'timeout') } : {},
+        writeFai: flagBool(flags, 'write-fai'),
+      })
+    }
     case 'corpus':
+      return runCorpus({
+        check: flagBool(flags, 'check'),
+        json: flagBool(flags, 'json'),
+        ...flagString(flags, 'openscad-bin') !== undefined ? { openscadBin: flagString(flags, 'openscad-bin') } : {},
+      })
     case 'report':
-      return notImplemented(command)
+      return notImplemented('report')
     default:
       process.stderr.write(`faijs-openscad: unknown command "${command}"\n\n${USAGE}`)
       return 1

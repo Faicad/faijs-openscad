@@ -1,0 +1,1072 @@
+{
+  "generatedBy": "@faicad/faijs-openscad corpus",
+  "generatedAt": "2026-10-06T12:32:01.736Z",
+  "converter": {
+    "name": "@faicad/faijs-openscad",
+    "version": "0.29.5"
+  },
+  "counts": {
+    "ported": 21,
+    "blocked": 28,
+    "skipped": 1
+  },
+  "entries": [
+    {
+      "id": "Advanced__GEB.scad.csg",
+      "source": "Advanced/GEB.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "offset",
+        "projection"
+      ],
+      "parsedNodes": 4,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "color": 4,
+        "group": 16,
+        "intersection": 4,
+        "linear_extrude": 15,
+        "offset": 12,
+        "text": 12,
+        "multmatrix": 17,
+        "difference": 3,
+        "square": 3,
+        "projection": 3
+      },
+      "blockedNodes": [
+        "offset",
+        "projection"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Advanced__animation.scad.csg",
+      "source": "Advanced/animation.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "hull"
+      ],
+      "parsedNodes": 2,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "group": 6,
+        "multmatrix": 8,
+        "cube": 1,
+        "color": 3,
+        "linear_extrude": 1,
+        "difference": 1,
+        "polygon": 2,
+        "offset": 1,
+        "sphere": 6,
+        "cylinder": 2,
+        "hull": 2
+      },
+      "blockedNodes": [
+        "hull"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Advanced__assert.scad.csg",
+      "source": "Advanced/assert.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 3,
+      "emittedStatements": 100,
+      "nodeHistogram": {
+        "color": 3,
+        "group": 6,
+        "multmatrix": 64,
+        "cube": 32
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Advanced__children.scad.csg",
+      "source": "Advanced/children.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "text"
+      ],
+      "parsedNodes": 3,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "color": 3,
+        "group": 32,
+        "multmatrix": 56,
+        "cube": 14,
+        "difference": 12,
+        "sphere": 12,
+        "cylinder": 16,
+        "linear_extrude": 4,
+        "text": 4
+      },
+      "blockedNodes": [
+        "text"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Advanced__children_indexed.scad.csg",
+      "source": "Advanced/children_indexed.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "text"
+      ],
+      "parsedNodes": 4,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "color": 4,
+        "multmatrix": 32,
+        "group": 17,
+        "linear_extrude": 4,
+        "text": 4,
+        "cube": 6,
+        "sphere": 5,
+        "cylinder": 3
+      },
+      "blockedNodes": [
+        "text"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Advanced__module_recursion.scad.csg",
+      "source": "Advanced/module_recursion.scad",
+      "status": "skipped",
+      "blockedBy": [
+        "oversized-output"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 6140,
+      "nodeHistogram": {
+        "group": 3070,
+        "color": 2047,
+        "multmatrix": 2047,
+        "square": 2047
+      },
+      "blockedNodes": [],
+      "errorCodes": [],
+      "notes": "Generated code is 1281 KB, exceeds faijs static checker 1 MiB limit"
+    },
+    {
+      "id": "Advanced__offset.scad.csg",
+      "source": "Advanced/offset.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "linear_extrude",
+        "offset"
+      ],
+      "parsedNodes": 4,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "linear_extrude": 2,
+        "offset": 3,
+        "square": 1,
+        "multmatrix": 2,
+        "group": 3,
+        "difference": 1,
+        "circle": 2,
+        "cylinder": 1,
+        "sphere": 1
+      },
+      "blockedNodes": [
+        "linear_extrude",
+        "offset"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Advanced__surface_image.scad.csg",
+      "source": "Advanced/surface_image.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "projection"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "group": 1,
+        "color": 3,
+        "multmatrix": 6,
+        "linear_extrude": 3,
+        "projection": 3,
+        "surface": 3
+      },
+      "blockedNodes": [
+        "projection"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Basics__CSG-modules.scad.csg",
+      "source": "Basics/CSG-modules.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 2,
+      "emittedStatements": 59,
+      "nodeHistogram": {
+        "difference": 1,
+        "intersection": 2,
+        "group": 36,
+        "color": 22,
+        "sphere": 3,
+        "cube": 3,
+        "union": 2,
+        "multmatrix": 28,
+        "cylinder": 16
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Basics__CSG.scad.csg",
+      "source": "Basics/CSG.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 3,
+      "emittedStatements": 12,
+      "nodeHistogram": {
+        "multmatrix": 2,
+        "union": 1,
+        "cube": 3,
+        "sphere": 3,
+        "intersection": 1,
+        "difference": 1
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Basics__LetterBlock.scad.csg",
+      "source": "Basics/LetterBlock.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "text"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "group": 1,
+        "difference": 1,
+        "multmatrix": 2,
+        "cube": 1,
+        "linear_extrude": 1,
+        "text": 1
+      },
+      "blockedNodes": [
+        "text"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Basics__hull.scad.csg",
+      "source": "Basics/hull.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "hull"
+      ],
+      "parsedNodes": 2,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "hull": 1,
+        "multmatrix": 6,
+        "sphere": 1,
+        "cube": 5,
+        "cylinder": 1
+      },
+      "blockedNodes": [
+        "hull"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Basics__linear_extrude.scad.csg",
+      "source": "Basics/linear_extrude.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "linear_extrude"
+      ],
+      "parsedNodes": 4,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "color": 4,
+        "multmatrix": 4,
+        "linear_extrude": 4,
+        "square": 4
+      },
+      "blockedNodes": [
+        "linear_extrude"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Basics__logo.scad.csg",
+      "source": "Basics/logo.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 1,
+      "emittedStatements": 7,
+      "nodeHistogram": {
+        "group": 1,
+        "difference": 1,
+        "sphere": 1,
+        "cylinder": 3,
+        "multmatrix": 2
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Basics__logo_and_text.scad.csg",
+      "source": "Basics/logo_and_text.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "text"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "multmatrix": 13,
+        "group": 13,
+        "difference": 1,
+        "sphere": 1,
+        "cylinder": 3,
+        "color": 4,
+        "linear_extrude": 4,
+        "text": 4
+      },
+      "blockedNodes": [
+        "text"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Basics__projection.scad.csg",
+      "source": "Basics/projection.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "projection"
+      ],
+      "parsedNodes": 5,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "import": 5,
+        "color": 4,
+        "multmatrix": 8,
+        "linear_extrude": 4,
+        "difference": 4,
+        "square": 4,
+        "projection": 4
+      },
+      "blockedNodes": [
+        "projection"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Basics__roof.scad.csg",
+      "source": "Basics/roof.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 4,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "multmatrix": 4
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Basics__rotate_extrude.scad.csg",
+      "source": "Basics/rotate_extrude.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "rotate_extrude"
+      ],
+      "parsedNodes": 4,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "color": 4,
+        "rotate_extrude": 6,
+        "multmatrix": 9,
+        "square": 4,
+        "text": 1,
+        "polygon": 1
+      },
+      "blockedNodes": [
+        "rotate_extrude"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Basics__text_on_cube.scad.csg",
+      "source": "Basics/text_on_cube.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "text"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "difference": 1,
+        "union": 1,
+        "color": 1,
+        "cube": 1,
+        "multmatrix": 10,
+        "group": 6,
+        "linear_extrude": 6,
+        "text": 6
+      },
+      "blockedNodes": [
+        "text"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Functions__echo.scad.csg",
+      "source": "Functions/echo.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 0,
+      "emittedStatements": 0,
+      "nodeHistogram": {},
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Functions__functions.scad.csg",
+      "source": "Functions/functions.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 2,
+      "emittedStatements": 167,
+      "nodeHistogram": {
+        "color": 2,
+        "group": 2,
+        "multmatrix": 82,
+        "cube": 41,
+        "sphere": 41
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Functions__list_comprehensions.scad.csg",
+      "source": "Functions/list_comprehensions.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 9,
+      "emittedStatements": 18,
+      "nodeHistogram": {
+        "group": 9,
+        "polygon": 9,
+        "multmatrix": 8
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Functions__polygon_areas.scad.csg",
+      "source": "Functions/polygon_areas.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "text"
+      ],
+      "parsedNodes": 6,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "multmatrix": 11,
+        "color": 6,
+        "text": 6,
+        "group": 5,
+        "polygon": 5
+      },
+      "blockedNodes": [
+        "text"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Functions__recursion.scad.csg",
+      "source": "Functions/recursion.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "text"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "color": 1,
+        "text": 1
+      },
+      "blockedNodes": [
+        "text"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Old__example001.scad.csg",
+      "source": "Old/example001.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 1,
+      "emittedStatements": 8,
+      "nodeHistogram": {
+        "group": 4,
+        "difference": 1,
+        "sphere": 1,
+        "multmatrix": 3,
+        "cylinder": 3
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Old__example002.scad.csg",
+      "source": "Old/example002.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 1,
+      "emittedStatements": 12,
+      "nodeHistogram": {
+        "group": 1,
+        "intersection": 1,
+        "difference": 1,
+        "union": 2,
+        "cube": 5,
+        "multmatrix": 2,
+        "cylinder": 1
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Old__example003.scad.csg",
+      "source": "Old/example003.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 1,
+      "emittedStatements": 10,
+      "nodeHistogram": {
+        "group": 1,
+        "difference": 1,
+        "union": 2,
+        "cube": 7
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Old__example004.scad.csg",
+      "source": "Old/example004.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 1,
+      "emittedStatements": 3,
+      "nodeHistogram": {
+        "group": 1,
+        "difference": 1,
+        "cube": 1,
+        "sphere": 1
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Old__example005.scad.csg",
+      "source": "Old/example005.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 1,
+      "emittedStatements": 23,
+      "nodeHistogram": {
+        "group": 2,
+        "multmatrix": 10,
+        "difference": 1,
+        "cylinder": 9,
+        "cube": 1
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Old__example006.scad.csg",
+      "source": "Old/example006.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "hull"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "group": 9,
+        "difference": 1,
+        "multmatrix": 48,
+        "hull": 1,
+        "sphere": 29,
+        "union": 1
+      },
+      "blockedNodes": [
+        "hull"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Old__example007.scad.csg",
+      "source": "Old/example007.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "import",
+        "rotate_extrude"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "multmatrix": 13,
+        "group": 4,
+        "difference": 1,
+        "rotate_extrude": 1,
+        "import": 5,
+        "intersection": 2,
+        "linear_extrude": 4
+      },
+      "blockedNodes": [
+        "import",
+        "rotate_extrude"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Old__example008.scad.csg",
+      "source": "Old/example008.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "import"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "difference": 1,
+        "intersection": 2,
+        "multmatrix": 8,
+        "linear_extrude": 5,
+        "import": 5
+      },
+      "blockedNodes": [
+        "import"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Old__example009.scad.csg",
+      "source": "Old/example009.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "linear_extrude",
+        "rotate_extrude"
+      ],
+      "parsedNodes": 3,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "linear_extrude": 4,
+        "import": 5,
+        "group": 1,
+        "multmatrix": 2,
+        "intersection": 1,
+        "rotate_extrude": 1
+      },
+      "blockedNodes": [
+        "linear_extrude",
+        "rotate_extrude"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Old__example010.scad.csg",
+      "source": "Old/example010.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "surface"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "intersection": 1,
+        "surface": 2,
+        "multmatrix": 1
+      },
+      "blockedNodes": [
+        "surface"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Old__example011.scad.csg",
+      "source": "Old/example011.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "polyhedron"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "polyhedron": 1
+      },
+      "blockedNodes": [
+        "polyhedron"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Old__example012.scad.csg",
+      "source": "Old/example012.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "import"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "difference": 1,
+        "sphere": 1,
+        "multmatrix": 2,
+        "import": 1
+      },
+      "blockedNodes": [
+        "import"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Old__example013.scad.csg",
+      "source": "Old/example013.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "import"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "intersection": 1,
+        "linear_extrude": 3,
+        "import": 3,
+        "multmatrix": 2
+      },
+      "blockedNodes": [
+        "import"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Old__example014.scad.csg",
+      "source": "Old/example014.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 1,
+      "emittedStatements": 9,
+      "nodeHistogram": {
+        "intersection": 1,
+        "multmatrix": 4,
+        "cube": 4
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Old__example015.scad.csg",
+      "source": "Old/example015.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "import"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "group": 1,
+        "difference": 2,
+        "multmatrix": 6,
+        "intersection": 1,
+        "union": 1,
+        "square": 4,
+        "circle": 1,
+        "import": 1
+      },
+      "blockedNodes": [
+        "import"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Old__example016.scad.csg",
+      "source": "Old/example016.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "import"
+      ],
+      "parsedNodes": 1,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "difference": 9,
+        "group": 10,
+        "cube": 9,
+        "multmatrix": 12,
+        "render": 4,
+        "import": 4
+      },
+      "blockedNodes": [
+        "import"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Old__example017.scad.csg",
+      "source": "Old/example017.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 1,
+      "emittedStatements": 109,
+      "nodeHistogram": {
+        "group": 11,
+        "multmatrix": 51,
+        "linear_extrude": 5,
+        "difference": 5,
+        "circle": 21,
+        "square": 18,
+        "color": 1,
+        "union": 3,
+        "polygon": 3,
+        "intersection": 8,
+        "rotate_extrude": 1
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Old__example018.scad.csg",
+      "source": "Old/example018.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 1,
+      "emittedStatements": 69,
+      "nodeHistogram": {
+        "group": 9,
+        "multmatrix": 32,
+        "cube": 20,
+        "cylinder": 4,
+        "union": 4,
+        "sphere": 4
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Old__example019.scad.csg",
+      "source": "Old/example019.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 1,
+      "emittedStatements": 83,
+      "nodeHistogram": {
+        "group": 1,
+        "multmatrix": 41,
+        "cylinder": 41
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Old__example020.scad.csg",
+      "source": "Old/example020.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "linear_extrude"
+      ],
+      "parsedNodes": 3,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "multmatrix": 17,
+        "group": 53,
+        "linear_extrude": 3,
+        "difference": 3,
+        "circle": 2,
+        "polygon": 30,
+        "cylinder": 1
+      },
+      "blockedNodes": [
+        "linear_extrude"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Old__example021.scad.csg",
+      "source": "Old/example021.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "projection"
+      ],
+      "parsedNodes": 2,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "multmatrix": 62,
+        "group": 15,
+        "linear_extrude": 10,
+        "projection": 10,
+        "difference": 12,
+        "sphere": 12,
+        "cylinder": 36
+      },
+      "blockedNodes": [
+        "projection"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    },
+    {
+      "id": "Old__example022.scad.csg",
+      "source": "Old/example022.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 2,
+      "emittedStatements": 76,
+      "nodeHistogram": {
+        "multmatrix": 38,
+        "group": 10,
+        "cube": 5,
+        "cylinder": 16,
+        "sphere": 8
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Old__example023.scad.csg",
+      "source": "Old/example023.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 1,
+      "emittedStatements": 190,
+      "nodeHistogram": {
+        "group": 14,
+        "multmatrix": 75,
+        "linear_extrude": 51,
+        "polygon": 51
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Old__example024.scad.csg",
+      "source": "Old/example024.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 1,
+      "emittedStatements": 499,
+      "nodeHistogram": {
+        "difference": 2,
+        "multmatrix": 221,
+        "group": 491,
+        "cube": 221
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Parametric__candleStand.scad.csg",
+      "source": "Parametric/candleStand.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 4,
+      "emittedStatements": 103,
+      "nodeHistogram": {
+        "cylinder": 24,
+        "multmatrix": 51,
+        "group": 31,
+        "difference": 3,
+        "union": 1,
+        "cube": 14,
+        "linear_extrude": 1,
+        "circle": 2
+      },
+      "blockedNodes": [],
+      "errorCodes": []
+    },
+    {
+      "id": "Parametric__sign.scad.csg",
+      "source": "Parametric/sign.scad",
+      "status": "blocked",
+      "blockedBy": [
+        "text"
+      ],
+      "parsedNodes": 2,
+      "emittedStatements": 0,
+      "nodeHistogram": {
+        "multmatrix": 4,
+        "difference": 1,
+        "cylinder": 2,
+        "linear_extrude": 1,
+        "text": 2
+      },
+      "blockedNodes": [
+        "text"
+      ],
+      "errorCodes": [
+        "OSC3002"
+      ]
+    }
+  ]
+}

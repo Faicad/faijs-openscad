@@ -67,6 +67,13 @@ describe('CLI argv parsing', () => {
     const r = parseArgs(['transpile', '--', '--weird'])
     expect(r.positional).toEqual(['--weird'])
   })
+
+  it('supports -o shorthand for output', () => {
+    const r = parseArgs(['transpile', 'input.scad', '-o', 'out.fai.js'])
+    expect(r.command).toBe('transpile')
+    expect(r.positional).toEqual(['input.scad'])
+    expect(r.flags.o).toBe('out.fai.js')
+  })
 })
 
 describe('CLI command routing', () => {
@@ -77,16 +84,20 @@ describe('CLI command routing', () => {
     expect(r.err).toBe('')
   })
 
-  it('help exits 0 and lists the commands', async () => {
+  it('help exits 0 and lists all commands', async () => {
     const r = await run(['help'])
     expect(r.code).toBe(0)
+    expect(r.out).toContain('transpile')
+    expect(r.out).toContain('dump')
+    expect(r.out).toContain('check')
+    expect(r.out).toContain('run')
+    expect(r.out).toContain('corpus')
     expect(r.out).toContain('doctor')
     expect(r.err).toBe('')
     expect((await run([])).code).toBe(0)
   })
 
   it('doctor exits 0 whether or not OpenSCAD is installed', async () => {
-    // A missing binary reduces capability; it must not fail the doctor command.
     const r = await run(['doctor'])
     expect(r.code).toBe(0)
     expect(r.err).toBe('')
@@ -107,12 +118,39 @@ describe('CLI command routing', () => {
     expect(r.err).toContain('Unknown diagnostic code')
   })
 
-  it('commands scheduled for later milestones fail loudly instead of pretending', async () => {
-    for (const cmd of ['transpile', 'dump', 'check', 'run', 'corpus', 'report']) {
-      const r = await run([cmd])
-      expect(r.code).toBe(1)
-      expect(r.err).toContain('not implemented yet')
-    }
+  it('transpile without input exits 1', async () => {
+    const r = await run(['transpile'])
+    expect(r.code).toBe(1)
+    expect(r.err).toContain('missing input file')
+  })
+
+  it('dump without input exits 1', async () => {
+    const r = await run(['dump'])
+    expect(r.code).toBe(1)
+    expect(r.err).toContain('missing input file')
+  })
+
+  it('check without input exits 1', async () => {
+    const r = await run(['check'])
+    expect(r.code).toBe(1)
+    expect(r.err).toContain('missing input file')
+  })
+
+  it('run without input exits 1', async () => {
+    const r = await run(['run'])
+    expect(r.code).toBe(1)
+    expect(r.err).toContain('missing input file')
+  })
+
+  it('transpile with unsupported extension exits 1', async () => {
+    const r = await run(['transpile', 'foo.txt'])
+    expect(r.code).toBe(1)
+  })
+
+  it('report is still not implemented', async () => {
+    const r = await run(['report'])
+    expect(r.code).toBe(1)
+    expect(r.err).toContain('not implemented yet')
   })
 
   it('unknown command exits 1', async () => {

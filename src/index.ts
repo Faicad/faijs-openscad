@@ -191,3 +191,27 @@ export type {
 
 export { inspectEnvironment, probeFaijs, resolveCorpusRoot, countCorpus } from './environment'
 export type { EnvironmentReport, InspectOptions, FaijsProbe, CorpusProbe } from './environment'
+
+// CLI commands (M3)
+export { transpileFile, runTranspile } from './cli/commands/transpile'
+export type { TranspileOptions, TranspileReport } from './cli/commands/transpile'
+
+export { runDump } from './cli/commands/dump'
+export type { DumpOptions } from './cli/commands/dump'
+
+export { runCheck } from './cli/commands/check'
+export type { CheckOptions, CheckReport } from './cli/commands/check'
+
+export { runRun } from './cli/commands/run'
+export type { RunOptions, RunReport } from './cli/commands/run'
+
+export { runRunCand } from './cli/commands/run-cand'
+export type { RunCandOptions, RunCandEntry, RunCandReport } from './cli/commands/run-cand'
+
+export { runCorpus } from './cli/commands/corpus'
+export type {
+  CorpusOptions,
+  CorpusStatus,
+  CorpusManifestEntry,
+  CorpusManifest,
+} from './cli/commands/corpus'
