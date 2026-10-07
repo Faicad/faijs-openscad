@@ -9,7 +9,7 @@
  *   (b) 求值器不支持     → Math 不能用，只能输出算好的字面量
  *   (c) 前置静态校验误拦 → 执行器本身没问题，只是校验器白名单漏项
  *
- * ── 结论：(c)。三层证据如下 ──
+ * ── 结论：(c)，且 faijs ≥ 0.30.9 已修复 ──
  *   L1 `security-scanner` 的 `S4_SAFE_GLOBALS`（0.29.5 实测 34 项）**含** Math/
  *      JSON/Number/console… 以及单位常量 MM/INCH/DEGREE。这些名字**全都是**
  *      JS 语言内建、真实存在于 `globalThis` —— 所以「不需要 import」是设计事实，
@@ -19,26 +19,26 @@
  *        `new Function` 的函数体在**真实全局作用域**求值，`Math` 天然可见；
  *      - interp env（禁 eval 环境）：`S4_SAFE_GLOBALS.has(name)` →
  *        `globalThis[name]`。
- *   L3 `metadata-extractor.collectExprIdentifiers` 的已知标识符集合只有
- *      `paramNames` / `declared` / `SCRIPT_UNIT_NAMES` —— **没有 S4_SAFE_GLOBALS**。
- *      `Math` 于是落进 `else` 分支抛 `E_REFERENCE`。而 `runtime.ts` 的 execute
- *      **第一步**就是 `extractMetadata`，所以整条链路在真正执行前就断了。
+ *   L3 `metadata-extractor.collectExprIdentifiers` 的已知标识符集合 ——
+ *      0.29.5 只有 `paramNames` / `declared` / `SCRIPT_UNIT_NAMES`（无 S4），
+ *      `Math` 落进 `else` 抛 `E_REFERENCE`。
+ *      **0.30.9 修复**：metadata-extractor 现已引用 `S4_SAFE_GLOBALS`，
+ *      `Math` 在 op 实参里放行。本 probe 的「缺口守门」用例即为此修复的探测器。
  *
  * ── ★ 决定性对照（同一函数、同一位置，只换实参）──
  *      `cad.box(10 * MM, 1, 1)`  → 放行   （MM 在 SCRIPT_UNIT_NAMES 里）
- *      `cad.box(Math.PI, 1, 1)`  → 抛错   （Math 只在 S4_SAFE_GLOBALS 里）
- *   两者在 S4 白名单里同级，差别**仅**在于 metadata-extractor 额外内联了单位常量表。
- *   ——这条直接排除了 (a) 与 (b)。
+ *      `cad.box(Math.PI, 1, 1)`  → 0.29.5 抛错 / 0.30.9 放行
+ *   两者在 S4 白名单里同级；0.30.9 起 metadata-extractor 把 S4 并入白名单，
+ *   两者均放行。
  *
- * ── 触发条件是「位置」而非「标识符」──
- *   只有 **op 实参表达式**（`parseValueExpr` 的非 lenient 路径）会拦；
- *   顶层常量行 RHS 走 `recordArgSource` 的 `lenient: true` 路径，不拦。
- *   实测：`let x = Math.PI` 通过，`cad.box(Math.PI,1,1)` 抛错。
+ * ── 触发条件曾是「位置」而非「标识符」──
+ *   0.29.5：只有 **op 实参表达式**会拦，顶层常量行 RHS 不拦。
+ *   0.30.9：op 实参也放行（S4 并入白名单），位置差异不再决定 Math 的去留。
  *
  * ── 对 M2 的含义 ──
- *   emitter 现有的「算好数值再输出字面量」策略（`emit/units.ts`）天然绕开此问题，
- *   **不需要 import**。若将来想输出人读友好的 `Math.PI`，可行做法是先在顶层常量行
- *   绑定（`let pi = Math.PI`），再在实参里引用变量 —— 已由本文件 §C 的绕行用例钉住。
+ *   emitter 现有的「算好数值再输出字面量」策略（`emit/units.ts`）仍然有效，
+ *   **不需要 import**。0.30.9 起亦可直出 `Math.PI` 到 op 实参 ——
+ *   若将来要切换到人读友好的写法，不再需要先提升为顶层常量行。
  *
  * 静态组（L1/L2/L3 + 对照实验）**不需要 wasm**，只需安装 @faicad/faijs；
  * 真机组 §C 需 `FAIJS_PROBE_RUNTIME=1`。
@@ -113,13 +113,14 @@ describe.skipIf(!installed)('probe(static): Math 是「免 import 的安全全�
     expect(text).toContain('globalThis')
   })
 
-  it('★ 缺口守门：metadata-extractor 引用了单位常量表，却未引用 S4_SAFE_GLOBALS', () => {
+  it('★ 修复守门：metadata-extractor 已把 S4_SAFE_GLOBALS 并入标识符白名单', () => {
     const text = distRead('lang/metadata-extractor.js')
     expect(text).toContain('unknown identifier')
     expect(text).toContain('SCRIPT_UNIT_NAMES')
-    // 一旦 faijs 修复（把 S4 并入其标识符白名单），本行会失败 —— 那正是提示
-    // 我们复查 emit/units.ts 字面量策略、以及可以恢复 `Math.PI` 直出写法的信号。
-    expect(text).not.toContain('S4_SAFE_GLOBALS')
+    // faijs ≥ 0.30.9 修复：metadata-extractor 现引用 S4_SAFE_GLOBALS，
+    // Math 等 JS 内建全局在 op 实参里不再被 E_REFERENCE 拦截。
+    // emitter 可安全直出 Math.PI 到 op 实参（仍可选保留字面量策略）。
+    expect(text).toContain('S4_SAFE_GLOBALS')
   })
 })
 
@@ -133,23 +134,15 @@ describe.skipIf(!installed)('probe(static): extractMetadata 是「位置敏感�
     extract = mod.extractMetadata
   })
 
-  it('op 实参里的 Math 抛 E_REFERENCE（复现 M2 报错）', () => {
-    let caught: unknown
-    try {
-      extract('let c = cad.box(Math.PI, 1, 1)', EXTRACT_OPTS)
-    } catch (err) {
-      caught = err
-    }
-    expect(caught).toBeInstanceOf(Error)
-    expect((caught as Error).message).toMatch(/unknown identifier "Math"/)
+  it('op 实参里的 Math 放行（faijs ≥ 0.30.9 已修，0.29.5 曾抛 E_REFERENCE）', () => {
+    expect(() => extract('let c = cad.box(Math.PI, 1, 1)', EXTRACT_OPTS)).not.toThrow()
   })
 
-  it('★ 决定性对照：同一位置，单位常量 MM 放行、Math 抛错', () => {
-    // 两者在 S4_SAFE_GLOBALS 里同级；差别只在 metadata-extractor 内联了单位常量表。
+  it('★ 决定性对照：同一位置，单位常量 MM 与 Math 均放行', () => {
+    // 两者在 S4_SAFE_GLOBALS 里同级；0.30.9 起 metadata-extractor 把 S4 并入
+    // 白名单，两者在 op 实参里均放行。
     expect(() => extract('let c = cad.box(10 * MM, 1, 1)', EXTRACT_OPTS)).not.toThrow()
-    expect(() => extract('let c = cad.box(Math.PI, 1, 1)', EXTRACT_OPTS)).toThrow(
-      /unknown identifier "Math"/,
-    )
+    expect(() => extract('let c = cad.box(Math.PI, 1, 1)', EXTRACT_OPTS)).not.toThrow()
   })
 
   it('顶层常量行的 Math 不抛 —— 拦截条件是「位置」而不是「标识符」', () => {
@@ -166,12 +159,12 @@ describe.skipIf(!installed)('probe(static): extractMetadata 是「位置敏感�
     ).not.toThrow()
   })
 
-  it('嵌套对象属性值里的 Math 同样被拦（M2 实际踩到的形态）', () => {
+  it('嵌套对象属性值里的 Math 同样放行（faijs ≥ 0.30.9 已修）', () => {
     expect(() =>
       extract(`let c = cad.profile({ contours: [{ segments: [
         { kind: 'line', x1: 0, y1: 0, x2: Math.PI, y2: 0 }
       ] }] })`, EXTRACT_OPTS),
-    ).toThrow(/unknown identifier "Math"/)
+    ).not.toThrow()
   })
 })
 
@@ -202,10 +195,10 @@ describe.skipIf(!runtimeEnabled)('probe(runtime): createRuntime 下的 Math 行�
     expect(r.failedAt?.message).toBeUndefined()
   })
 
-  it('op 实参 Math.PI 被拦（端到端复现 M2 的报错）', async () => {
-    await expect(execute('let c = cad.box(Math.PI, 1, 1)')).rejects.toThrow(
-      /unknown identifier "Math"/,
-    )
+  it('op 实参 Math.PI 放行（faijs ≥ 0.30.9 已修，0.29.5 曾端到端拦截）', async () => {
+    const r = await execute('let c = cad.box(Math.PI, 1, 1)')
+    expect(r.failedAt?.message).toBeUndefined()
+    expect(r.outputs.has('c')).toBe(true)
   })
 
   it('op 实参 10 * MM 通过（同属免 import 全局，对照）', async () => {

@@ -44,9 +44,8 @@
   "engines": {
     "node": ">=22"
   },
-  "dependencies": {},
   "peerDependencies": {
-    "@faicad/faijs": "^0.29.0",
+    "@faicad/faijs": "^0.30.9",
     "@faicad/faijs-extra": "^0.29.0"
   },
   "peerDependenciesMeta": {
@@ -56,7 +55,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@faicad/faijs": "^0.29.0",
+    "@faicad/faijs": "^0.30.9",
     "@types/node": "^26.2.0",
     "eslint": "^10.8.1",
     "globals": "^17.11.0",
