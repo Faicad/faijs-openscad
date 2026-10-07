@@ -70,10 +70,31 @@ export interface IrBox extends IrSolid {
   readonly centered: boolean
 }
 
-/** `sphere(r)` → `cad.sphere(r)`。球心恒在原点（OpenSCAD 亦如此）。 */
+/** `sphere(r)` → `cad.sphere(r, { segments })`。球心恒在原点（OpenSCAD 亦如此）。 */
 export interface IrSphere extends IrSolid {
   readonly kind: 'sphere'
   readonly radius: number
+  /** 三角化分片数（M9 §1.3）：按 $fn/$fa/$fs + 半径算，传给 cad.sphere 控制密度。 */
+  readonly segments?: number
+}
+
+/** `cylinder(h, r1, r2, center)` 且 `r1 === r2` → `cad.cylinder(r, h, { centered, segments })`。 */
+export interface IrCylinder extends IrSolid {
+  readonly kind: 'cylinder'
+  readonly radius: number
+  readonly height: number
+  readonly centered: boolean
+  readonly segments?: number
+}
+
+/** `cylinder(h, r1, r2, center)` 且 `r1 !== r2` → `cad.cone(r1, r2, h, { centered, segments })`。 */
+export interface IrCone extends IrSolid {
+  readonly kind: 'cone'
+  readonly radiusBottom: number
+  readonly radiusTop: number
+  readonly height: number
+  readonly centered: boolean
+  readonly segments?: number
 }
 
 /** `cylinder(h, r1, r2, center)` 且 `r1 === r2` → `cad.cylinder(r, h, { centered })`。 */

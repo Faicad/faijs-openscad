@@ -447,14 +447,24 @@ describe('lower: 三角化参数采集（M9 §1.3, A2）', () => {
     expect(result.tessellation?.segments).toBe(24)
   })
 
-  it('$fa/$fs 采集（取最小值 = 最严格），但 segments 不计算（无显式 $fn）', () => {
+  it('$fa/$fs 采集（取最小值 = 最严格），且按半径算 segments', () => {
     const result = lower('sphere(r = 10, $fa = 6, $fs = 1);')
     expect(result.tessellation?.fa).toBe(6)
     expect(result.tessellation?.fs).toBe(1)
     expect(result.tessellation?.fn).toBeUndefined()
-    // M9 §1.3: 仅有 $fa/$fs 时不计算全局 segments——
-    // OpenSCAD 按 per-primitive 半径换算，单一全局 segments 无法复刻
-    expect(result.tessellation?.segments).toBeUndefined()
+    // sphere r=10, $fa=6, $fs=1 → max(5, min(ceil(360/6)=60, ceil(2π·10/1)=63)) = 60
+    expect(result.tessellation?.segments).toBe(60)
+  })
+
+  it('sphere(r=1, $fa=12, $fs=2) → segments=5（OpenSCAD 默认，下限 5）', () => {
+    const result = lower('sphere(r = 1, $fa = 12, $fs = 2);')
+    expect(result.tessellation?.segments).toBe(5)
+  })
+
+  it('cylinder(r=1, $fa=12, $fs=2) → segments=4（circle 公式，下限 3）', () => {
+    const result = lower('cylinder(h = 5, r = 1, $fa = 12, $fs = 2);')
+    // circle r=1 → max(3, min(30, ceil(π)=4)) = 4
+    expect(result.tessellation?.segments).toBe(4)
   })
 
   it('linear_extrude 的 $fn 也被采集', () => {

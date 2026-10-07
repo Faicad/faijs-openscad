@@ -146,15 +146,15 @@ class Emitter {
           node.id,
         )
       case 'sphere':
-        return this.assign(`await cad.sphere(${lengthLiteral(node.radius)})`, node.id)
+        return this.assign(`await cad.sphere(${lengthLiteral(node.radius)}${this.optionsExpr({ segments: node.segments })})`, node.id)
       case 'cylinder':
         return this.assign(
-          `await cad.cylinder(${lengthLiteral(node.radius)}, ${lengthLiteral(node.height)}${this.centeredOpt(node.centered)})`,
+          `await cad.cylinder(${lengthLiteral(node.radius)}, ${lengthLiteral(node.height)}${this.optionsExpr({ centered: node.centered, segments: node.segments })})`,
           node.id,
         )
       case 'cone':
         return this.assign(
-          `await cad.cone(${lengthLiteral(node.radiusBottom)}, ${lengthLiteral(node.radiusTop)}, ${lengthLiteral(node.height)}${this.centeredOpt(node.centered)})`,
+          `await cad.cone(${lengthLiteral(node.radiusBottom)}, ${lengthLiteral(node.radiusTop)}, ${lengthLiteral(node.height)}${this.optionsExpr({ centered: node.centered, segments: node.segments })})`,
           node.id,
         )
       case 'rect2d':
@@ -256,6 +256,18 @@ class Emitter {
   private centeredOpt(centered: boolean): string {
     // 默认即 `centered: false`，省略选项让输出更接近手写 faijs。
     return centered ? ', { centered: true }' : ''
+  }
+
+  /**
+   * 构造图元选项字符串（centered + segments）。
+   * M9 §1.3：把 per-primitive segments 写进 cad.sphere/cylinder/cone 调用，
+   * 让 runtime 创建图元时就用正确三角化密度（而非事后重新三角化）。
+   */
+  private optionsExpr(opts: { centered?: boolean; segments?: number }): string {
+    const parts: string[] = []
+    if (opts.centered) parts.push('centered: true')
+    if (opts.segments !== undefined) parts.push(`segments: ${opts.segments}`)
+    return parts.length > 0 ? `, { ${parts.join(', ')} }` : ''
   }
 
   // ── 2D profile ───────────────────────────────────────────────────────────

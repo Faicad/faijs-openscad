@@ -27,8 +27,7 @@ import {
 import { DiagnosticCode } from '../diagnostics/codes'
 import { DiagnosticBag, type Diagnostic, type Span } from '../diagnostics/diagnostic'
 import { capabilityOf, isInShippedScope } from './capability'
-// faceted-geometry.ts 的 circleFragments/sphereFragments 仅在 faceted-geometry.test.ts 中使用；
-// lower.ts 不再需要它们——M9 §1.3 后 $fa/$fs 不换算为全局 segments（见 collectTessellation 注释）
+import { circleFragments, sphereFragments } from './faceted-geometry'
 import type {
   IrBlocked,
   IrGeometry,
@@ -251,7 +250,15 @@ class Lowerer {
     // sphere 的棱面复刻需要 polyhedron（T810），faijs 目前没有 cad.polyhedron。
     // 走 analytic sphere + OSC3201 信息诊断。
     this.reportFaceting(node, id)
-    return { kind: 'sphere', id, origin, dimension: '3d', radius }
+    const segments = this.primitiveSegments(node, radius, true)
+    return {
+      kind: 'sphere',
+      id,
+      origin,
+      dimension: '3d',
+      radius,
+      ...(segments === undefined ? {} : { segments }),
+    }
   }
 
   private lowerCylinder(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
@@ -272,8 +279,19 @@ class Lowerer {
     // 语义修正（M9 §1.3）：$fn/$fa/$fs 不改变建模语义，一律产出解析几何。
     // 棱面只是导出时的三角化视图，由 parity runner 在导出侧对齐分片参数。
     this.reportFaceting(node, id)
+    // segments 按较大端半径算（保证更细一侧够细）
+    const segments = this.primitiveSegments(node, Math.max(bottom, top), false)
     if (bottom === top) {
-      return { kind: 'cylinder', id, origin, dimension: '3d', radius: bottom, height: h.value, centered }
+      return {
+        kind: 'cylinder',
+        id,
+        origin,
+        dimension: '3d',
+        radius: bottom,
+        height: h.value,
+        centered,
+        ...(segments === undefined ? {} : { segments }),
+      }
     }
     return {
       kind: 'cone',
@@ -284,6 +302,7 @@ class Lowerer {
       radiusTop: top,
       height: h.value,
       centered,
+      ...(segments === undefined ? {} : { segments }),
     }
   }
 
@@ -760,11 +779,10 @@ class Lowerer {
    * - `$fn > 0`（显式指定）：取模型中最大值作为全局 segments。
    *   这是因为 `solidToShape(kernel, solid, segments)` 接受单一全局值，
    *   而显式 `$fn` 在 OpenSCAD 里也是统一分片数。
-   * - `$fa`/`$fs`（无显式 `$fn`）：**不计算全局 segments**。
-   *   OpenSCAD 按**每个图元的实际半径**换算分片数（r=1 → 4 段，r=10 → 30 段），
-   *   而 `solidToShape` 只接受单一值，无法复刻这种 per-primitive 计算。
-   *   此时 parity runner 不传 segments，让 faijs 用默认三角化——
-   *   两侧都是「默认密度」的三角化，差异最小。
+   * - `$fa`/`$fs`（无显式 `$fn`）：按 OpenSCAD 公式 + 节点半径算 fragments。
+   *   sphere: `max(5, min(ceil(360/$fa), ceil(2πr/$fs)))`（下限 5，实验标定）；
+   *   circle/cylinder: `max(3, min(ceil(360/$fa), ceil(2πr/$fs)))`（下限 3）。
+   *   多节点取 max fragments 作为全局 segments（保证最细图元够细）。
    */
   private collectTessellation(node: CsgNode): void {
     // 只采集 FACETING_PRIMITIVES 中的节点（sphere/cylinder/cone/circle）
@@ -799,24 +817,105 @@ class Lowerer {
       this.bestFs = this.bestFs === undefined ? fs : Math.min(this.bestFs, fs)
     }
 
-    // 只有显式 $fn > 0 时才计算 segments（可安全传给 solidToShape）
-    // $fa/$fs 无显式 $fn 时不计算——OpenSCAD 按 per-primitive 半径换算，
-    // 单一全局 segments 无法复刻
-    if (fn !== undefined) {
-      this.maxSegments = this.maxSegments === undefined ? fn : Math.max(this.maxSegments, fn)
+    // 计算本节点的 fragments 并更新全局 maxSegments
+    const fragments = this.nodeFragments(node, fn, fa, fs)
+    if (fragments !== undefined) {
+      this.maxSegments = this.maxSegments === undefined ? fragments : Math.max(this.maxSegments, fragments)
     }
+  }
+
+  /**
+   * 按本节点的参数计算 fragments 数。
+   *
+   * - 显式 `$fn > 0`：直接用 $fn。
+   * - 无显式 `$fn`：按 `$fa`/`$fs` + 节点半径用 OpenSCAD 公式算。
+   *   sphere 用 `sphereFragments`（下限 5），其余用 `circleFragments`（下限 3）。
+   * - 无法提取半径（linear_extrude/rotate_extrude 的轮廓半径不在本节点）：
+   *   返回 undefined，不参与 maxSegments 计算。
+   */
+  private nodeFragments(
+    node: CsgNode,
+    fn: number | undefined,
+    fa: number | undefined,
+    fs: number | undefined,
+  ): number | undefined {
+    if (fn !== undefined) return fn
+    const r = this.silentRadius(node)
+    if (r === undefined) return undefined
+    if (node.name === 'sphere') {
+      return sphereFragments(r, undefined, fa, fs)
+    }
+    return circleFragments(r, undefined, fa, fs)
+  }
+
+  /**
+   * 按节点的 `$fn`/`$fa`/`$fs` 和半径算 per-primitive segments。
+   *
+   * - 显式 `$fn > 0`：segments = $fn。
+   * - 无显式 `$fn` 但有 `$fa`/`$fs`：sphere 用 `sphereFragments`（下限 5），
+   *   其余用 `circleFragments`（下限 3）。
+   * - 无任何 `$` 变量：undefined（让 faijs 用默认三角化）。
+   *
+   * 这是 per-primitive 的 segments，存到 IR 节点上，emit 时写进
+   * `cad.sphere(r, { segments })` 等调用，让 runtime 创建图元时就用正确密度
+   * （而非事后调 solidToShape 重新三角化——OCCT 会缓存更细的三角化不变粗）。
+   */
+  private primitiveSegments(node: CsgNode, radius: number, isSphere: boolean): number | undefined {
+    const fn = this.specialVar(node, '$fn')
+    if (fn !== undefined && fn > 0) return Math.floor(fn)
+    const fa = this.specialVar(node, '$fa')
+    const fs = this.specialVar(node, '$fs')
+    if (fa === undefined && fs === undefined) return undefined
+    return isSphere
+      ? sphereFragments(radius, undefined, fa, fs)
+      : circleFragments(radius, undefined, fa, fs)
+  }
+
+  /** 静默读取节点的特殊变量（$fn/$fa/$fs）数值，非数值或不存在返回 undefined。 */
+  private specialVar(node: CsgNode, name: string): number | undefined {
+    const a = argumentOf(node, name)
+    return a?.value.kind === 'number' ? a.value.value : undefined
+  }
+
+  /**
+   * 静默提取节点半径（不触发诊断）。
+   * - sphere/circle：`r` 或 `d/2`
+   * - cylinder/cone：`max(r1,r2)` 或 `max(d1,d2)/2`（取较大端，保证更细一侧够细）
+   * - 其余：undefined
+   */
+  private silentRadius(node: CsgNode): number | undefined {
+    const num = (name: string): number | undefined => {
+      const a = argumentOf(node, name)
+      return a?.value.kind === 'number' ? a.value.value : undefined
+    }
+    if (node.name === 'sphere' || node.name === 'circle') {
+      const r = num('r')
+      if (r !== undefined) return r
+      const d = num('d')
+      if (d !== undefined) return d / 2
+      return undefined
+    }
+    if (node.name === 'cylinder' || node.name === 'cone') {
+      const r1 = num('r1') ?? num('r')
+      const r2 = num('r2') ?? num('r')
+      const d1 = num('d1') ?? num('d')
+      const d2 = num('d2') ?? num('d')
+      const rr1 = r1 ?? (d1 !== undefined ? d1 / 2 : undefined)
+      const rr2 = r2 ?? (d2 !== undefined ? d2 / 2 : undefined)
+      if (rr1 === undefined && rr2 === undefined) return undefined
+      return Math.max(rr1 ?? 0, rr2 ?? 0)
+    }
+    return undefined
   }
 
   /**
    * 计算最终的全局三角化参数。
    *
    * - 无任何 `$fn`/`$fa`/`$fs`：返回 `undefined`（使用 faijs 默认三角化）。
-   * - 有显式 `$fn > 0`：返回 `fn` 和 `segments = fn`，parity runner 传给
-   *   `solidToShape` 做精确分片对齐。
-   * - 仅有 `$fa`/`$fs`（无显式 `$fn`）：返回 `fa`/`fs` 但 **`segments = undefined`**。
-   *   parity runner 不传 segments，让 faijs 用默认三角化。
-   *   原因：OpenSCAD 按 per-primitive 半径换算分片数，单一全局 segments
-   *   无法复刻（如 r=1 → 4 段 vs r=10 → 30 段）。
+   * - 有显式 `$fn > 0`：返回 `fn` 和 `segments = fn`。
+   * - 仅有 `$fa`/`$fs`（无显式 `$fn`）：返回 `fa`/`fs` 和
+   *   `segments = maxSegments`（按各图元半径用 OpenSCAD 公式算出的最大 fragments）。
+   *   parity runner 把 segments 传给 `solidToShape` 做分片对齐。
    */
   private computeTessellation(): TessellationParams | undefined {
     if (this.bestFn === undefined && this.bestFa === undefined && this.bestFs === undefined) {
@@ -825,8 +924,7 @@ class Lowerer {
     const fn = this.bestFn
     const fa = this.bestFa
     const fs = this.bestFs
-    // segments 只在显式 $fn > 0 时计算——可安全传给 solidToShape
-    const segments = fn
+    const segments = this.maxSegments
     return {
       ...(fn === undefined ? {} : { fn }),
       ...(fa === undefined ? {} : { fa }),

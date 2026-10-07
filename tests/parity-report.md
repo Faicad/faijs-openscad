@@ -1,18 +1,18 @@
 # Parity Report
 
-- **Timestamp**: 2026-10-06T15:49:06.386Z
+- **Timestamp**: 2026-10-07T14:49:08.920Z
 - **Converter**: 0.29.5
 
 ## Summary
 
 | Verdict | Count |
 |---|---|
-| PASS | 5 |
+| PASS | 6 |
 | PASS-ANALYTIC | 0 |
 | PASS-NT | 0 |
-| FAIL | 12 |
-| ERROR | 4 |
-| **Total** | 21 |
+| FAIL | 11 |
+| ERROR | 5 |
+| **Total** | 22 |
 
 ## Tolerance
 
@@ -29,39 +29,40 @@
 
 ## Per-Example Results
 
-| Example | Verdict | Volume Δ | Area Δ | Bbox IoU | Centroid dist | Hausdorff | STEP |
-|---|---|---|---|---|---|---|---|
-| Advanced/assert.scad | PASS | 0.014639 | 0.007103 | 1.000000 | 0.000007 | 0.000000 | exact |
-| Basics/CSG-modules.scad | PASS | 2.252296 | 0.335655 | 0.999886 | 0.007546 | 0.000000 | exact |
-| Basics/CSG.scad | FAIL | 42.395339 | 22.263225 | 0.990889 | 0.247451 | 0.000000 | exact |
-| Basics/logo.scad | FAIL | 0.960414 | 10.306047 | 0.999188 | 0.000033 | 0.000000 | exact |
-| Basics/roof.scad | ERROR | — | — | — | — | — | n/a |
-| Functions/echo.scad | ERROR | — | — | — | — | — | n/a |
-| Functions/functions.scad | FAIL | 72.029523 | 119.032665 | 0.998745 | 1.164802 | 0.000000 | exact |
-| Functions/list_comprehensions.scad | ERROR | — | — | — | — | — | n/a |
-| Old/example001.scad | FAIL | 431.043449 | 93.731276 | 0.994639 | 0.000029 | 0.000000 | exact |
-| Old/example002.scad | FAIL | 59.347923 | 16.012854 | 1.000000 | 0.011399 | 0.000000 | exact |
-| Old/example003.scad | PASS | 0.000000 | 0.000000 | 1.000000 | 0.000000 | 0.000000 | exact |
-| Old/example004.scad | FAIL | 142.074189 | 127.359782 | 1.000000 | 0.000022 | 0.000000 | exact |
-| Old/example005.scad | FAIL | 15726.617601 | 1210.961514 | 0.994423 | 0.020421 | 0.000000 | exact |
-| Old/example014.scad | PASS | 0.005226 | 0.001518 | 0.999998 | 0.000000 | 0.000000 | exact |
-| Old/example017.scad | ERROR | — | — | — | — | — | n/a |
-| Old/example018.scad | FAIL | 9243.972897 | 478.097491 | 0.999995 | 0.000124 | 0.000000 | exact |
-| Old/example019.scad | FAIL | 893.799754 | 111.805297 | 0.996200 | 0.018778 | 0.000000 | exact |
-| Old/example022.scad | FAIL | 216.421031 | 22.051482 | 1.000000 | 0.000679 | 0.000000 | exact |
-| Old/example023.scad | FAIL | 1043.301762 | 0.023607 | 0.500000 | 0.324151 | 0.000000 | exact |
-| Old/example024.scad | PASS | 0.462035 | 0.042650 | 0.999999 | 0.000027 | 0.000000 | exact |
-| Parametric/candleStand.scad | FAIL | 37.366124 | 9.714998 | 0.999796 | 0.012953 | 0.000000 | exact |
+| Example | Verdict | Volume Δ | Area Δ | Bbox IoU | Centroid dist | Hausdorff | Tessellation | STEP |
+|---|---|---|---|---|---|---|---|---|
+| Advanced/assert.scad | PASS | 0.014639 | 0.007103 | 1.000000 | 0.000007 | 0.000000 | default | exact |
+| Advanced/module_recursion.scad | ERROR | — | — | — | — | — | default | n/a |
+| Basics/CSG-modules.scad | PASS | 2.252296 | 0.335655 | 0.999886 | 0.007546 | 0.000000 | seg=72 | exact |
+| Basics/CSG.scad | FAIL | 42.395339 | 22.263225 | 0.990889 | 0.247451 | 0.000000 | seg=30 | exact |
+| Basics/logo.scad | PASS | 13.602304 | 7.372897 | 0.999626 | 0.000029 | 0.000000 | seg=100 | exact |
+| Basics/roof.scad | ERROR | — | — | — | — | — | default | n/a |
+| Functions/echo.scad | ERROR | — | — | — | — | — | default | n/a |
+| Functions/functions.scad | FAIL | 72.029523 | 119.032665 | 0.998745 | 1.164802 | 0.000000 | seg=5 | exact |
+| Functions/list_comprehensions.scad | ERROR | — | — | — | — | — | default | n/a |
+| Old/example001.scad | FAIL | 431.043449 | 93.731276 | 0.994639 | 0.000029 | 0.000000 | seg=30 | exact |
+| Old/example002.scad | FAIL | 59.347923 | 16.012854 | 1.000000 | 0.011399 | 0.000000 | seg=30 | exact |
+| Old/example003.scad | PASS | 0.000000 | 0.000000 | 1.000000 | 0.000000 | 0.000000 | default | exact |
+| Old/example004.scad | FAIL | 142.074189 | 127.359782 | 1.000000 | 0.000022 | 0.000000 | seg=30 | exact |
+| Old/example005.scad | FAIL | 15726.617601 | 1210.961514 | 0.994423 | 0.020421 | 0.000000 | seg=30 | exact |
+| Old/example014.scad | PASS | 0.005226 | 0.001518 | 0.999998 | 0.000000 | 0.000000 | default | exact |
+| Old/example017.scad | ERROR | — | — | — | — | — | default | n/a |
+| Old/example018.scad | FAIL | 9243.972897 | 478.097491 | 0.999995 | 0.000124 | 0.000000 | seg=30 | exact |
+| Old/example019.scad | FAIL | 893.799754 | 111.805297 | 0.996200 | 0.018778 | 0.000000 | seg=19 | exact |
+| Old/example022.scad | FAIL | 216.421031 | 22.051482 | 1.000000 | 0.000679 | 0.000000 | seg=16 | exact |
+| Old/example023.scad | FAIL | 1043.301762 | 0.023607 | 0.500000 | 0.324151 | 0.000000 | default | exact |
+| Old/example024.scad | PASS | 0.462035 | 0.042650 | 0.999999 | 0.000027 | 0.000000 | default | exact |
+| Parametric/candleStand.scad | FAIL | 45.510784 | 7.816309 | 0.999796 | 0.015888 | 0.000000 | seg=360 | exact |
 
 ## Failures & Errors
+
+### Advanced/module_recursion.scad — ERROR
+
+> [parser] line 1: source too long (1311373 > 1048576 bytes)
 
 ### Basics/CSG.scad — FAIL
 
 > volume: Δ=42.395339 (rel 0.005424); surface area: Δ=22.263225 (rel 0.006422); bbox IoU: 0.990889 (need > 0.999000); centroid distance: 0.247451
-
-### Basics/logo.scad — FAIL
-
-> surface area: Δ=10.306047 (rel 0.001074)
 
 ### Basics/roof.scad — ERROR
 
@@ -117,4 +118,4 @@
 
 ### Parametric/candleStand.scad — FAIL
 
-> volume: Δ=37.366124 (rel 0.007123); surface area: Δ=9.714998 (rel 0.001241); centroid distance: 0.012953
+> volume: Δ=45.510784 (rel 0.008662); centroid distance: 0.015888

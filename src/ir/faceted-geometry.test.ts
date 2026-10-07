@@ -39,9 +39,18 @@ describe('sphereFragments', () => {
     expect(sphereFragments(10, 6, undefined, undefined)).toBe(6)
   })
 
-  it('$fn=0 → computed from $fa/$fs (half of circle)', () => {
-    // r=10, $fa=12, $fs=2 → min(ceil(180/12)=15, ceil(π*10/2)=16) = 15
-    expect(sphereFragments(10, 0, DEFAULT_FA, DEFAULT_FS)).toBe(15)
+  it('$fn=0 → computed from $fa/$fs (同 circle 公式，下限 5)', () => {
+    // r=10, $fa=12, $fs=2 → max(5, min(ceil(360/12)=30, ceil(2π·10/2)=32)) = 30
+    expect(sphereFragments(10, 0, DEFAULT_FA, DEFAULT_FS)).toBe(30)
+  })
+
+  it('r=1 → 下限 5（实验标定：OpenSCAD sphere(1) 默认 5 段 = 26 tris）', () => {
+    // 公式 min(30, 4)=4，但 sphere 下限 5 → 5
+    expect(sphereFragments(1, 0, DEFAULT_FA, DEFAULT_FS)).toBe(5)
+  })
+
+  it('r=3 → 10（公式 min(30, 10)=10，≥5 无下限兜底）', () => {
+    expect(sphereFragments(3, 0, DEFAULT_FA, DEFAULT_FS)).toBe(10)
   })
 })
 

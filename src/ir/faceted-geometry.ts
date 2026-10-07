@@ -46,8 +46,17 @@ export function circleFragments(
 }
 
 /**
- * Compute the number of latitude segments for a sphere of radius `r`.
- * OpenSCAD uses half the circle fragments (pole to pole = 180°).
+ * Compute the number of fragments for a sphere of radius `r`.
+ *
+ * 实验标定（2026-10-07，OpenSCAD 2024.x）：sphere 的分片公式与 circle 相同
+ * （经度满圆 360°，全周长 2πr），**但下限是 5 而非 3**。旧公式用 180/πr/下限3
+ * 是错误的（会算出 r=1 → 3 段，实际 OpenSCAD 产出 5 段 = 26 tris）。
+ *
+ *   fragments = max(5, min(ceil(360/$fa), ceil(2*π*r/$fs)))
+ *
+ * 验证：r=1,$fa=12,$fs=2 → max(5, min(30, 4)) = 5 → 26 tris ✅
+ *       r=3 → max(5, min(30, 10)) = 10 → 96 tris ✅
+ *       r=10 → max(5, min(30, 32)) = 30 → 896 tris ✅
  */
 export function sphereFragments(
   r: number,
@@ -55,14 +64,14 @@ export function sphereFragments(
   fa: number | undefined,
   fs: number | undefined,
 ): number {
-  if (fn !== undefined && fn > 0) return Math.max(3, Math.floor(fn))
+  if (fn !== undefined && fn > 0) return Math.max(5, Math.floor(fn))
   const a = fa ?? DEFAULT_FA
   const s = fs ?? DEFAULT_FS
   return Math.max(
-    3,
+    5,
     Math.min(
-      Math.ceil(180 / a),
-      Math.ceil((Math.PI * r) / s),
+      Math.ceil(360 / a),
+      Math.ceil((2 * Math.PI * r) / s),
     ),
   )
 }
