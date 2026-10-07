@@ -143,9 +143,9 @@ export const DIAGNOSTIC_CODES: readonly DiagnosticCodeMeta[] = [
   },
   {
     code: DiagnosticCode.OSC3201,
-    defaultSeverity: 'warning',
-    title: 'Faceting not preserved in analytic mode',
-    hint: 'OpenSCAD $fn/$fa/$fs produced real faceted geometry; faijs analytic BREP keeps exact surfaces. Reported as PASS-ANALYTIC, never as strict PASS.',
+    defaultSeverity: 'info',
+    title: 'Tessellation parameter recorded for export-side alignment',
+    hint: 'OpenSCAD $fn/$fa/$fs are export parameters, not modelling semantics. The converter emits analytic geometry and records these as tessellation parameters; the parity runner applies equivalent faceting at STL export time.',
     downgradable: false,
   },
   {

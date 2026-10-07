@@ -353,16 +353,13 @@ describe('lower: 参数诊断', () => {
   })
 })
 
-describe('lower: 棱面复刻（T802, $fn > 0）', () => {
-  it('circle($fn=6) → polygon2d（正六边形），不报 OSC3201', () => {
+describe('lower: 棱面参数采集（M9 §1.3 语义修正后）', () => {
+  it('circle($fn=6) → circle2d（analytic），报 OSC3201（三角化参数已采集）', () => {
     const result = lower('circle(r = 10, $fn = 6);')
-    expect(result.model.root.kind).toBe('polygon2d')
-    expect(result.diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.OSC3201)
-    if (result.model.root.kind === 'polygon2d') {
-      expect(result.model.root.points).toHaveLength(6)
-      // 首顶点在角度 0 处: [r, 0]
-      expect(result.model.root.points[0]![0]).toBeCloseTo(10, 6)
-      expect(result.model.root.points[0]![1]).toBeCloseTo(0, 6)
+    expect(result.model.root.kind).toBe('circle2d')
+    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3201)
+    if (result.model.root.kind === 'circle2d') {
+      expect(result.model.root.radius).toBe(10)
     }
   })
 
@@ -377,23 +374,20 @@ describe('lower: 棱面复刻（T802, $fn > 0）', () => {
     expect(result.model.root.kind).toBe('circle2d')
   })
 
-  it('cylinder($fn=6) → extrude(polygon2d)，不报 OSC3201', () => {
+  it('cylinder($fn=6) → cylinder（analytic），报 OSC3201', () => {
     const result = lower('cylinder(h = 20, r = 5, $fn = 6);')
-    expect(result.model.root.kind).toBe('extrude')
-    expect(result.diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.OSC3201)
-    if (result.model.root.kind === 'extrude') {
-      expect(result.model.root.length).toBe(20)
-      expect(result.model.root.child.kind).toBe('polygon2d')
-      if (result.model.root.child.kind === 'polygon2d') {
-        expect(result.model.root.child.points).toHaveLength(6)
-      }
+    expect(result.model.root.kind).toBe('cylinder')
+    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3201)
+    if (result.model.root.kind === 'cylinder') {
+      expect(result.model.root.radius).toBe(5)
+      expect(result.model.root.height).toBe(20)
     }
   })
 
-  it('cylinder($fn=6, center=true) → extrude(polygon2d, centered)', () => {
+  it('cylinder($fn=6, center=true) → cylinder（analytic, centered）', () => {
     const result = lower('cylinder(h = 20, r = 5, $fn = 6, center = true);')
-    expect(result.model.root.kind).toBe('extrude')
-    if (result.model.root.kind === 'extrude') {
+    expect(result.model.root.kind).toBe('cylinder')
+    if (result.model.root.kind === 'cylinder') {
       expect(result.model.root.centered).toBe(true)
     }
   })
@@ -403,15 +397,68 @@ describe('lower: 棱面复刻（T802, $fn > 0）', () => {
     expect(result.model.root.kind).toBe('cylinder')
   })
 
-  it('cone（r1≠r2）$fn=6 → 仍走 analytic cone + OSC3201（需 T804 scale-extrude）', () => {
+  it('cone（r1≠r2）$fn=6 → analytic cone + OSC3201', () => {
     const result = lower('cylinder(h = 20, r1 = 5, r2 = 3, $fn = 6);')
     expect(result.model.root.kind).toBe('cone')
     expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3201)
   })
 
-  it('sphere $fn=12 → 仍走 analytic sphere + OSC3201（需 T810 polyhedron）', () => {
+  it('sphere $fn=12 → analytic sphere + OSC3201', () => {
     const result = lower('sphere(r = 10, $fn = 12);')
     expect(result.model.root.kind).toBe('sphere')
     expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3201)
+  })
+})
+
+describe('lower: 三角化参数采集（M9 §1.3, A2）', () => {
+  it('sphere($fn=24) → tessellation.fn=24, segments=24', () => {
+    const result = lower('sphere(r = 10, $fn = 24);')
+    expect(result.tessellation).toBeDefined()
+    expect(result.tessellation?.fn).toBe(24)
+    expect(result.tessellation?.segments).toBe(24)
+    expect(result.model.tessellation?.fn).toBe(24)
+  })
+
+  it('circle($fn=6) → tessellation.fn=6, segments=6', () => {
+    const result = lower('circle(r = 10, $fn = 6);')
+    expect(result.tessellation?.fn).toBe(6)
+    expect(result.tessellation?.segments).toBe(6)
+  })
+
+  it('cylinder($fn=8) → tessellation.fn=8', () => {
+    const result = lower('cylinder(h = 20, r = 5, $fn = 8);')
+    expect(result.tessellation?.fn).toBe(8)
+  })
+
+  it('无 $fn/$fa/$fs → tessellation=undefined', () => {
+    const result = lower('sphere(r = 10);')
+    expect(result.tessellation).toBeUndefined()
+    expect(result.model.tessellation).toBeUndefined()
+  })
+
+  it('$fn=0 → tessellation=undefined（不触发采集）', () => {
+    const result = lower('sphere(r = 10, $fn = 0);')
+    expect(result.tessellation).toBeUndefined()
+  })
+
+  it('多节点取最大 $fn', () => {
+    const result = lower('sphere(r = 10, $fn = 12); cylinder(h = 5, r = 3, $fn = 24);')
+    expect(result.tessellation?.fn).toBe(24)
+    expect(result.tessellation?.segments).toBe(24)
+  })
+
+  it('$fa/$fs 采集（取最小值 = 最严格），但 segments 不计算（无显式 $fn）', () => {
+    const result = lower('sphere(r = 10, $fa = 6, $fs = 1);')
+    expect(result.tessellation?.fa).toBe(6)
+    expect(result.tessellation?.fs).toBe(1)
+    expect(result.tessellation?.fn).toBeUndefined()
+    // M9 §1.3: 仅有 $fa/$fs 时不计算全局 segments——
+    // OpenSCAD 按 per-primitive 半径换算，单一全局 segments 无法复刻
+    expect(result.tessellation?.segments).toBeUndefined()
+  })
+
+  it('linear_extrude 的 $fn 也被采集', () => {
+    const result = lower('linear_extrude(height = 10, $fn = 16) { circle(r = 5); }')
+    expect(result.tessellation?.fn).toBe(16)
   })
 })

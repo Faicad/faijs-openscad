@@ -27,7 +27,8 @@ import {
 import { DiagnosticCode } from '../diagnostics/codes'
 import { DiagnosticBag, type Diagnostic, type Span } from '../diagnostics/diagnostic'
 import { capabilityOf, isInShippedScope } from './capability'
-import { circleFragments, regularPolygonPoints } from './faceted-geometry'
+// faceted-geometry.ts 的 circleFragments/sphereFragments 仅在 faceted-geometry.test.ts 中使用；
+// lower.ts 不再需要它们——M9 §1.3 后 $fa/$fs 不换算为全局 segments（见 collectTessellation 注释）
 import type {
   IrBlocked,
   IrGeometry,
@@ -35,6 +36,7 @@ import type {
   IrModel,
   IrOrigin,
   Matrix4,
+  TessellationParams,
   Vec2,
   Vec4,
 } from './model'
@@ -49,6 +51,8 @@ export interface LowerOptions {
 export interface LowerResult {
   readonly model: IrModel
   readonly diagnostics: readonly Diagnostic[]
+  /** 三角化参数（M9 §1.3），采集自语料的 $fn/$fa/$fs。 */
+  readonly tessellation?: TessellationParams
 }
 
 /**
@@ -101,8 +105,8 @@ const KNOWN_ARGS: Readonly<Record<string, readonly string[]>> = {
 }
 
 /**
- * 显式 `$fn > 0` 时 OpenSCAD 产出真实棱面实体。对于 cylinder/circle 我们可以用
- * 正多边形 + 拉伸精确复刻；对 sphere/cone 暂时仍走 analytic（见下文）。
+ * 显式 `$fn > 0` 的节点名集合。这些节点的 `$fn`/`$fa`/`$fs` 不改变建模语义，
+ * 只控制导出时的三角化分片密度（M9 §1.3 铁律 2）。
  */
 const FACETING_PRIMITIVES = new Set(['sphere', 'cylinder', 'cone', 'circle'])
 
@@ -120,6 +124,11 @@ class Lowerer {
   private nextId = 0
   private readonly path?: string
   private readonly openscadVersion?: string
+  /** M9 §1.3: 采集语料中最严格的三角化参数。 */
+  private bestFn: number | undefined
+  private bestFa: number | undefined
+  private bestFs: number | undefined
+  private maxSegments: number | undefined
 
   constructor(options: LowerOptions) {
     this.path = options.path
@@ -133,6 +142,7 @@ class Lowerer {
       .filter((n): n is IrGeometry => n !== undefined)
 
     const root = this.combine('union', children, document.span, 'root')
+    const tessellation = this.computeTessellation()
     return {
       model: {
         root,
@@ -141,8 +151,10 @@ class Lowerer {
           ...(this.path === undefined ? {} : { path: this.path }),
           ...(this.openscadVersion === undefined ? {} : { openscadVersion: this.openscadVersion }),
         },
+        ...(tessellation === undefined ? {} : { tessellation }),
       },
       diagnostics: this.bag.all(),
+      ...(tessellation === undefined ? {} : { tessellation }),
     }
   }
 
@@ -171,6 +183,9 @@ class Lowerer {
       const entry = capabilityOf(node.name)
       return this.blocked(node, id, origin, entry.note)
     }
+
+    // M9 §1.3 铁律 2：采集 $fn/$fa/$fs 作为三角化参数（不影响建模语义）。
+    this.collectTessellation(node)
 
     switch (node.name) {
       case 'cube':
@@ -253,16 +268,13 @@ class Lowerer {
 
     // OpenSCAD 的 r1 在 z=0（底）、r2 在 z=h（顶）；faijs cone 的
     // radiusBottom / radiusTop 同序同向，故无需交换。
+    //
+    // 语义修正（M9 §1.3）：$fn/$fa/$fs 不改变建模语义，一律产出解析几何。
+    // 棱面只是导出时的三角化视图，由 parity runner 在导出侧对齐分片参数。
+    this.reportFaceting(node, id)
     if (bottom === top) {
-      // cylinder（r1 === r2）：显式 $fn > 0 时用正多边形 + extrude 精确复刻棱面。
-      const fn = this.readFacetingFn(node)
-      if (fn !== undefined) {
-        return this.lowerFacetedCylinder(node, id, origin, bottom, h.value, centered, fn)
-      }
       return { kind: 'cylinder', id, origin, dimension: '3d', radius: bottom, height: h.value, centered }
     }
-    // cone（r1 !== r2）：棱面复刻需要 scale-extrude（T804），暂走 analytic + OSC3201。
-    this.reportFaceting(node, id)
     return {
       kind: 'cone',
       id,
@@ -290,18 +302,8 @@ class Lowerer {
     this.reportUnknownArgs(node)
     const radius = this.radiusArg(node, id)
     if (radius === undefined) return { kind: 'empty', id, origin }
-    // 显式 $fn > 0：用正 N 边形 polygon2d 精确复刻 OpenSCAD 棱面圆。
-    const fn = this.readFacetingFn(node)
-    if (fn !== undefined) {
-      const points = regularPolygonPoints(radius, fn)
-      return {
-        kind: 'polygon2d',
-        id,
-        origin,
-        dimension: '2d',
-        points: points as readonly Vec2[],
-      }
-    }
+    // 语义修正（M9 §1.3）：$fn/$fa/$fs 不改变建模语义，一律产出解析圆。
+    // 棱面只是导出时的三角化视图，由 parity runner 在导出侧对齐分片参数。
     this.reportFaceting(node, id)
     return { kind: 'circle2d', id, origin, dimension: '2d', radius }
   }
@@ -745,54 +747,91 @@ class Lowerer {
     return [parts[0], parts[1], parts[2], parts[3] ?? 1] as Vec4
   }
 
-  // ── 棱面复刻 ─────────────────────────────────────────────────────────────
+  // ── 三角化参数采集（M9 §1.3 铁律 2） ─────────────────────────────────────
 
   /**
-   * 读取显式 `$fn`。返回 `undefined` 表示无显式 `$fn`（或 `$fn <= 0`），
-   * 此时 OpenSCAD 使用 `$fa`/`$fs` 默认值分面——但那些面足够细，faijs analytic
-   * 曲面在 STL 层面可以近似，故只对显式 `$fn > 0` 做棱面复刻。
+   * 采集单个节点的 `$fn`/`$fa`/`$fs` 特殊变量。
+   *
+   * 语义修正（M9 §1.3）：这些变量**不改变建模语义**，只控制导出时的
+   * 三角化分片密度。转换器把它们采集为导出元数据，交给 parity runner
+   * 在导出侧对齐分片参数。
+   *
+   * 采集策略：
+   * - `$fn > 0`（显式指定）：取模型中最大值作为全局 segments。
+   *   这是因为 `solidToShape(kernel, solid, segments)` 接受单一全局值，
+   *   而显式 `$fn` 在 OpenSCAD 里也是统一分片数。
+   * - `$fa`/`$fs`（无显式 `$fn`）：**不计算全局 segments**。
+   *   OpenSCAD 按**每个图元的实际半径**换算分片数（r=1 → 4 段，r=10 → 30 段），
+   *   而 `solidToShape` 只接受单一值，无法复刻这种 per-primitive 计算。
+   *   此时 parity runner 不传 segments，让 faijs 用默认三角化——
+   *   两侧都是「默认密度」的三角化，差异最小。
    */
-  private readFacetingFn(node: CsgNode): number | undefined {
-    const arg = argumentOf(node, '$fn')
-    if (!arg || arg.value.kind !== 'number' || arg.value.value <= 0) return undefined
-    return Math.floor(arg.value.value)
+  private collectTessellation(node: CsgNode): void {
+    // 只采集 FACETING_PRIMITIVES 中的节点（sphere/cylinder/cone/circle）
+    // 以及 linear_extrude / rotate_extrude（它们的 $fn 作用于轮廓弧）
+    if (
+      !FACETING_PRIMITIVES.has(node.name) &&
+      node.name !== 'linear_extrude' &&
+      node.name !== 'rotate_extrude'
+    ) {
+      return
+    }
+
+    const fnArg = argumentOf(node, '$fn')
+    const faArg = argumentOf(node, '$fa')
+    const fsArg = argumentOf(node, '$fs')
+
+    const fn = fnArg?.value.kind === 'number' && fnArg.value.value > 0
+      ? Math.floor(fnArg.value.value)
+      : undefined
+    const fa = faArg?.value.kind === 'number' ? faArg.value.value : undefined
+    const fs = fsArg?.value.kind === 'number' ? fsArg.value.value : undefined
+
+    if (fn !== undefined) {
+      this.bestFn = this.bestFn === undefined ? fn : Math.max(this.bestFn, fn)
+    }
+    if (fa !== undefined) {
+      // $fa 越小越严格（更多分片），取最小值
+      this.bestFa = this.bestFa === undefined ? fa : Math.min(this.bestFa, fa)
+    }
+    if (fs !== undefined) {
+      // $fs 越小越严格（更多分片），取最小值
+      this.bestFs = this.bestFs === undefined ? fs : Math.min(this.bestFs, fs)
+    }
+
+    // 只有显式 $fn > 0 时才计算 segments（可安全传给 solidToShape）
+    // $fa/$fs 无显式 $fn 时不计算——OpenSCAD 按 per-primitive 半径换算，
+    // 单一全局 segments 无法复刻
+    if (fn !== undefined) {
+      this.maxSegments = this.maxSegments === undefined ? fn : Math.max(this.maxSegments, fn)
+    }
   }
 
   /**
-   * `$fn > 0` 的 cylinder → 正多边形 polygon2d + extrude。
+   * 计算最终的全局三角化参数。
    *
-   * OpenSCAD 的 cylinder($fn=N) 截面是正 N 边形（内接于半径 r 的圆），
-   * 沿 Z 轴拉伸高度 h。faijs 的 `cad.profile` + `cad.extrude` 可以精确复刻。
-   *
-   * 返回的 IR 是一个 `extrude` 节点，其 child 是 `polygon2d`。
+   * - 无任何 `$fn`/`$fa`/`$fs`：返回 `undefined`（使用 faijs 默认三角化）。
+   * - 有显式 `$fn > 0`：返回 `fn` 和 `segments = fn`，parity runner 传给
+   *   `solidToShape` 做精确分片对齐。
+   * - 仅有 `$fa`/`$fs`（无显式 `$fn`）：返回 `fa`/`fs` 但 **`segments = undefined`**。
+   *   parity runner 不传 segments，让 faijs 用默认三角化。
+   *   原因：OpenSCAD 按 per-primitive 半径换算分片数，单一全局 segments
+   *   无法复刻（如 r=1 → 4 段 vs r=10 → 30 段）。
    */
-  private lowerFacetedCylinder(
-    node: CsgNode,
-    id: number,
-    origin: IrOrigin,
-    radius: number,
-    height: number,
-    centered: boolean,
-    fn: number,
-  ): IrGeometry {
-    const segments = circleFragments(radius, fn, undefined, undefined)
-    const points = regularPolygonPoints(radius, segments)
-    const polygonId = this.nextId++
-    const polygon: IrGeometry2D = {
-      kind: 'polygon2d',
-      id: polygonId,
-      origin: { ...origin, nodeId: polygonId },
-      dimension: '2d',
-      points: points as readonly Vec2[],
+  private computeTessellation(): TessellationParams | undefined {
+    if (this.bestFn === undefined && this.bestFa === undefined && this.bestFs === undefined) {
+      return undefined
     }
+    const fn = this.bestFn
+    const fa = this.bestFa
+    const fs = this.bestFs
+    // segments 只在显式 $fn > 0 时计算——可安全传给 solidToShape
+    const segments = fn
     return {
-      kind: 'extrude',
-      id,
-      origin,
-      dimension: '3d',
-      child: polygon,
-      length: height,
-      centered,
+      ...(fn === undefined ? {} : { fn }),
+      ...(fa === undefined ? {} : { fa }),
+      ...(fs === undefined ? {} : { fs }),
+      ...(segments === undefined ? {} : { segments }),
     }
   }
 
@@ -814,9 +853,14 @@ class Lowerer {
   }
 
   /**
-   * pass 6：显式 `$fn > 0` 意味着 OpenSCAD 产出的是真实棱面实体，而 analytic
-   * BREP 保留精确曲面。两边**不是**同一个几何，所以只报警、不做假换算
-   * （plan §5.5；`$fn` 与 faijs `segments` 的语义差别见 ir/faceting.probe.test.ts）。
+   * pass 6 tessellation-policy（M9 §1.3 修正后）：
+   *
+   * `$fn`/`$fa`/`$fs` 是**导出参数**，不是建模语义。转换器一律产出解析
+   * 几何（sphere/cylinder/circle），这些变量只影响导出时的三角化分片密度。
+   * OSC3201 从「analytic 不保留棱面」的信息降级为「三角化参数已采集，
+   * 将在导出侧对齐」的备注——方向正确，语义已修正。
+   *
+   * 报 OSC3201 让 parity runner 知道这个例子有显式 `$fn`，需要做分片对齐。
    */
   private reportFaceting(node: CsgNode, id: number): void {
     if (!FACETING_PRIMITIVES.has(node.name)) return
@@ -824,7 +868,7 @@ class Lowerer {
     if (!fn || fn.value.kind !== 'number' || fn.value.value <= 0) return
     this.bag.add({
       code: DiagnosticCode.OSC3201,
-      message: `${node.name}: explicit $fn=${fn.value.value} is not preserved — faijs emits an analytic surface instead of faceted geometry`,
+      message: `${node.name}: explicit $fn=${fn.value.value} recorded as tessellation parameter; analytic geometry preserved, faceting applied at export`,
       ...this.spanRef(node.span),
       nodeId: id,
     })

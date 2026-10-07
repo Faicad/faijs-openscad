@@ -148,6 +148,7 @@ export type {
   IrTransform,
   IrUnion,
   Matrix4,
+  TessellationParams,
   Vec2,
   Vec3,
   Vec4,

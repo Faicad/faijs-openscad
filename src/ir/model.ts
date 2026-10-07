@@ -76,53 +76,12 @@ export interface IrSphere extends IrSolid {
   readonly radius: number
 }
 
-/**
- * Faceted sphere: when `$fn > 0`, OpenSCAD produces a real faceted polyhedron.
- * This node carries the vertex/face data so the emitter can produce an exact
- * faceted solid (via runtime polyhedron helper or cad.profile + extrude).
- *
- * The facet count follows OpenSCAD's `$fn` sphere tessellation:
- * - `fn` latitude strips, each with `fn` longitude segments
- * - Total triangles = 2 * fn * (fn - 1) + 2 * fn (caps)
- */
-export interface IrFacetedSphere extends IrSolid {
-  readonly kind: 'faceted-sphere'
-  readonly radius: number
-  /** Number of segments (from $fn, or computed from $fa/$fs). */
-  readonly segments: number
-}
-
 /** `cylinder(h, r1, r2, center)` 且 `r1 === r2` → `cad.cylinder(r, h, { centered })`。 */
 export interface IrCylinder extends IrSolid {
   readonly kind: 'cylinder'
   readonly radius: number
   readonly height: number
   readonly centered: boolean
-}
-
-/**
- * Faceted cylinder: when `$fn > 0`, the cross-section is a regular N-gon
- * instead of a circle. Emitted as a polygon2d + extrude.
- */
-export interface IrFacetedCylinder extends IrSolid {
-  readonly kind: 'faceted-cylinder'
-  readonly radius: number
-  readonly height: number
-  readonly centered: boolean
-  readonly segments: number
-}
-
-/**
- * Faceted cone: when `$fn > 0`, the cross-sections are regular N-gons
- * instead of circles. Emitted as a polygon2d + extrude (with scale).
- */
-export interface IrFacetedCone extends IrSolid {
-  readonly kind: 'faceted-cone'
-  readonly radiusBottom: number
-  readonly radiusTop: number
-  readonly height: number
-  readonly centered: boolean
-  readonly segments: number
 }
 
 /** `cylinder(h, r1, r2, center)` 且 `r1 !== r2` → `cad.cone(r1, r2, h, { centered })`。 */
@@ -259,11 +218,8 @@ export interface IrBlocked extends IrCommon {
 export type IrGeometry =
   | IrBox
   | IrSphere
-  | IrFacetedSphere
   | IrCylinder
-  | IrFacetedCylinder
   | IrCone
-  | IrFacetedCone
   | IrRect2D
   | IrCircle2D
   | IrPolygon2D
@@ -281,6 +237,27 @@ export type IrGeometry =
 /** 保维度为 2D 的几何子集（`linear_extrude` 的输入约束）。 */
 export type IrGeometry2D = IrRect2D | IrCircle2D | IrPolygon2D | IrUnion | IrDifference | IrIntersection
 
+/**
+ * 三角化参数（M9 §1.3 铁律 2）。
+ *
+ * `$fn`/`$fa`/`$fs` 是 OpenSCAD 的导出参数，不改变建模语义。转换器把它们
+ * 采集为三角化元数据，交给 parity runner 在导出侧对齐分片密度。
+ *
+ * - `fn > 0`：精确分段数（优先级最高）
+ * - `fn` 未设：由 `fa`/`fs` 按公式换算出 `segments`
+ * - 全部未设：使用 OpenSCAD 默认值（$fa=12, $fs=2）
+ */
+export interface TessellationParams {
+  /** 显式 $fn > 0 时的精确分段数。 */
+  readonly fn?: number
+  /** $fa 角度（度），缺省 12。 */
+  readonly fa?: number
+  /** $fs 大小（mm），缺省 2。 */
+  readonly fs?: number
+  /** 从 fn 或 fa/fs 换算出的分段数（供 parity runner 使用）。 */
+  readonly segments?: number
+}
+
 /** 模型根：可能是单节点，也可能是多个根节点的隐式 union。 */
 export interface IrModel {
   readonly root: IrGeometry
@@ -291,6 +268,12 @@ export interface IrModel {
     readonly path?: string
     readonly openscadVersion?: string
   }
+  /**
+   * 三角化参数（M9 §1.3）。采集自模型中所有显式 `$fn`/`$fa`/`$fs` 的
+   * 最严格值（取最大 segments），供 parity runner 在导出侧对齐分片密度。
+   * `undefined` 表示语料未设置任何 `$` 变量（使用 OpenSCAD 默认值）。
+   */
+  readonly tessellation?: TessellationParams
 }
 
 /** 深度优先前序遍历。 */
@@ -314,11 +297,8 @@ export function irChildren(node: IrGeometry): readonly IrGeometry[] {
       return [node.child]
     case 'box':
     case 'sphere':
-    case 'faceted-sphere':
     case 'cylinder':
-    case 'faceted-cylinder':
     case 'cone':
-    case 'faceted-cone':
     case 'rect2d':
     case 'circle2d':
     case 'polygon2d':

@@ -33,6 +33,8 @@ export interface ParityEntry {
   readonly fiveDim?: FiveDimResult
   /** $fn value used (if applicable). */
   readonly fn?: number
+  /** Tessellation segments (M9 §1.3, from $fn/$fa/$fs). */
+  readonly segments?: number
   /** Whether the example uses faceted primitives. */
   readonly hasFacetedPrimitives: boolean
   /** Whether STEP export is exact or approximate. */
@@ -67,12 +69,22 @@ export interface ParityReport {
   }
 }
 
-// ── Analytic classification rules (T404) ──────────────────────────────────
+// ── Analytic classification rules (T404) — deprecated under M9 §1.3 ──────
 
 /**
  * Determine if a comparison should be classified as PASS-ANALYTIC.
  *
- * Rules (plan §5.5, §9.6):
+ * **⚠️ M9 §1.3 语义修正后此函数已废弃**——`run-parity.ts` 不再调用它。
+ *
+ * 旧语义（已否决）：faijs 产出解析几何，OpenSCAD 产出棱面体，低 `$fn` 时
+ * 两边有系统性体积差，用 `PASS-ANALYTIC` 容忍。
+ *
+ * 新语义（M9 §1.3）：两边是同一解析几何的两次三角化，分片参数已对齐。
+ * 不再需要 `PASS-ANALYTIC` 容忍类别——直接用 `comparison.verdict`。
+ *
+ * 函数保留供向后兼容与测试，但新代码不应调用。
+ *
+ * Rules (plan §5.5, §9.6, 旧版):
  *  1. If the example has no faceted primitives ($fn not set or $fn ≥ 32),
  *     and metrics match → PASS (strict).
  *  2. If the example has low-$fn primitives ($fn < 32), faijs BREP is
@@ -81,10 +93,6 @@ export interface ParityReport {
  *  3. If metrics diverge beyond tolerance for reasons other than faceting
  *     → FAIL.
  *  4. If the comparison could not be computed → ERROR.
- *
- * The threshold $fn < 32 is derived from the faceting probe matrix:
- * $fn=0 uses $fa/$fs defaults, $fn=3/4/6/12 produces visible facets,
- * $fn=32+ is visually smooth. The exact threshold is configurable.
  */
 export const ANALYTIC_FACET_THRESHOLD = 32
 
@@ -211,8 +219,8 @@ export function renderMarkdown(report: ParityReport): string {
   // Per-example table
   lines.push('## Per-Example Results')
   lines.push('')
-  lines.push('| Example | Verdict | Volume Δ | Area Δ | Bbox IoU | Centroid dist | Hausdorff | STEP |')
-  lines.push('|---|---|---|---|---|---|---|---|')
+  lines.push('| Example | Verdict | Volume Δ | Area Δ | Bbox IoU | Centroid dist | Hausdorff | Tessellation | STEP |')
+  lines.push('|---|---|---|---|---|---|---|---|---|')
 
   for (const e of report.entries) {
     const c = e.comparison
@@ -221,7 +229,8 @@ export function renderMarkdown(report: ParityReport): string {
     const iou = c ? c.bboxIoU.toFixed(6) : '—'
     const cent = c ? c.centroidDistance.toFixed(6) : '—'
     const haus = c ? c.hausdorffDistance.toFixed(6) : '—'
-    lines.push(`| ${e.name} | ${e.verdict} | ${vol} | ${area} | ${iou} | ${cent} | ${haus} | ${e.stepExport} |`)
+    const tess = e.segments !== undefined ? `seg=${e.segments}` : (e.fn !== undefined ? `fn=${e.fn}` : 'default')
+    lines.push(`| ${e.name} | ${e.verdict} | ${vol} | ${area} | ${iou} | ${cent} | ${haus} | ${tess} | ${e.stepExport} |`)
   }
   lines.push('')
 

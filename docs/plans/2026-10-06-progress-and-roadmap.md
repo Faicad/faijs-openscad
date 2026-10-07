@@ -1,5 +1,11 @@
 # faijs-openscad 进度报告与后续任务规划（M6 之后）
 
+> **[2026-10-07 废弃声明]** 本文档已**彻底废弃**，由
+> `docs/plans/2026-10-07-analytic-semantics-parity-plan.md` 取代。
+> 废弃原因：本文档 §4 T802 的 faceted 基本体路线建立在错误的 OpenSCAD 语义理解上
+> （把 `$fn` 当建模语义，实际它只是 STL 导出三角化参数）。
+> 原文内容按历史记录保留，不再维护。
+
 > 日期：2026-10-06
 > 前置文档：`docs/plans/2026-10-05-faijs-openscad-development-plan.md`（总计划，本文件不重复其背景）
 > 事实基线：本仓库当前源码、`tests/manifest.json`、M0–M6 各里程碑门禁实测结果（2026-10-06）。

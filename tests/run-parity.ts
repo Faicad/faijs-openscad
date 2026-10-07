@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url'
 import { emitFaijs, lowerCsg, parseCsg } from '../src/index'
 import { readStlMetrics, computeMetrics, type MeshMetrics, type StlTriangle } from '../src/parity/stl-metrics'
 import { compareMetrics, type ComparisonResult, type ParityVerdict } from '../src/parity/compare-mesh'
-import { classifyAnalytic, buildReport, renderMarkdown, renderJson, type ParityEntry } from '../src/parity/report'
+import { buildReport, renderMarkdown, renderJson, type ParityEntry } from '../src/parity/report'
 import { CONVERTER_VERSION } from '../src/version'
 
 // ── faijs runtime (loaded dynamically) ──────────────────────────────────────
@@ -48,6 +48,8 @@ interface FaijsNodeModule {
   createRuntime: (ports: unknown, mode: string) => FaijsRuntime
   createNodePorts: () => unknown
   initOcctWasm: () => Promise<void>
+  /** M9 §1.3: solidToShape(kernel, solid, segments) — 重新三角化 BREP solid。 */
+  solidToShape: (kernel: unknown, solid: unknown, segments?: number) => FaijsShape
 }
 
 // ── Paths ───────────────────────────────────────────────────────────────────
@@ -103,11 +105,15 @@ async function getRuntime(mod: FaijsNodeModule): Promise<FaijsRuntime> {
 
 /**
  * Execute a .fai.js script and extract the `result` output as a Shape.
- * Returns undefined if the script failed or produced no geometry.
+ *
+ * M9 §1.3: 如果 `segments` 参数提供，使用 `solidToShape` 对 BREP solid 重新
+ * 三角化，使 faijs 导出的网格分片密度与 OpenSCAD 的 `$fn` 对齐。
+ * 返回 undefined if the script failed or produced no geometry.
  */
 async function executeFaijs(
   mod: FaijsNodeModule,
   code: string,
+  segments?: number,
 ): Promise<{ shape?: FaijsShape; error?: string }> {
   const rt = await getRuntime(mod)
   try {
@@ -115,6 +121,21 @@ async function executeFaijs(
     if (r.failedAt) {
       return { error: String(r.failedAt.message ?? r.failedAt) }
     }
+
+    // M9 §1.3: 如果有 brepSolids 且提供了 segments，重新三角化
+    if (segments !== undefined && (r as any).brepSolids?.size > 0) {
+      const brepSolids = (r as any).brepSolids as Map<string, { solid: unknown; kernel: unknown }>
+      // 取 'result' 或第一个 solid
+      const entry = brepSolids.get('result') ?? brepSolids.values().next().value
+      if (entry) {
+        const shape = mod.solidToShape(entry.kernel, entry.solid, segments)
+        if (shape.positions && shape.indices) {
+          return { shape }
+        }
+      }
+    }
+
+    // 默认路径：直接从 outputs 取 result
     const out = r.outputs instanceof Map ? r.outputs.get('result') : undefined
     if (out === undefined || out === null) {
       return { error: 'no result variable in script output' }
@@ -210,10 +231,12 @@ async function main() {
 
     // Check for faceted primitives
     const hasFaceted = lowered.diagnostics.some((d) => d.code === 'OSC3201')
-    const fnArg = lowered.model.nodes.find((n) => 'segments' in n) as { segments?: number } | undefined
+    // M9 §1.3 A2: 从 lowered.tessellation 获取三角化参数
+    const tessellation = lowered.tessellation
+    const tessSegments = tessellation?.segments
 
-    // 3. Execute via faijs
-    const execResult = await executeFaijs(mod, emitted.code)
+    // 3. Execute via faijs — M9 §1.3 A3: 按 tessellation 参数重新三角化
+    const execResult = await executeFaijs(mod, emitted.code, tessSegments)
     if (execResult.error || !execResult.shape) {
       console.log(`    EXEC ERROR: ${execResult.error ?? 'no shape'}`)
       entries.push({
@@ -230,7 +253,8 @@ async function main() {
     // 4. Compute candidate metrics
     const candTriangles = shapeToTriangles(execResult.shape)
     const candMetrics = computeMetrics(candTriangles)
-    console.log(`    candidate: ${candMetrics.triangleCount} tris, vol=${candMetrics.volume.toFixed(4)}`)
+    const tessInfo = tessSegments !== undefined ? ` (seg=${tessSegments})` : ''
+    console.log(`    candidate: ${candMetrics.triangleCount} tris, vol=${candMetrics.volume.toFixed(4)}${tessInfo}`)
 
     // 5. Read reference STL
     if (!existsSync(stlPath)) {
@@ -248,9 +272,10 @@ async function main() {
     const refMetrics = readStlMetrics(new Uint8Array(refBuffer).buffer)
     console.log(`    reference: ${refMetrics.triangleCount} tris, vol=${refMetrics.volume.toFixed(4)}`)
 
-    // 6. Compare
+    // 6. Compare — M9 §1.3: parity 比对的是同一解析几何的两次三角化
     const comparison = compareMetrics(refMetrics, candMetrics)
-    const verdict = classifyAnalytic(comparison, hasFaceted, fnArg?.segments)
+    // 语义修正后：两边都是同一解析几何的三角化，不再有 analytic-vs-faceted 区别
+    const verdict = comparison.verdict
 
     console.log(`    verdict: ${verdict} (volΔ=${comparison.volumeDelta.toFixed(6)}, IoU=${comparison.bboxIoU.toFixed(6)})`)
 
@@ -260,7 +285,8 @@ async function main() {
       comparison,
       hasFacetedPrimitives: hasFaceted,
       stepExport: 'exact',
-      ...(fnArg?.segments !== undefined ? { fn: fnArg.segments } : {}),
+      ...(tessellation?.fn !== undefined ? { fn: tessellation.fn } : {}),
+      ...(tessSegments !== undefined ? { segments: tessSegments } : {}),
     })
   }
 

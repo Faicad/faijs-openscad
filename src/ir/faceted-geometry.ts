@@ -1,12 +1,15 @@
 /**
- * Faceted geometry computation (M8, T802).
+ * Fragment-count computation (M9 §1.3 语义修正后).
  *
- * When OpenSCAD has `$fn > 0`, sphere/cylinder/cone are real faceted
- * polyhedra, not analytic surfaces. This module computes the vertex/face
- * data that matches OpenSCAD's tessellation algorithm, so the emitter
- * can produce exact faceted geometry.
+ * **语义修正（M9 §1.3）**：`$fn`/`$fa`/`$fs` 是**导出参数**，不改变建模语义。
+ * 转换器一律产出解析几何（sphere/cylinder/circle），这些变量只在导出时控制
+ * 三角化分片密度。本模块仅提供从 `$fn`/`$fa`/`$fs` 换算**分段数**的函数
+ *（`circleFragments` / `sphereFragments`），供 `lower.ts` 采集三角化参数使用。
  *
- * OpenSCAD's faceting rules:
+ * `facetedSphereGeometry` / `regularPolygonPoints` 保留供测试与探针使用，
+ * 但**不再进入主转换管线**——主管线产出的始终是解析几何。
+ *
+ * OpenSCAD's faceting rules (for segment-count computation only):
  *  - `$fn > 0`: use exactly $fn segments
  *  - `$fn = 0` (or undef): compute from $fa (min angle) and $fs (min size)
  *    - For circles: fragments = max(3, min(ceil(360 / $fa), ceil(2*PI*r / $fs)))
