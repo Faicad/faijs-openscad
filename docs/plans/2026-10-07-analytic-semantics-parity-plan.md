@@ -124,7 +124,7 @@ M8 T803 实测：21 例中 5 PASS / 12 FAIL / 4 ERROR。旧的「细分差异」
 
 #### A4 调查结果（2026-10-07）
 
-**example023（IoU=0.5）根因：faijs 运行时 `cad.applyMatrix` bug**
+**example023（IoU=0.5）根因：faijs 运行时 `cad.applyMatrix` bug — 已修复**
 
 - 现象：extruded polygon-with-hole 几何体经 `cad.applyMatrix` 施加 Z 轴旋转（如 60°）后，
   顶面（Z=5）三角形被错误地移动到 Z=10，导致 Z extent 从 [0,5] 变为 [0,10]。
@@ -134,21 +134,73 @@ M8 T803 实测：21 例中 5 PASS / 12 FAIL / 4 ERROR。旧的「细分差异」
   `cad.extrude` → `cad.applyMatrix(Z旋转60°)` → Z range 从 [0,5] 变为 [0,10]。
 - 90° 旋转不受影响（轴对齐），仅非轴对齐旋转触发。
 - 简单 square（单轮廓无孔）不受影响。
-- **状态：已定位，待 faijs 侧修复**。
+- **状态：✅ 已在 faijs 0.30.9 中修复**。重跑 parity 确认 example023 从 FAIL → PASS
+  （volΔ=0.030364, IoU=1.000000）。
 
 **Functions/functions（体积 >6%, 85198 vs 1558 tris）根因：三角化密度不匹配**
 
 - 现象：cand 有 85198 个三角形，ref 仅 1558 个。语料包含 41 个 `sphere(r=1)` 和
   81 个 `cube(2, center=true)`，无显式 `$fn`（CSG dump 里 $fn=0, $fa=12, $fs=2）。
-- OpenSCAD 对 `sphere(r=1)` 的默认分片：`max(3, min(ceil(180/12), ceil(PI*1/2)))` = 3 段。
+- OpenSCAD 对 `sphere(r=1)` 的默认分片：`max(5, min(ceil(360/12), ceil(2π*1/2)))` = 5 段。
 - faijs 的 `solidToShape(kernel, solid, segments)` 接受**单一全局 segments** 值，
   无法复刻 OpenSCAD 的 per-primitive 半径感知分片计算。
 - 旧策略用 refRadius=10 算出 segments=30 传给 `solidToShape`，导致 r=1 的小球
-  被过度分片（30 段 vs OpenSCAD 的 3 段），三角形数膨胀 ~50 倍。
+  被过度分片（30 段 vs OpenSCAD 的 5 段），三角形数膨胀 ~50 倍。
 - **修正后策略**：当无显式 `$fn > 0` 时不传 segments（让 faijs 用默认三角化）。
   但 faijs 默认三角化密度仍高于 OpenSCAD 默认值（85198 vs 1558 tris），
   说明 faijs 默认分片密度本身需要标定——这是 faijs 侧的问题。
 - **状态：已定位，待 faijs 侧标定默认三角化密度或支持 per-primitive segments**。
+  → 排除项：详见 `2026-10-07-faijs-tessellation-density-proposal.md`。
+
+**2D union ERROR（example017, list_comprehensions）— ✅ 已修复**
+
+- 现象：faijs `cad.union` 拒绝 2D face 输入，报错
+  `union: no solid input — wire/face/shell geometry cannot fuse`。
+- 根因：CSG dump 中 2D `group()` 是隐式 union，转换器把它 lower 成 `IrUnion`
+  （dimension='2d'），emitter 生成 `cad.union`，但 faijs `cad.union` 只接受 3D solid。
+- **修复**：emitter 对 2D union 改用 `cad.fuse`（BREP 层布尔，支持 2D face 输入）。
+  `cad.subtract` 和 `cad.intersect` 对 2D face 本身就能工作，无需修改。
+- **parity 确认**：
+  - example017 从 ERROR → FAIL（2D union 不再报错，几何正确生成，FAIL 是三角化密度差异）
+  - list_comprehensions 从 ERROR → PASS-NT（执行成功，无 ref STL 可比对）
+- **状态：✅ 已修复并经 parity 确认**。
+
+**module_recursion ERROR（source too long）— 部分修复**
+
+- 现象：生成的 `.fai.js` 源码 1,311,373 字节，超过 faijs 静态校验器 1,048,576 字节上限。
+- 根因：parity runner 调用 `emitFaijs` 时未传 `compact: true`，CLI 的 auto-fallback
+  逻辑没有在 parity runner 中生效。
+- **修复**：parity runner 增加 auto-fallback：输出超过 1 MiB 时自动用 compact 模式重新生成。
+- compact 模式通过 helper 函数（`__rect`/`__circle`）和单行矩阵压缩输出，
+  使文件大小通过了 1 MiB 限制。
+- **残留问题**：faijs 静态校验器还有 top-level statements 数量限制（5000），
+  compact 后仍有 8189 条语句，超限。这需要进一步优化（如循环展开改写为 JS `for` 循环），
+  或 faijs 侧放宽限制。
+- **状态：部分修复（文件大小已解决，语句数限制待解决）**。
+
+**Parametric/candleStand（IoU=0.036, volΔ=75%）根因：faijs union 丢弃几何**
+
+- 现象：cand Z range [0, 3] vs ref [0, 53.5]，体积差 75%。cand 只有 682 tris vs
+  ref 8064 tris。
+- 调查：生成的 faijs 代码正确包含 `part0 = cad.cone(2, 1, 50)`（50mm 高锥体）、
+  `part4`（cylinder at z=46.5）、`part79`（复杂 difference at z=46.5）、
+  `part101`（7 个 box(25,3,3)），最终 `part102 = union(part0, part4, part79, part101)`。
+  但执行后 `part102` 的 Z range 只有 [0, 3]——只有 `part101`（box, Z∈[0,3]）的几何
+  保留，其余全部丢失。
+- 最小复现：单独执行 `union(cone(2,1,50), cylinder(4,7)@z=46.5)` 时 Z range 正确
+  （0-53.5），说明问题出在更复杂的 union 链中——某个中间 union/difference 产生了
+  非流形结果，导致后续 `cad.union` 丢弃部分输入。
+- cand 有 `boundaryEdges: 104`（非流形边），ref 有 0。
+- **状态：已定位，待 faijs 侧修复 union 对非流形输入的鲁棒性**。
+
+**其它 FAIL 例子（CSG.scad, example001/002/004/005/018/019/022）**
+
+- 这些例子的 FAIL 主因是三角化密度不匹配（cand 三角形数显著多于 ref），
+  属于 tessellation proposal 的排除项。
+- 部分例子有 `boundaryEdges > 0`（CSG.scad=2, example005=1, example018=8,
+  example022=8, candleStand=104），指示 faijs union/subtract 产生了非流形边——
+  这可能也贡献了部分体积差异，但主因仍是密度差异。
+- **状态：排除项，待 faijs 侧 tessellation 密度控制落地后重跑**。
 
 ### 阶段 B — 能力缺口（faijs 侧，= 内核方案阶段 1–3）
 
@@ -161,8 +213,8 @@ M8 T803 实测：21 例中 5 PASS / 12 FAIL / 4 ERROR。旧的「细分差异」
 | K07–K10 occt-wasm P0 | projection / 非等比 scale 例解锁 |
 | K11–K13 | surface 例解锁；exportStep 参数供 parity 使用 |
 
-2D union 不支持（2 例 ERROR）：随 K 系列落地评估 `cad.union` 是否开放 2D face 布尔；
-若内核无计划，本仓库用「面→薄实体→布尔→取面」runtime 兜底并如实标注。
+2D union 不支持（2 例 ERROR）：**已修复** — emitter 对 2D union 改用 `cad.fuse`
+（BREP 层布尔，支持 2D face 输入），`cad.subtract`/`cad.intersect` 本身兼容 2D face。
 
 ### 阶段 C — 全量收敛
 

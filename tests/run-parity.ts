@@ -210,10 +210,17 @@ async function main() {
     }
     const csg = readFileSync(csgPath, 'utf8')
 
-    // 2. Transpile
+    // 2. Transpile — auto-fallback to compact mode if output exceeds 1 MiB
+    // (faijs static checker rejects source > 1,048,576 bytes).
     const { document } = parseCsg(csg, { path: entry.source })
     const lowered = lowerCsg(document, { path: entry.source })
-    const emitted = emitFaijs(lowered.model)
+    let emitted = emitFaijs(lowered.model)
+    if (emitted.ok && emitted.code.length > 1_000_000) {
+      const compactEmitted = emitFaijs(lowered.model, { compact: true })
+      if (compactEmitted.ok && compactEmitted.code.length < emitted.code.length) {
+        emitted = compactEmitted
+      }
+    }
 
     if (!emitted.ok) {
       console.log(`    BLOCKED: ${emitted.blocked.join(', ')}`)

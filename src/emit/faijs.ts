@@ -165,7 +165,11 @@ class Emitter {
         const names = this.emitAll(node.children)
         if (names.length === 0) return undefined
         if (names.length === 1) return names[0]
-        return this.assign(`await cad.union(${names.join(', ')})`, node.id)
+        // M9 A4: faijs `cad.union` rejects 2D face inputs ("wire/face/shell
+        // geometry cannot fuse"). `cad.fuse` is the BREP-level boolean that
+        // accepts both solid and face inputs, so use it for 2D unions.
+        const op = node.dimension === '2d' ? 'cad.fuse' : 'cad.union'
+        return this.assign(`await ${op}(${names.join(', ')})`, node.id)
       }
       case 'difference': {
         const names = this.emitAll(node.children)

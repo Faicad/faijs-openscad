@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-07T14:49:08.920Z",
+  "timestamp": "2026-10-07T18:34:03.384Z",
   "converterVersion": "0.29.5",
   "tolerance": {
     "volumeAbs": 0.01,
@@ -56,38 +56,38 @@
             "min": [
               -44,
               -44,
-              -4
+              -4.000001430511475
             ],
             "max": [
               44,
               44,
-              4
+              4.000001430511475
             ],
             "extent": [
               88,
               88,
-              8
+              8.00000286102295
             ]
           },
-          "volume": 12376.002428823935,
-          "surfaceArea": 9912.001171541444,
+          "volume": 12376.003761233482,
+          "surfaceArea": 9912.001852477324,
           "centroid": [
-            -0.0000012140928133623503,
-            -2.712563957151039e-15,
-            0
+            -0.0000014223998589194848,
+            -4.67386780804322e-15,
+            -5.734807126433399e-18
           ],
           "connectedComponents": 32,
           "isManifold": 1,
           "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 0.01463932672595547,
-        "volumeRelDelta": 0.0000011828800786157098,
-        "surfaceAreaDelta": 0.00710346517371363,
-        "surfaceAreaRelDelta": 7.166529796332691e-7,
+        "volumeDelta": 0.015971736273058923,
+        "volumeRelDelta": 0.000001290540677038956,
+        "surfaceAreaDelta": 0.007784401053868351,
+        "surfaceAreaRelDelta": 7.853510491347196e-7,
         "bboxOverlap": 61952,
-        "bboxIoU": 1,
-        "centroidDistance": 0.00000734185202669688,
+        "bboxIoU": 0.9999996423722592,
+        "centroidDistance": 0.000007550159072254014,
         "triangleCountDelta": 0,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
@@ -101,7 +101,7 @@
       "verdict": "ERROR",
       "hasFacetedPrimitives": false,
       "stepExport": "n/a",
-      "error": "[parser] line 1: source too long (1311373 > 1048576 bytes)"
+      "error": "[parser] line 1: too many top-level statements (8189 > 5000)"
     },
     {
       "name": "Basics/CSG-modules.scad",
@@ -141,8 +141,8 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 12938,
-          "vertexCount": 6488,
+          "triangleCount": 12742,
+          "vertexCount": 6390,
           "bbox": {
             "min": [
               -27.488344192504883,
@@ -160,26 +160,26 @@
               50
             ]
           },
-          "volume": 3344.6541005237364,
-          "surfaceArea": 3253.854118108122,
+          "volume": 3344.647065530688,
+          "surfaceArea": 3253.844262328067,
           "centroid": [
-            1.2211522090750704,
-            7.941722475493737e-7,
-            -19.227272530633936
+            1.2211462859849211,
+            8.349785783738673e-7,
+            -19.227258804581776
           ],
           "connectedComponents": 15,
           "isManifold": 0,
           "boundaryEdges": 2,
           "nonManifoldEdges": 2
         },
-        "volumeDelta": 2.252295550283179,
-        "volumeRelDelta": 0.0006729484735292154,
-        "surfaceAreaDelta": 0.33565538686752916,
-        "surfaceAreaRelDelta": 0.00010314560927005691,
+        "volumeDelta": 2.2593305433315436,
+        "volumeRelDelta": 0.00067505041251879,
+        "surfaceAreaDelta": 0.3455111669222788,
+        "surfaceAreaRelDelta": 0.00010617425257015693,
         "bboxOverlap": 44991.25814437866,
         "bboxIoU": 0.9998857273999402,
-        "centroidDistance": 0.007545589168784956,
-        "triangleCountDelta": 2578,
+        "centroidDistance": 0.007554879924191873,
+        "triangleCountDelta": 2774,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
         "hausdorffDistance": 0
@@ -462,10 +462,10 @@
     },
     {
       "name": "Functions/list_comprehensions.scad",
-      "verdict": "ERROR",
+      "verdict": "PASS-NT",
       "hasFacetedPrimitives": false,
       "stepExport": "n/a",
-      "error": "[api/boolean] union: no solid input — wire/face/shell geometry cannot fuse (types: face, face, face, face, face, face, face, face, face)"
+      "error": "Reference STL not found"
     },
     {
       "name": "Old/example001.scad",
@@ -952,25 +952,25 @@
               20
             ]
           },
-          "volume": 5936.765674543362,
-          "surfaceArea": 1781.0294516231195,
+          "volume": 5936.7658467076535,
+          "surfaceArea": 1781.0294706581276,
           "centroid": [
-            1.835172675846408e-16,
-            -3.191604653645927e-16,
-            -1.7553825595052597e-16
+            3.1916046195351944e-17,
+            -4.468246467349272e-16,
+            -2.8923916864537697e-16
           ],
           "connectedComponents": 1,
           "isManifold": 1,
           "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 0.00522606378490309,
-        "volumeRelDelta": 8.802880341584414e-7,
-        "surfaceAreaDelta": 0.0015184805083663377,
-        "surfaceAreaRelDelta": 8.525858497075885e-7,
+        "volumeDelta": 0.005398228076046507,
+        "volumeRelDelta": 9.092876854895999e-7,
+        "surfaceAreaDelta": 0.0015375155164747412,
+        "surfaceAreaRelDelta": 8.632734841308364e-7,
         "bboxOverlap": 10009.76,
         "bboxIoU": 0.9999976087848618,
-        "centroidDistance": 4.2528958057782684e-16,
+        "centroidDistance": 5.889928582568211e-16,
         "triangleCountDelta": 32,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
@@ -981,10 +981,89 @@
     },
     {
       "name": "Old/example017.scad",
-      "verdict": "ERROR",
+      "verdict": "FAIL",
+      "comparison": {
+        "verdict": "FAIL",
+        "ref": {
+          "triangleCount": 1240,
+          "vertexCount": 598,
+          "bbox": {
+            "min": [
+              -102,
+              -101.441,
+              0
+            ],
+            "max": [
+              102,
+              102,
+              80
+            ],
+            "extent": [
+              204,
+              203.441,
+              80
+            ]
+          },
+          "volume": 167575.80772009306,
+          "surfaceArea": 70066.14473755434,
+          "centroid": [
+            -1.0449315253031043e-15,
+            -0.38185139068637824,
+            24.364846476743693
+          ],
+          "connectedComponents": 1,
+          "isManifold": 0,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 16
+        },
+        "cand": {
+          "triangleCount": 2768,
+          "vertexCount": 1377,
+          "bbox": {
+            "min": [
+              -102,
+              -102,
+              0
+            ],
+            "max": [
+              102,
+              102,
+              80
+            ],
+            "extent": [
+              204,
+              204,
+              80
+            ]
+          },
+          "volume": 167098.9903774369,
+          "surfaceArea": 69145.16857251921,
+          "centroid": [
+            0.000021932580858704078,
+            -0.07593052752336661,
+            24.490282644058325
+          ],
+          "connectedComponents": 1,
+          "isManifold": 0,
+          "boundaryEdges": 16,
+          "nonManifoldEdges": 1
+        },
+        "volumeDelta": 476.8173426561698,
+        "volumeRelDelta": 0.0028453829293343595,
+        "surfaceAreaDelta": 920.9761650351284,
+        "surfaceAreaRelDelta": 0.013144381904910202,
+        "bboxOverlap": 3320157.12,
+        "bboxIoU": 0.9972598039215687,
+        "centroidDistance": 0.33063848395192075,
+        "triangleCountDelta": 1528,
+        "maxSurfaceDistance": 0,
+        "meanSurfaceDistance": 0,
+        "hausdorffDistance": 0,
+        "message": "volume: Δ=476.817343 (rel 0.002845); surface area: Δ=920.976165 (rel 0.013144); bbox IoU: 0.997260 (need > 0.999000); centroid distance: 0.330638"
+      },
       "hasFacetedPrimitives": false,
-      "stepExport": "n/a",
-      "error": "[api/boolean] union: no solid input — wire/face/shell geometry cannot fuse (types: face, face, face)"
+      "stepExport": "exact",
+      "segments": 30
     },
     {
       "name": "Old/example018.scad",
@@ -1030,43 +1109,43 @@
             "min": [
               -185.3553466796875,
               -185.3553466796875,
-              -35.355350494384766
+              -35.3553466796875
             ],
             "max": [
               185.3553466796875,
               185.3553466796875,
-              35.355350494384766
+              35.3553466796875
             ],
             "extent": [
               370.710693359375,
               370.710693359375,
-              70.71070098876953
+              70.710693359375
             ]
           },
-          "volume": 2582665.789703485,
-          "surfaceArea": 276701.42743170273,
+          "volume": 2582665.860529562,
+          "surfaceArea": 276701.4323274863,
           "centroid": [
-            0.00004994335828942371,
-            -9.179283927225788e-7,
-            5.58175122300021e-7
+            0.00004992712922640001,
+            -9.338750867171491e-7,
+            5.583971218289281e-7
           ],
           "connectedComponents": 16,
           "isManifold": 0,
           "boundaryEdges": 8,
           "nonManifoldEdges": 8
         },
-        "volumeDelta": 9243.972897424828,
-        "volumeRelDelta": 0.003579236978426901,
-        "surfaceAreaDelta": 478.09749081137124,
-        "surfaceAreaRelDelta": 0.0017278461309325136,
+        "volumeDelta": 9244.04372350173,
+        "volumeRelDelta": 0.0035792643039027467,
+        "surfaceAreaDelta": 478.1023865949246,
+        "surfaceAreaRelDelta": 0.0017278637937409478,
         "bboxOverlap": 9717468.134453459,
-        "bboxIoU": 0.9999948311090302,
-        "centroidDistance": 0.00012429091054740973,
+        "bboxIoU": 0.9999949390043812,
+        "centroidDistance": 0.00012426907597242213,
         "triangleCountDelta": 8936,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
         "hausdorffDistance": 0,
-        "message": "volume: Δ=9243.972897 (rel 0.003579); surface area: Δ=478.097491 (rel 0.001728)"
+        "message": "volume: Δ=9244.043724 (rel 0.003579); surface area: Δ=478.102387 (rel 0.001728)"
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
@@ -1246,9 +1325,9 @@
     },
     {
       "name": "Old/example023.scad",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "comparison": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "ref": {
           "triangleCount": 3028,
           "vertexCount": 1588,
@@ -1283,48 +1362,47 @@
         },
         "cand": {
           "triangleCount": 3028,
-          "vertexCount": 2096,
+          "vertexCount": 1588,
           "bbox": {
             "min": [
-              -49.13137435913086,
-              -48.13137435913086,
+              -49.13138198852539,
+              -48.13138198852539,
               0
             ],
             "max": [
               55,
               63,
-              10
+              5
             ],
             "extent": [
-              104.13137435913086,
-              111.13137435913086,
-              10
+              104.13138198852539,
+              111.13138198852539,
+              5
             ]
           },
-          "volume": 5833.32999192013,
-          "surfaceArea": 9655.99743654791,
+          "volume": 4789.9978659892895,
+          "surfaceArea": 9655.99721429922,
           "centroid": [
-            -2.1602984312690423,
-            2.158584448817901,
-            2.824150613596166
+            -2.160298963866807,
+            2.1585850735282532,
+            2.4999996897793415
           ],
-          "connectedComponents": 90,
-          "isManifold": 0,
-          "boundaryEdges": 1016,
+          "connectedComponents": 55,
+          "isManifold": 1,
+          "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 1043.3017617776295,
-        "volumeRelDelta": 0.17885183303922958,
-        "surfaceAreaDelta": 0.023607267467014026,
-        "surfaceAreaRelDelta": 0.000002444823531337925,
-        "bboxOverlap": 57861.31373217686,
-        "bboxIoU": 0.49999988075963553,
-        "centroidDistance": 0.32415061416065094,
+        "volumeDelta": 0.03036415321093955,
+        "volumeRelDelta": 0.0000063390342920873,
+        "surfaceAreaDelta": 0.02382951615800266,
+        "surfaceAreaRelDelta": 0.00000246784012274552,
+        "bboxOverlap": 57861.32194379934,
+        "bboxIoU": 0.9999996649576348,
+        "centroidDistance": 0.00001835341672964636,
         "triangleCountDelta": 0,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "volume: Δ=1043.301762 (rel 0.178852); bbox IoU: 0.500000 (need > 0.999000); centroid distance: 0.324151"
+        "hausdorffDistance": 0
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact"
@@ -1371,40 +1449,40 @@
           "vertexCount": 4550,
           "bbox": {
             "min": [
-              -61.23725128173828,
-              -70.71070098876953,
-              -4.440892098500626e-15
+              -61.237220764160156,
+              -70.71067810058594,
+              -7.105427357601002e-15
             ],
             "max": [
-              81.64965057373047,
-              70.71070098876953,
-              86.60250091552734
+              81.64964294433594,
+              70.71067810058594,
+              86.6025390625
             ],
             "extent": [
-              142.88690185546875,
-              141.42140197753906,
-              86.60250091552734
+              142.8868637084961,
+              141.42135620117188,
+              86.6025390625
             ]
           },
-          "volume": 203221.48721866478,
-          "surfaceArea": 130468.3423799127,
+          "volume": 203221.4850188937,
+          "surfaceArea": 130468.3393852368,
           "centroid": [
-            -0.00001391869374241908,
-            -1.0856074735690426e-9,
-            24.69233578935016
+            0.0000029999190080907026,
+            -0.0000024823146733841296,
+            24.6923475784436
           ],
           "connectedComponents": 1,
           "isManifold": 1,
           "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 0.4620346545416396,
-        "volumeRelDelta": 0.000002273552176323234,
-        "surfaceAreaDelta": 0.04264975478872657,
-        "surfaceAreaRelDelta": 3.2689734544594824e-7,
-        "bboxOverlap": 1749999.0998925492,
-        "bboxIoU": 0.9999992706361241,
-        "centroidDistance": 0.000027143888537146492,
+        "volumeDelta": 0.4598348834551871,
+        "volumeRelDelta": 0.0000022627277003336324,
+        "surfaceAreaDelta": 0.039655078886426054,
+        "surfaceAreaRelDelta": 3.039440761895161e-7,
+        "bboxOverlap": 1749998.4644695742,
+        "bboxIoU": 0.9999986946163811,
+        "centroidDistance": 0.000007114706010373836,
         "triangleCountDelta": 0,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
@@ -1451,49 +1529,49 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 15186,
-          "vertexCount": 7628,
+          "triangleCount": 682,
+          "vertexCount": 361,
           "bbox": {
             "min": [
-              -26.524200439453125,
-              -28.373199462890625,
+              -23.391990661621094,
+              -24.595720291137695,
               0
             ],
             "max": [
-              29,
-              28.373199462890625,
-              53.5
+              17.15091323852539,
+              24.818241119384766,
+              3.000000476837158
             ],
             "extent": [
-              55.524200439453125,
-              56.74639892578125,
-              53.5
+              40.542903900146484,
+              49.41396141052246,
+              3.000000476837158
             ]
           },
-          "volume": 5253.83145425228,
-          "surfaceArea": 7824.966521356702,
+          "volume": 1277.2809241148434,
+          "surfaceArea": 1703.7573841755443,
           "centroid": [
-            0.00024163559217831135,
-            0.0003847276417596804,
-            35.797651641661176
+            -2.2869318945630104,
+            0.079922489067788,
+            1.501005919405561
           ],
           "connectedComponents": 1,
           "isManifold": 0,
-          "boundaryEdges": 104,
+          "boundaryEdges": 40,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 45.51078413765208,
-        "volumeRelDelta": 0.008662398962345306,
-        "surfaceAreaDelta": 7.816309402534898,
-        "surfaceAreaRelDelta": 0.0009988936542030978,
-        "bboxOverlap": 168533.35815306,
-        "bboxIoU": 0.9997961783253085,
-        "centroidDistance": 0.015887633143209907,
-        "triangleCountDelta": 7122,
+        "volumeDelta": 3931.039745999785,
+        "volumeRelDelta": 0.7547614663121862,
+        "surfaceAreaDelta": 6113.3928277786235,
+        "surfaceAreaRelDelta": 0.7820487853015644,
+        "bboxOverlap": 6010.15742166572,
+        "bboxIoU": 0.035661530082414704,
+        "centroidDistance": 34.38874487116201,
+        "triangleCountDelta": 7382,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
         "hausdorffDistance": 0,
-        "message": "volume: Δ=45.510784 (rel 0.008662); centroid distance: 0.015888"
+        "message": "volume: Δ=3931.039746 (rel 0.754761); surface area: Δ=6113.392828 (rel 0.782049); bbox IoU: 0.035662 (need > 0.999000); centroid distance: 34.388745"
       },
       "hasFacetedPrimitives": true,
       "stepExport": "exact",
@@ -1503,11 +1581,11 @@
   ],
   "summary": {
     "total": 22,
-    "pass": 6,
+    "pass": 7,
     "passAnalytic": 0,
-    "passNT": 0,
+    "passNT": 1,
     "fail": 11,
-    "error": 5,
+    "error": 3,
     "blocked": 0
   }
 }

@@ -97,23 +97,6 @@ export interface IrCone extends IrSolid {
   readonly segments?: number
 }
 
-/** `cylinder(h, r1, r2, center)` 且 `r1 === r2` → `cad.cylinder(r, h, { centered })`。 */
-export interface IrCylinder extends IrSolid {
-  readonly kind: 'cylinder'
-  readonly radius: number
-  readonly height: number
-  readonly centered: boolean
-}
-
-/** `cylinder(h, r1, r2, center)` 且 `r1 !== r2` → `cad.cone(r1, r2, h, { centered })`。 */
-export interface IrCone extends IrSolid {
-  readonly kind: 'cone'
-  readonly radiusBottom: number
-  readonly radiusTop: number
-  readonly height: number
-  readonly centered: boolean
-}
-
 // ── 2D 图元（全部落到 `cad.profile`） ──────────────────────────────────────
 
 /** `square(size, center)` → 4 段 line 的矩形轮廓。 */
