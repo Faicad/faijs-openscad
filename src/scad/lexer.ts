@@ -7,7 +7,7 @@
  *
  * 永不抛异常：非法字符产生诊断并跳过。
  */
-import { DiagnosticBag, type Diagnostic, type Span } from '../diagnostics/diagnostic'
+import { DiagnosticBag, type Span } from '../diagnostics/diagnostic'
 import { DiagnosticCode } from '../diagnostics/codes'
 import type {
   KeywordKind,

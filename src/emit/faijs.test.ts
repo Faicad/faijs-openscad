@@ -302,7 +302,7 @@ describe('emit: compact mode (T812)', () => {
     const available = await staticCheckAvailable()
     if (!available) return // skip if faijs not installed
 
-    const code = body(await transpile(`
+    const _code = body(await transpile(`
       union() {
         square(size = [10, 20]);
         circle(r = 5);

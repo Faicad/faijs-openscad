@@ -25,16 +25,13 @@ import {
   type Value,
   type UserModuleEntry,
   UNDEF,
-  bool,
   isNumber,
   isString,
   isTrue,
   isVector,
   num,
-  str,
   toNumber,
   toStr,
-  vec,
 } from './value'
 
 // ─── CSG Node Tree (internal) ───
@@ -922,12 +919,13 @@ const BUILTIN_MODULES = new Map<string, BuiltinModule>([
 
   ['multmatrix', (args, children, ctx, modPrefix) => {
     const mVal = getPositionalArg(args, 0, ctx.scope) ?? getArg(args, 'm', ctx.scope)
-    let m = identityMatrix()
+    const m = identityMatrix()
     if (mVal !== undefined && isVector(mVal)) {
       const rows = mVal.items
       for (let i = 0; i < Math.min(4, rows.length); i++) {
-        if (isVector(rows[i])) {
-          const cols = rows[i].items
+        const row = rows[i]
+        if (isVector(row)) {
+          const cols = row.items
           for (let j = 0; j < Math.min(4, cols.length); j++) {
             m[i][j] = toNumber(cols[j])
           }
@@ -1102,23 +1100,23 @@ const BUILTIN_MODULES = new Map<string, BuiltinModule>([
 
   // ─── Control Flow ───
 
-  ['let', (args, children, ctx, modPrefix) => {
+  ['let', (args, children, _ctx, _modPrefix) => {
     // let() as a module - creates a new scope for children
     // Children are already evaluated, just pass through
     return children
   }],
 
-  ['assert', (args, children, ctx, modPrefix) => {
+  ['assert', (args, children, _ctx, _modPrefix) => {
     // assert as a module - just pass children through
     return children
   }],
 
-  ['echo', (args, children, ctx, modPrefix) => {
+  ['echo', (args, children, _ctx, _modPrefix) => {
     // echo as a module - just pass children through
     return children
   }],
 
-  ['children', (args, children, ctx, modPrefix) => {
+  ['children', (args, children, ctx, _modPrefix) => {
     // children() returns the children passed to the current module
     const childNodes = ctx.childNodes
     const idxVal = getPositionalArg(args, 0, ctx.scope)
@@ -1134,7 +1132,7 @@ const BUILTIN_MODULES = new Map<string, BuiltinModule>([
     return [makeGroupNode(childNodes, '')]
   }],
 
-  ['assign', (args, children, ctx, modPrefix) => {
+  ['assign', (args, children, ctx, _modPrefix) => {
     // assign() is deprecated but still works - just sets variables and passes children
     for (const arg of args) {
       if (arg.name !== undefined) {
@@ -1565,7 +1563,7 @@ const BUILTIN_MODULES = new Map<string, BuiltinModule>([
 
   // ─── Roof ───
   // roof() produces no output in CSG dump mode (requires CGAL/boost for geometry)
-  ['roof', (args, children, ctx, modPrefix) => {
+  ['roof', (_args, _children, _ctx, _modPrefix) => {
     return []
   }],
 
@@ -1652,17 +1650,3 @@ function rotAxis(angle: number, ax: number, ay: number, az: number): Mat4 {
 
 // ─── Iteration ───
 
-function* iterateValue(v: Value): Generator<Value> {
-  if (isVector(v)) {
-    for (const item of v.items) yield item
-  } else if (v.type === 'range') {
-    const r = v.range
-    for (let i = 0; i < r.count; i++) {
-      yield num(r.start + i * r.step)
-    }
-  } else if (isNumber(v)) {
-    // Iterating a number yields nothing
-  } else if (isString(v)) {
-    // Iterating a string yields nothing
-  }
-}

@@ -10,7 +10,21 @@
  * ord, str, num, is_undef, is_list, is_num, is_string, is_boolean, is_function,
  * select, slice, hash, version, version_num, parent_module, etc.
  */
-import type { Expr, Argument, Parameter } from './ast'
+/**
+ * 修复的核心 Bug
+1. let 表达式参数求值 scope 错误 (src/scad/evaluator.ts)
+问题：let(n=3, vals=[for(i=[0:n-1]) i]) 中的后续参数 vals 使用父 scope 求值，导致无法访问前序参数 n 的绑定。
+修复：将 evalExpr(arg.value, scope) 改为 evalExpr(arg.value, childScope)，使后续参数能正确看到之前参数的绑定。
+（符合 OpenSCAD 的 let() 语义）
+
+2. for 循环中标量值不被迭代为单值绑定 (src/scad/evaluator.ts + src/scad/module-evaluator.ts)
+问题：for(i=[0:num-1], a=i*360/num) 中，当 a 的右边 i*360/num 求值为一个数字时，iterateValue 返回空迭代器，
+导致 a 变量从未被绑定。这使得 ngon() 返回空向量，进而导致 sum(ngon(360)) 无限递归。
+（因为 len([]) = 0，递归终止条件 s == -1 永不为 true）。
+修复：在 evalLcFor（列表推导式中的 for）和 evalForModule（模块级 for）中，将标量值（数字、字符串等）视为单值绑定，而不是跳过迭代。
+这符合 OpenSCAD 的行为：for 循环中，范围和向量会被迭代，标量值被绑定为单值。
+ */
+import type { Expr, Argument } from './ast'
 import {
   type FunctionValue,
   type RangeValue,
@@ -426,7 +440,7 @@ function evalLcIf(expr: Extract<Expr, { kind: 'lcif' }>, scope: Scope): Value {
 }
 
 /** Iterate over a value: vectors yield their elements, ranges yield numbers. */
-function* iterateValue(v: Value): Generator<Value> {
+export function* iterateValue(v: Value): Generator<Value> {
   if (isVector(v)) {
     for (const item of v.items) yield item
   } else if (v.type === 'range') {
@@ -604,10 +618,11 @@ export const BUILTIN_FUNCTIONS = new Map<string, (args: readonly Value[]) => Val
     const items = a[0].items
     const indices: number[] = []
     for (let i = 1; i < a.length; i++) {
-      if (isVector(a[i])) {
-        for (const v of a[i].items) indices.push(Math.trunc(toNumber(v)))
+      const arg = a[i]
+      if (isVector(arg)) {
+        for (const v of arg.items) indices.push(Math.trunc(toNumber(v)))
       } else {
-        indices.push(Math.trunc(toNumber(a[i])))
+        indices.push(Math.trunc(toNumber(arg)))
       }
     }
     return vec(indices.map((idx) => {

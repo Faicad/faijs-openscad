@@ -8,7 +8,6 @@
  * 参数列表。
  */
 import type { Span } from '../diagnostics/diagnostic'
-import type { KeywordKind } from './token'
 
 // ─── Expressions ───
 
