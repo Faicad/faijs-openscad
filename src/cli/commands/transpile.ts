@@ -43,6 +43,8 @@ export interface TranspileOptions {
   readonly compact?: boolean
   /** Use structured lower path (parseScad → lowerScad), skipping CSG expansion. */
   readonly structured?: boolean
+  /** Force CSG expansion path (overrides auto-selection). */
+  readonly noStructured?: boolean
 }
 
 export interface TranspileReport {
@@ -70,8 +72,27 @@ export async function transpileFile(
   const ext = extname(abs).toLowerCase()
 
   // ── Structured path: parseScad → lowerScad → emitFaijs (no CSG expansion) ──
-  if (options.structured && ext === '.scad') {
-    return transpileStructured(abs, options)
+  if (ext === '.scad') {
+    // Explicit flags take priority.
+    if (options.structured) {
+      return transpileStructured(abs, options)
+    }
+    if (options.noStructured) {
+      // Fall through to CSG expansion path below.
+    } else {
+      // Auto-selection (Plan C): scan source for unsupported modules.
+      // If the source uses modules that the structured path cannot handle,
+      // fall back to CSG expansion with a warning diagnostic.
+      const sourceText = readFileSync(abs, 'utf8')
+      const unsupported = detectUnsupportedModules(sourceText)
+      if (unsupported.length > 0) {
+        // Fall back to CSG path — continue below.
+        // The warning will be added to the report diagnostics.
+        ;(options as { _autoFallback?: string[] })._autoFallback = unsupported
+      } else {
+        return transpileStructured(abs, options)
+      }
+    }
   }
 
   // ── Step 1: Obtain CSG text ────────────────────────────────────────────
@@ -119,6 +140,17 @@ export async function transpileFile(
 
   // Collect diagnostics from the front-end (e.g. OSC5001, OSC5003).
   const diags: Diagnostic[] = [...artifact.diagnostics]
+
+  // Auto-fallback warning: if we fell back from structured to CSG due to
+  // unsupported modules, emit an info diagnostic explaining the choice.
+  const autoFallback = (options as { _autoFallback?: string[] })._autoFallback
+  if (autoFallback !== undefined && autoFallback.length > 0) {
+    diags.push({
+      code: 'OSC3004',
+      severity: 'info',
+      message: `Auto-selected CSG expansion path: source uses unsupported module(s) ${autoFallback.join(', ')}. Use --structured to force structured path (with warnings) or --no-structured to suppress this message.`,
+    })
+  }
 
   // If OpenSCAD produced no CSG (binary missing, subprocess failed), bail.
   if (artifact.csgText.length === 0) {
@@ -342,13 +374,17 @@ async function emitToStdout(
   const ext = extname(abs).toLowerCase()
 
   // Structured path — no OpenSCAD binary needed.
-  if (options.structured && ext === '.scad') {
-    const text = readFileSync(abs, 'utf8')
-    const label = basename(abs)
-    const parsed = parseScad(text, { path: label })
-    const lowered = lowerScad(parsed.document, { path: abs })
-    const emitted = emitFaijs(lowered.model)
-    return emitted.ok ? emitted.code : undefined
+  if (ext === '.scad') {
+    const useStructured = options.structured ||
+      (!options.noStructured && detectUnsupportedModules(readFileSync(abs, 'utf8')).length === 0)
+    if (useStructured) {
+      const text = readFileSync(abs, 'utf8')
+      const label = basename(abs)
+      const parsed = parseScad(text, { path: label })
+      const lowered = lowerScad(parsed.document, { path: abs })
+      const emitted = emitFaijs(lowered.model)
+      return emitted.ok ? emitted.code : undefined
+    }
   }
 
   let csgText: string
@@ -378,6 +414,36 @@ async function emitToStdout(
   const lowered = lowerCsg(parsed.document, { path: label })
   const emitted = emitFaijs(lowered.model)
   return emitted.ok ? emitted.code : undefined
+}
+
+// ── auto-path-selection helpers ─────────────────────────────────────────────
+
+/**
+ * Builtin modules that the structured lower path does not yet support.
+ * Used by the auto-selection logic to decide whether to fall back to CSG.
+ */
+const UNSUPPORTED_MODULE_KEYWORDS = [
+  'hull', 'minkowski', 'offset', 'projection', 'polyhedron',
+  'surface', 'text', 'fill',
+]
+
+/**
+ * Scan .scad source text for modules that the structured path cannot handle.
+ * Returns a list of unsupported module names found in the source.
+ *
+ * Uses a simple regex to detect module calls (word followed by `(`) which is
+ * fast and good enough for auto-selection (false positives only cause an
+ * unnecessary CSG fallback, which is safe).
+ */
+export function detectUnsupportedModules(sourceText: string): string[] {
+  const found: string[] = []
+  for (const name of UNSUPPORTED_MODULE_KEYWORDS) {
+    const re = new RegExp(`\\b${name}\\s*\\(`, 'i')
+    if (re.test(sourceText)) {
+      found.push(name)
+    }
+  }
+  return found
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────

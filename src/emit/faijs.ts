@@ -71,7 +71,7 @@ class Emitter {
   /** 强制容器化（`export default async (cad) => { ... }`），未指定则按语句数自动判定。 */
   private readonly forceContainer: boolean
   /** Helpers needed (collected during emit, injected before body). */
-  private readonly neededHelpers = new Set<'rect' | 'circle' | '__rect' | '__circle' | 'rands' | 'matMul' | '__len' | '__concat' | '__str' | '__cross' | '__unionChildren' | '__each' | '__polygon'>()
+  private readonly neededHelpers = new Set<'rect' | 'circle' | '__rect' | '__circle' | 'rands' | 'matMul' | '__len' | '__concat' | '__str' | '__cross' | '__unionChildren' | '__each' | '__polygon' | '__ord' | '__search'>()
 
   constructor(options: EmitOptions) {
     this.prefix = options.variablePrefix ?? 'part'
@@ -199,6 +199,19 @@ class Emitter {
           'a[1]*b[2]-a[2]*b[1],' +
           'a[2]*b[0]-a[0]*b[2],' +
           'a[0]*b[1]-a[1]*b[0]]}',
+      )
+    }
+    if (this.neededHelpers.has('__ord')) {
+      defs.push('function __ord(s){return typeof s==="string"?s.charCodeAt(0):0}')
+    }
+    if (this.neededHelpers.has('__search')) {
+      defs.push(
+        'function __search(val,vec){' +
+          'for(let i=0;i<vec.length;i++){' +
+          'if(Array.isArray(vec[i])&&Array.isArray(val)){' +
+          'if(vec[i].length===val.length&&vec[i].every((v,j)=>v===val[j]))return i;' +
+          '}else if(vec[i]===val)return i;' +
+          '}return []}',
       )
     }
     if (this.neededHelpers.has('__unionChildren')) {
@@ -396,6 +409,8 @@ class Emitter {
         if (expr.callee === '__concat') this.neededHelpers.add('__concat')
         if (expr.callee === '__str') this.neededHelpers.add('__str')
         if (expr.callee === '__cross') this.neededHelpers.add('__cross')
+        if (expr.callee === '__ord') this.neededHelpers.add('__ord')
+        if (expr.callee === '__search') this.neededHelpers.add('__search')
         return `${expr.callee}(${expr.args.map((a) => this.emitExpr(a)).join(', ')})`
       case 'index':
         return `${this.emitExpr(expr.array)}[${this.emitExpr(expr.index)}]`

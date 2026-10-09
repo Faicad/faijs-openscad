@@ -64,8 +64,18 @@ const BUILTIN_MODULES = new Set([
   'cube', 'sphere', 'cylinder', 'square', 'circle', 'polygon', 'polyhedron',
   'translate', 'rotate', 'scale', 'mirror', 'multmatrix', 'color',
   'union', 'difference', 'intersection', 'linear_extrude', 'rotate_extrude',
-  'render', 'hull', 'minkowski', 'offset', 'fill', 'projection',
+  'render', 'hull', 'minkowski', 'offset', 'fill', 'projection', 'text', 'surface',
   'for', 'intersection_for', 'let', 'assert', 'echo', 'children',
+])
+
+/**
+ * Builtin modules that are recognised but NOT yet implemented in the structured
+ * lower path.  When encountered, an OSC3004 warning diagnostic is emitted so the
+ * user knows the output may be incomplete (instead of silently dropping geometry).
+ */
+const UNSUPPORTED_STRUCTURED_MODULES = new Set([
+  'hull', 'minkowski', 'offset', 'projection', 'polyhedron',
+  'surface', 'text', 'fill',
 ])
 
 const COLOR_NAMES: Record<string, [number, number, number]> = {
@@ -445,7 +455,16 @@ class ScadLowerer {
     }
 
     const chain = this.builtinChain(stmt, scope, childGeometries.length > 0)
-    if (chain.length === 0) return []
+    if (chain.length === 0) {
+      if (UNSUPPORTED_STRUCTURED_MODULES.has(stmt.name)) {
+        this.bag.add({
+          code: 'OSC3004',
+          severity: 'warning',
+          message: `Module "${stmt.name}" not supported in structured path, output may be incomplete`,
+        })
+      }
+      return []
+    }
 
     const exprCall: IrExprCall = {
       kind: 'exprCall',
@@ -646,11 +665,36 @@ class ScadLowerer {
         }
 
       case 'funcdef':
-      case 'let':
-      case 'assert':
-      case 'echo':
-      case 'member':
         return { kind: 'num', value: 0 }
+      case 'let': {
+        // let(x=5, y=10) expr → IIFE: (() => { const x = 5; const y = 10; return expr })()
+        const bindings = expr.args.map((arg) => ({
+          name: arg.name ?? '_',
+          value: this.lowerExpr(arg.value),
+        }))
+        return { kind: 'lclet', bindings, body: this.lowerExpr(expr.body) }
+      }
+      case 'assert': {
+        // assert(condition, message) body → body (assert is a no-op in structured path)
+        // In expression context: return the body value if present, else undef (0)
+        if (expr.body !== undefined) return this.lowerExpr(expr.body)
+        return { kind: 'num', value: 0 }
+      }
+      case 'echo': {
+        // echo(...) body → body (echo is a no-op in structured path)
+        // In expression context: return the body value if present, else undef (0)
+        if (expr.body !== undefined) return this.lowerExpr(expr.body)
+        return { kind: 'num', value: 0 }
+      }
+      case 'member': {
+        // vec.x → vec[0], vec.y → vec[1], vec.z → vec[2]
+        const memberIndex: Record<string, number> = { x: 0, y: 1, z: 2, w: 3 }
+        const idx = memberIndex[expr.member]
+        if (idx !== undefined) {
+          return { kind: 'index', array: this.lowerExpr(expr.object), index: { kind: 'num', value: idx } }
+        }
+        return { kind: 'num', value: 0 }
+      }
       case 'lcfor': {
         const iterators: IrIterator[] = expr.args.map((arg) => ({
           varName: arg.name ?? '_',
@@ -714,6 +758,10 @@ class ScadLowerer {
       case 'chr': return callExpr('String.fromCharCode', args.map((a) => callExpr('Math.round', [a])))
       case 'norm': return callExpr('Math.hypot', args)
       case 'cross': return callExpr('__cross', args)
+      case 'ord': return callExpr('__ord', args)
+      case 'search': return callExpr('__search', args)
+      case 'version': return { kind: 'vector', elements: [{ kind: 'num', value: 2021 }, { kind: 'num', value: 1 }, { kind: 'num', value: 0 }] }
+      case 'version_num': return { kind: 'num', value: 20210100 }
       default: return { kind: 'call', callee, args }
     }
   }

@@ -30,6 +30,7 @@ export const DiagnosticCode = {
   OSC3001: 'OSC3001', // `#` highlight semantics dropped
   OSC3002: 'OSC3002', // no faijs equivalent for this node
   OSC3003: 'OSC3003', // runtime helper required but output mode is `direct`
+  OSC3004: 'OSC3004', // module not supported in structured lower path
   OSC3101: 'OSC3101', // external resource dependency, unresolvable path
   OSC3201: 'OSC3201', // analytic mode did not preserve explicit faceting
   OSC3202: 'OSC3202', // mesh-only geometry: STEP export is approximate (not exact BREP)
@@ -132,6 +133,13 @@ export const DIAGNOSTIC_CODES: readonly DiagnosticCodeMeta[] = [
     defaultSeverity: 'error',
     title: 'Runtime helper required but output mode is direct',
     hint: 'Re-run with --output-style hybrid (or implement the exact direct mapping) — direct mode may not invent approximated geometry.',
+    downgradable: false,
+  },
+  {
+    code: DiagnosticCode.OSC3004,
+    defaultSeverity: 'warning',
+    title: 'Module not supported in structured lower path',
+    hint: 'This OpenSCAD module has no equivalent in the structured lower path yet. The geometry is skipped — output may be incomplete. Use --no-structured to fall back to CSG expansion.',
     downgradable: false,
   },
   {
