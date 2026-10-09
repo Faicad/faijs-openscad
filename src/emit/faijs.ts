@@ -508,7 +508,13 @@ class Emitter {
       const link = node.chain[i]
       const args = link.args.map((a) => this.emitExpr(a)).join(', ')
       if (i === 0) {
-        parts.push(`await ${link.method}(${args})`)
+        if (node.child !== undefined) {
+          const childName = this.emitNode(node.child)
+          if (childName === undefined) return undefined
+          parts.push(`await ${link.method}(${childName}, ${args})`)
+        } else {
+          parts.push(`await ${link.method}(${args})`)
+        }
       } else {
         parts.push(`${link.method}(${args})`)
       }

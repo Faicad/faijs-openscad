@@ -191,4 +191,27 @@ cube([a[0], a[1], a[2]]);
     expect(result.ok).toBe(true)
     expect(result.code).toContain('cad.sphere(')
   })
+
+  it('linear_extrude → cad.extrude(profile, { length })', () => {
+    const scad = `linear_extrude(height = 20) square([10, 10]);`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('cad.extrude(')
+    expect(result.code).toContain('length')
+  })
+
+  it('rotate_extrude → cad.revolve(profile, { axis, at, angle })', () => {
+    const scad = `rotate_extrude(angle = 180) square([5, 5]);`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('cad.revolve(')
+    expect(result.code).toContain('axis')
+    expect(result.code).toContain('angle')
+  })
 })

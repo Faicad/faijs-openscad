@@ -334,6 +334,49 @@ class ScadLowerer {
       })
     }
 
+    // render() — 几何透传
+    if (stmt.name === 'render') {
+      return childGeometries
+    }
+
+    // linear_extrude(height) { 2D profile } → cad.extrude(profile, { length })
+    if (stmt.name === 'linear_extrude') {
+      const getArg = (name: string): Expr | undefined => stmt.args.find((a) => a.name === name)?.value
+      const getPos = (idx: number): Expr | undefined => stmt.args.filter((a) => a.name === undefined)[idx]?.value
+      const hExpr = getArg('height') ?? getPos(0)
+      const h: IrExpr = hExpr !== undefined ? this.lowerExpr(hExpr) : { kind: 'num', value: 1 }
+      return childGeometries.map((g): IrExprCall => ({
+        kind: 'exprCall',
+        id: this.nextId++,
+        origin: this.origin(stmt.span, 'linear_extrude'),
+        dimension: '3d',
+        child: g,
+        chain: [{ method: 'cad.extrude', args: [{ kind: 'object', fields: [{ key: 'length', value: h }] }] }],
+      }))
+    }
+
+    // rotate_extrude(angle) { 2D profile } → cad.revolve(profile, { axis, at, angle })
+    if (stmt.name === 'rotate_extrude') {
+      const getArg = (name: string): Expr | undefined => stmt.args.find((a) => a.name === name)?.value
+      const getPos = (idx: number): Expr | undefined => stmt.args.filter((a) => a.name === undefined)[idx]?.value
+      const angleExpr = getArg('angle') ?? getPos(0)
+      const fields: { key: string; value: IrExpr }[] = [
+        { key: 'axis', value: { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 1 }] } },
+        { key: 'at', value: { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }] } },
+      ]
+      if (angleExpr !== undefined) {
+        fields.push({ key: 'angle', value: this.deg2rad(this.lowerExpr(angleExpr)) })
+      }
+      return childGeometries.map((g): IrExprCall => ({
+        kind: 'exprCall',
+        id: this.nextId++,
+        origin: this.origin(stmt.span, 'rotate_extrude'),
+        dimension: '3d',
+        child: g,
+        chain: [{ method: 'cad.revolve', args: [{ kind: 'object', fields }] }],
+      }))
+    }
+
     const chain = this.builtinChain(stmt, scope, childGeometries.length > 0)
     if (chain.length === 0) return []
 
