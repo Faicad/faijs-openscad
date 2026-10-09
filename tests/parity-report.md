@@ -1,6 +1,6 @@
 # Parity Report
 
-- **Timestamp**: 2026-10-09T02:26:32.643Z
+- **Timestamp**: 2026-10-09T03:27:26.982Z
 - **Converter**: 0.29.5
 
 ## Summary
@@ -9,9 +9,9 @@
 |---|---|
 | PASS | 6 |
 | PASS-ANALYTIC | 0 |
-| PASS-NT | 1 |
+| PASS-NT | 4 |
 | FAIL | 12 |
-| ERROR | 3 |
+| ERROR | 0 |
 | **Total** | 22 |
 
 ## Tolerance
@@ -32,12 +32,12 @@
 | Example | Verdict | Volume Δ | Area Δ | Bbox IoU | Centroid dist | Hausdorff | Tessellation | STEP |
 |---|---|---|---|---|---|---|---|---|
 | Advanced/assert.scad | PASS | 0.015972 | 0.007784 | 1.000000 | 0.000008 | 0.000000 | default | exact |
-| Advanced/module_recursion.scad | ERROR | — | — | — | — | — | default | n/a |
+| Advanced/module_recursion.scad | PASS-NT | — | — | — | — | — | default | n/a |
 | Basics/CSG-modules.scad | PASS | 2.011978 | 0.321899 | 0.999886 | 0.007674 | 0.000000 | seg=72 | exact |
 | Basics/CSG.scad | FAIL | 37.444122 | 23.320668 | 0.990889 | 0.248794 | 0.000000 | seg=30 | exact |
 | Basics/logo.scad | FAIL | 20.247197 | 9.207518 | 0.999626 | 0.000010 | 0.000000 | seg=100 | exact |
-| Basics/roof.scad | ERROR | — | — | — | — | — | default | n/a |
-| Functions/echo.scad | ERROR | — | — | — | — | — | default | n/a |
+| Basics/roof.scad | PASS-NT | — | — | — | — | — | default | n/a |
+| Functions/echo.scad | PASS-NT | — | — | — | — | — | default | n/a |
 | Functions/functions.scad | FAIL | 72.029523 | 119.032665 | 0.998745 | 1.164802 | 0.000000 | seg=5 | exact |
 | Functions/list_comprehensions.scad | PASS-NT | — | — | — | — | — | default | n/a |
 | Old/example001.scad | FAIL | 247.997806 | 84.408356 | 0.994639 | 0.000212 | 0.000000 | seg=30 | exact |
@@ -56,10 +56,6 @@
 
 ## Failures & Errors
 
-### Advanced/module_recursion.scad — ERROR
-
-> [parser] line 1: too many top-level statements (8189 > 5000)
-
 ### Basics/CSG.scad — FAIL
 
 > volume: Δ=37.444122 (rel 0.004794); surface area: Δ=23.320668 (rel 0.006727); bbox IoU: 0.990889 (need > 0.999000); centroid distance: 0.248794
@@ -67,14 +63,6 @@
 ### Basics/logo.scad — FAIL
 
 > volume: Δ=20.247197 (rel 0.001082)
-
-### Basics/roof.scad — ERROR
-
-> no result variable in script output
-
-### Functions/echo.scad — ERROR
-
-> no result variable in script output
 
 ### Functions/functions.scad — FAIL
 

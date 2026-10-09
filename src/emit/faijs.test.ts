@@ -324,3 +324,33 @@ describe('emit: compact mode (T812)', () => {
     expect(checked?.message ?? '').toBe('')
   })
 })
+describe('emit: 大脚本自动容器化（绕过 faijs 5000 顶层语句上限）', () => {
+  /** > `TOP_LEVEL_STATEMENT_LIMIT`（4900）条顶层语句的最小 CSG。 */
+  function bigModel(statements: number) {
+    const cubes = Array.from({ length: statements }, () => 'cube(size = [1, 1, 1]);').join('\n')
+    const csg = `group() {\n${cubes}\n}`
+    const { document } = parseCsg(csg, { path: 'big.csg' })
+    return lowerCsg(document, { path: 'big.csg' }).model
+  }
+
+  it('顶层语句超过上限时包进 export default async (cad) => { ... }', () => {
+    const result = emitFaijs(bigModel(5200))
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('export default async (cad) => {')
+    expect(result.code.trimEnd().split('\n').pop()).toBe('}')
+    expect(result.statementNodes.length).toBeGreaterThan(5000)
+  })
+
+  it('小脚本默认保持扁平，不容器化（保留源映射可读性）', async () => {
+    const code = await transpile('cube([1, 1, 1]);')
+    expect(code).not.toContain('export default')
+  })
+
+  it('container: true 即使小脚本也强制容器化', async () => {
+    const { document } = parseCsg('cube([1, 1, 1]);', { path: 't.csg' })
+    const { model } = lowerCsg(document, { path: 't.csg' })
+    const code = emitFaijs(model, { container: true }).code
+    expect(code).toContain('export default async (cad) => {')
+    expect(code.trimEnd().split('\n').pop()).toBe('}')
+  })
+})

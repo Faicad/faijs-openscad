@@ -237,6 +237,21 @@ async function main() {
       continue
     }
 
+    // Empty CSG (`echo`, or `roof` with no 2D child) legitimately yields no
+    // geometry — OpenSCAD itself emits no STL for these. The emitter also does
+    // not produce a `result` variable by design. Treat as PASS-NT, not ERROR.
+    if (lowered.model.root.kind === 'empty') {
+      console.log(`    PASS-NT: empty geometry (no solid output)`)
+      entries.push({
+        name: entry.source,
+        verdict: 'PASS-NT',
+        hasFacetedPrimitives: false,
+        stepExport: 'n/a',
+        error: 'empty geometry (no result)',
+      })
+      continue
+    }
+
     // Check for faceted primitives
     const hasFaceted = lowered.diagnostics.some((d) => d.code === 'OSC3201')
     // M9 §1.3 A2: tessellation params from lowered result

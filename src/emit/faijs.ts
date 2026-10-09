@@ -31,6 +31,12 @@ export interface EmitOptions {
    * 默认 false（保持可读）。
    */
   readonly compact?: boolean
+  /**
+   * 强制把全部语句包进 `export default async (cad) => { ... }` 容器。
+   * faijs 静态校验器对**扁平**脚本有 5000 条顶层语句上限（S5）；
+   * 未显式指定时，顶层语句数接近上限会自动启用容器（见 `Emitter.wrapBody`）。
+   */
+  readonly container?: boolean
 }
 
 export interface EmitResult {
@@ -48,6 +54,12 @@ export function emitFaijs(model: IrModel, options: EmitOptions = {}): EmitResult
   return new Emitter(options).run(model)
 }
 
+/**
+ * faijs 静态校验器（S5）对**扁平**脚本的顶层语句上限是 5000。留约 100 条
+ * 余量给 compact 模式的 helper 声明，超过即自动容器化（见 `wrapBody`）。
+ */
+const TOP_LEVEL_STATEMENT_LIMIT = 4900
+
 class Emitter {
   private readonly lines: string[] = []
   private readonly statementNodes: number[] = []
@@ -56,6 +68,8 @@ class Emitter {
   private readonly prefix: string
   private readonly withHeader: boolean
   private readonly compact: boolean
+  /** 强制容器化（`export default async (cad) => { ... }`），未指定则按语句数自动判定。 */
+  private readonly forceContainer: boolean
   /** Helpers needed in compact mode (collected during emit, injected before body). */
   private readonly neededHelpers = new Set<'rect' | 'circle'>()
 
@@ -63,6 +77,7 @@ class Emitter {
     this.prefix = options.variablePrefix ?? 'part'
     this.withHeader = options.header ?? true
     this.compact = options.compact ?? false
+    this.forceContainer = options.container ?? false
   }
 
   run(model: IrModel): EmitResult {
@@ -74,18 +89,36 @@ class Emitter {
 
     const body: string[] = []
     if (this.withHeader) body.push(...this.header(model))
+
+    const inner: string[] = []
     // In compact mode, inject helper definitions before the body.
     if (this.compact && this.neededHelpers.size > 0) {
-      body.push(...this.helperDefs())
+      inner.push(...this.helperDefs())
     }
-    body.push(...this.lines)
+    inner.push(...this.lines)
     if (rootVar === undefined) {
-      body.push('// the CSG produced no geometry (every subtree is background `%` or an empty group)')
+      inner.push('// the CSG produced no geometry (every subtree is background `%` or an empty group)')
     } else {
-      body.push(`let result = ${rootVar}`)
+      inner.push(`let result = ${rootVar}`)
     }
+    body.push(...this.wrapBody(inner))
 
     return { code: `${body.join('\n')}\n`, ok: true, blocked: [], statementNodes: this.statementNodes }
+  }
+
+  /**
+   * faijs 静态校验器（S5）对**扁平**脚本的顶层语句数有 5000 上限（超出即
+   * `too many top-level statements`）。语句数接近上限时，把全部语句包进
+   * `export default async (cad) => { ... }`：此时顶层只有 1 条语句，容器内的
+   * 语句仍被 faijs 逐条执行、`result` 照常产出（已实测）。
+   *
+   * 小脚本保持扁平输出，便于阅读与把报错行号直接映射回某个子树。
+   */
+  private wrapBody(inner: readonly string[]): string[] {
+    if (!this.forceContainer && inner.length <= TOP_LEVEL_STATEMENT_LIMIT) {
+      return [...inner]
+    }
+    return ['export default async (cad) => {', ...inner, '}']
   }
 
   // ── Compact-mode helpers ─────────────────────────────────────────────────
