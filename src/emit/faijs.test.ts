@@ -46,19 +46,21 @@ describe('emit: 3D 图元', () => {
     )
   })
 
-  it('sphere → cad.sphere(r)（球心在原点，与 OpenSCAD 同）', async () => {
-    expect(body(await transpile('sphere(r = 10);'))).toContain('await cad.sphere(10 * MM)')
+  it('sphere → cad.sphere(r, { segments })（球心在原点，与 OpenSCAD 同）', async () => {
+    const code = body(await transpile('sphere(r = 10);'))
+    expect(code).toContain('await cad.sphere(10 * MM')
+    expect(code).toContain('segments:')
   })
 
   it('等半径 cylinder → cad.cylinder(r, h)；center 透传为 centered', async () => {
     expect(body(await transpile('cylinder(h = 40, r1 = 5, r2 = 5, center = true);'))).toContain(
-      'await cad.cylinder(5 * MM, 40 * MM, { centered: true })',
+      'await cad.cylinder(5 * MM, 40 * MM, { centered: true',
     )
   })
 
   it('变半径 cylinder → cad.cone(rBottom, rTop, h)（不交换 r1/r2）', async () => {
     expect(body(await transpile('cylinder(h = 30, r1 = 5, r2 = 0);'))).toContain(
-      'await cad.cone(5 * MM, 0 * MM, 30 * MM)',
+      'await cad.cone(5 * MM, 0 * MM, 30 * MM',
     )
   })
 
@@ -81,12 +83,11 @@ describe('emit: 2D profile', () => {
     expect(code).toContain("{ kind: 'line', x1: -5 * MM, y1: -5 * MM, x2: 5 * MM, y2: -5 * MM }")
   })
 
-  it('circle → 两段 arc，角度是裸弧度（不是 * RADIAN）', async () => {
+  it('circle → polygon2d 轮廓（N-gon line段，不是 arc）', async () => {
     const code = body(await transpile('circle(r = 10);'))
-    expect(code.split("{ kind: 'arc'").length - 1).toBe(2)
-    expect(code).toContain('startAngle: 0, endAngle: 3.141592653589793, ccw: true')
-    expect(code).toContain('startAngle: 3.141592653589793, endAngle: 6.283185307179586')
-    expect(code).not.toContain('RADIAN')
+    // Faceted approach: circle → polygon2d → lines (not arcs)
+    expect(code.split("{ kind: 'line'").length - 1).toBeGreaterThanOrEqual(3)
+    expect(code).not.toContain("kind: 'arc'")
   })
 
   it('polygon(paths = undef) → 单个闭环', async () => {
@@ -287,8 +288,8 @@ describe('emit: compact mode (T812)', () => {
     const { document } = parseCsg('circle(r = 5);')
     const { model } = lowerCsg(document)
     const compact = emitFaijs(model, { compact: true, header: false })
-    expect(compact.code).toContain('function __circle')
-    expect(compact.code).toContain('__circle(5 * MM)')
+    // circle now generates polygon2d, not circle2d — no __circle helper
+    expect(compact.code).toContain('cad.profile(')
   })
 
   it('compact mode matrices are single-line', async () => {

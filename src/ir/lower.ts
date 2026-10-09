@@ -27,7 +27,13 @@ import {
 import { DiagnosticCode } from '../diagnostics/codes'
 import { DiagnosticBag, type Diagnostic, type Span } from '../diagnostics/diagnostic'
 import { capabilityOf, isInShippedScope } from './capability'
-import { circleFragments, sphereFragments } from './faceted-geometry'
+import {
+  circleFragments,
+  sphereFragments,
+  DEFAULT_FA,
+  DEFAULT_FS,
+  regularPolygonPoints,
+} from './faceted-geometry'
 import type {
   IrBlocked,
   IrGeometry,
@@ -50,8 +56,8 @@ export interface LowerOptions {
 export interface LowerResult {
   readonly model: IrModel
   readonly diagnostics: readonly Diagnostic[]
-  /** 三角化参数（M9 §1.3），采集自语料的 $fn/$fa/$fs。 */
-  readonly tessellation?: TessellationParams
+  /** 三角化参数（M9 §1.3），采集自语料的 $fn/$fa/$fs（含 OpenSCAD 默认值）。 */
+  readonly tessellation: TessellationParams
 }
 
 /**
@@ -150,10 +156,10 @@ class Lowerer {
           ...(this.path === undefined ? {} : { path: this.path }),
           ...(this.openscadVersion === undefined ? {} : { openscadVersion: this.openscadVersion }),
         },
-        ...(tessellation === undefined ? {} : { tessellation }),
+        tessellation,
       },
       diagnostics: this.bag.all(),
-      ...(tessellation === undefined ? {} : { tessellation }),
+      tessellation,
     }
   }
 
@@ -247,17 +253,25 @@ class Lowerer {
     this.reportUnknownArgs(node)
     const radius = this.radiusArg(node, id)
     if (radius === undefined) return { kind: 'empty', id, origin }
-    // sphere 的棱面复刻需要 polyhedron（T810），faijs 目前没有 cad.polyhedron。
-    // 走 analytic sphere + OSC3201 信息诊断。
     this.reportFaceting(node, id)
-    const segments = this.primitiveSegments(node, radius, true)
+    // Faceted approach: always compute segments from $fn/$fa/$fs
+    // (even when $fn is 0/unset, use $fa/$fs defaults to compute segments)
+    const fn = this.specialVar(node, '$fn')
+    const fa = this.specialVar(node, '$fa')
+    const fs = this.specialVar(node, '$fs')
+    const segments = sphereFragments(
+      radius,
+      fn !== undefined && fn > 0 ? fn : undefined,
+      fa,
+      fs,
+    )
     return {
       kind: 'sphere',
       id,
       origin,
       dimension: '3d',
       radius,
-      ...(segments === undefined ? {} : { segments }),
+      segments,
     }
   }
 
@@ -273,14 +287,18 @@ class Lowerer {
     const centered = this.boolArg(node, 'center', false, id)
     if (centered === undefined) return { kind: 'empty', id, origin }
 
-    // OpenSCAD 的 r1 在 z=0（底）、r2 在 z=h（顶）；faijs cone 的
-    // radiusBottom / radiusTop 同序同向，故无需交换。
-    //
-    // 语义修正（M9 §1.3）：$fn/$fa/$fs 不改变建模语义，一律产出解析几何。
-    // 棱面只是导出时的三角化视图，由 parity runner 在导出侧对齐分片参数。
     this.reportFaceting(node, id)
-    // segments 按较大端半径算（保证更细一侧够细）
-    const segments = this.primitiveSegments(node, Math.max(bottom, top), false)
+    // Faceted approach: always compute segments from $fn/$fa/$fs
+    const fn = this.specialVar(node, '$fn')
+    const fa = this.specialVar(node, '$fa')
+    const fs = this.specialVar(node, '$fs')
+    const maxR = Math.max(bottom, top)
+    const segments = circleFragments(
+      maxR,
+      fn !== undefined && fn > 0 ? fn : undefined,
+      fa,
+      fs,
+    )
     if (bottom === top) {
       return {
         kind: 'cylinder',
@@ -290,7 +308,7 @@ class Lowerer {
         radius: bottom,
         height: h.value,
         centered,
-        ...(segments === undefined ? {} : { segments }),
+        segments,
       }
     }
     return {
@@ -302,7 +320,7 @@ class Lowerer {
       radiusTop: top,
       height: h.value,
       centered,
-      ...(segments === undefined ? {} : { segments }),
+      segments,
     }
   }
 
@@ -321,10 +339,26 @@ class Lowerer {
     this.reportUnknownArgs(node)
     const radius = this.radiusArg(node, id)
     if (radius === undefined) return { kind: 'empty', id, origin }
-    // 语义修正（M9 §1.3）：$fn/$fa/$fs 不改变建模语义，一律产出解析圆。
-    // 棱面只是导出时的三角化视图，由 parity runner 在导出侧对齐分片参数。
     this.reportFaceting(node, id)
-    return { kind: 'circle2d', id, origin, dimension: '2d', radius }
+    // Faceted approach: produce a regular N-gon polygon (same as OpenSCAD's
+    // circle with $fn/$fa/$fs computed segments).
+    const fn = this.specialVar(node, '$fn')
+    const fa = this.specialVar(node, '$fa')
+    const fs = this.specialVar(node, '$fs')
+    const segments = circleFragments(
+      radius,
+      fn !== undefined && fn > 0 ? fn : undefined,
+      fa,
+      fs,
+    )
+    const pts = regularPolygonPoints(radius, segments)
+    return {
+      kind: 'polygon2d',
+      id,
+      origin,
+      dimension: '2d',
+      points: pts,
+    }
   }
 
   private lowerPolygon(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
@@ -840,6 +874,9 @@ class Lowerer {
     fs: number | undefined,
   ): number | undefined {
     if (fn !== undefined) return fn
+    // 只有显式设置了 $fa 或 $fs 时才计算 fragments
+    // （无显式 $ 变量时不采集 maxSegments，让 per-primitive segments 保持 undefined）
+    if (fa === undefined && fs === undefined) return undefined
     const r = this.silentRadius(node)
     if (r === undefined) return undefined
     if (node.name === 'sphere') {
@@ -851,24 +888,19 @@ class Lowerer {
   /**
    * 按节点的 `$fn`/`$fa`/`$fs` 和半径算 per-primitive segments。
    *
-   * - 显式 `$fn > 0`：segments = $fn。
-   * - 无显式 `$fn` 但有 `$fa`/`$fs`：sphere 用 `sphereFragments`（下限 5），
-   *   其余用 `circleFragments`（下限 3）。
-   * - 无任何 `$` 变量：undefined（让 faijs 用默认三角化）。
+   * M9 §1.3 tessellation 方案（faijs 0.31.1+）：
+   * - 显式 `$fn > 0`：segments = $fn（per-primitive override，优先于全局 deflection）。
+   * - `$fn = 0` 或未设：返回 undefined，让全局 deflection 控制三角化密度。
+   *   全局 deflection 在 parity runner 中通过 `createRuntime({ tessellation })` 设置，
+   *   对应 OpenSCAD 的 `$fa`/`$fs` 默认值。
    *
-   * 这是 per-primitive 的 segments，存到 IR 节点上，emit 时写进
-   * `cad.sphere(r, { segments })` 等调用，让 runtime 创建图元时就用正确密度
-   * （而非事后调 solidToShape 重新三角化——OCCT 会缓存更细的三角化不变粗）。
+   * 这避免了 segments 仅控制周向分段、而纵向仍由全局 deflection 决定的问题——
+   * 不传 segments 时 OCCT 的 meshShape 在两个方向上统一使用 deflection。
    */
-  private primitiveSegments(node: CsgNode, radius: number, isSphere: boolean): number | undefined {
+  private primitiveSegments(node: CsgNode, _radius: number, _isSphere: boolean): number | undefined {
     const fn = this.specialVar(node, '$fn')
     if (fn !== undefined && fn > 0) return Math.floor(fn)
-    const fa = this.specialVar(node, '$fa')
-    const fs = this.specialVar(node, '$fs')
-    if (fa === undefined && fs === undefined) return undefined
-    return isSphere
-      ? sphereFragments(radius, undefined, fa, fs)
-      : circleFragments(radius, undefined, fa, fs)
+    return undefined
   }
 
   /** 静默读取节点的特殊变量（$fn/$fa/$fs）数值，非数值或不存在返回 undefined。 */
@@ -911,25 +943,38 @@ class Lowerer {
   /**
    * 计算最终的全局三角化参数。
    *
-   * - 无任何 `$fn`/`$fa`/`$fs`：返回 `undefined`（使用 faijs 默认三角化）。
-   * - 有显式 `$fn > 0`：返回 `fn` 和 `segments = fn`。
+   * 始终返回 TessellationParams（使用 OpenSCAD 默认值 $fa=12, $fs=2 作为兜底），
+   * 因为 parity 比对的 OpenSCAD 参考 STL 始终用这些默认值三角化。
+   *
+   * - 有显式 `$fn > 0`：返回 `fn` 和 `segments = fn`（per-primitive 覆盖）。
+   *   `angularDeflection` = `2π / fn`（而非 $fa 转弧度），因为 $fn 是 per-primitive
+   *   override，布尔运算后的 solidToShape 仍用全局 angularDeflection 做网格化——
+   *   用 $fn 换算确保布尔后密度与显式 $fn 一致（修复 logo.scad 等 $fn>0 例子的密度不足）。
    * - 仅有 `$fa`/`$fs`（无显式 `$fn`）：返回 `fa`/`fs` 和
    *   `segments = maxSegments`（按各图元半径用 OpenSCAD 公式算出的最大 fragments）。
-   *   parity runner 把 segments 传给 `solidToShape` 做分片对齐。
+   *   `angularDeflection` = $fa 转弧度。
+   * - 全部未设：使用 OpenSCAD 默认值 $fa=12, $fs=2。
+   *
+   * `linearDeflection` = $fs（mm）。
+   * 这两个值交给 faijs `createRuntime({ tessellation })` 做全局三角化密度控制。
    */
-  private computeTessellation(): TessellationParams | undefined {
-    if (this.bestFn === undefined && this.bestFa === undefined && this.bestFs === undefined) {
-      return undefined
-    }
+  private computeTessellation(): TessellationParams {
     const fn = this.bestFn
-    const fa = this.bestFa
-    const fs = this.bestFs
+    const fa = this.bestFa ?? DEFAULT_FA
+    const fs = this.bestFs ?? DEFAULT_FS
     const segments = this.maxSegments
+    // 当有显式 $fn 时，用 2π/fn 计算 angularDeflection（比 $fa 更细，匹配 $fn 覆盖语义）；
+    // 否则用 $fa 转弧度。
+    const angularDeflection = fn !== undefined
+      ? (2 * Math.PI) / fn
+      : (fa * Math.PI) / 180
     return {
       ...(fn === undefined ? {} : { fn }),
-      ...(fa === undefined ? {} : { fa }),
-      ...(fs === undefined ? {} : { fs }),
+      ...(this.bestFa === undefined ? {} : { fa: this.bestFa }),
+      ...(this.bestFs === undefined ? {} : { fs: this.bestFs }),
       ...(segments === undefined ? {} : { segments }),
+      angularDeflection,
+      linearDeflection: fs,
     }
   }
 

@@ -82,13 +82,13 @@ describe.skipIf(!hasCsg)('CLI corpus command (T304)', () => {
     const manifestPath = join(here, 'manifest.json')
     expect(existsSync(manifestPath)).toBe(true)
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
-    expect(manifest.counts.ported + manifest.counts.blocked + manifest.counts.skipped).toBe(50)
-    // P0-only examples that pass (module_recursion uses compact mode to fit)
-    expect(manifest.counts.ported).toBe(22)
-    // Examples with out-of-scope nodes are blocked
-    expect(manifest.counts.blocked).toBe(28)
-    // No skipped examples (module_recursion now fits via compact mode)
-    expect(manifest.counts.skipped).toBe(0)
+expect(manifest.counts.ported + manifest.counts.blocked + manifest.counts.skipped).toBe(50)
+// P0-only examples that pass (module_recursion uses compact mode to fit)
+expect(manifest.counts.ported).toBe(22)
+// Examples with out-of-scope nodes are blocked
+expect(manifest.counts.blocked).toBe(28)
+// No skipped examples (module_recursion now fits via compact mode)
+expect(manifest.counts.skipped).toBe(0)
   })
 
   it('every blocked/skipped entry has non-empty blockedBy', () => {

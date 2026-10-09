@@ -101,7 +101,6 @@ export function facetedSphereGeometry(
 
   // Top pole
   vertices.push([0, 0, radius])
-
   // Rings: latitude from top to bottom
   // OpenSCAD uses: for lat = 1..n-1, phi = lat * (pi / n)
   //   z = r * cos(phi), ringRadius = r * sin(phi)
@@ -171,6 +170,22 @@ export function facetedSphereGeometry(
 }
 
 /**
+ * Flat-array variant of {@link facetedSphereGeometry}.
+ * Returns vertices as [x0,y0,z0, x1,y1,z1, ...] and faces as [v0,v1,v2, ...].
+ */
+export function facetedSphereGeometryFlat(
+  radius: number,
+  segments: number,
+): { vertices: number[]; faces: number[] } {
+  const { vertices: vv, faces: ff } = facetedSphereGeometry(radius, segments)
+  const flatV: number[] = []
+  for (const v of vv) flatV.push(v[0], v[1], v[2])
+  const flatF: number[] = []
+  for (const f of ff) flatF.push(f[0], f[1], f[2])
+  return { vertices: flatV, faces: flatF }
+}
+
+/**
  * Generate a regular N-gon polygon for a faceted circle/cylinder cross-section.
  *
  * OpenSCAD's circle with $fn=N produces a regular N-gon with vertices at:
@@ -190,4 +205,167 @@ export function regularPolygonPoints(
     points.push([radius * Math.cos(angle), radius * Math.sin(angle)])
   }
   return points
+}
+
+/**
+ * Generate vertices and triangular faces for a faceted cylinder.
+ *
+ * OpenSCAD's cylinder tessellation:
+ * - Bottom ring at z=0: n vertices
+ * - Top ring at z=h: n vertices
+ * - Bottom cap: n triangles (fan from vertex 0 of bottom ring)
+ * - Top cap: n triangles (fan from vertex 0 of top ring)
+ * - Side: 2*n triangles (quads split into two triangles)
+ *
+ * For `centered=true`, z range is [-h/2, h/2].
+ *
+ * @param radius - Cylinder radius
+ * @param height - Cylinder height
+ * @param segments - Number of segments
+ * @param centered - If true, center on origin (z ∈ [-h/2, h/2])
+ * @returns vertices (flat [x,y,z,...]) and faces (flat [v0,v1,v2,...])
+ */
+export function facetedCylinderGeometry(
+  radius: number,
+  height: number,
+  segments: number,
+  centered: boolean,
+): { vertices: number[]; faces: number[] } {
+  const n = segments
+  const z0 = centered ? -height / 2 : 0
+  const z1 = centered ? height / 2 : height
+  const vertices: number[] = []
+  const faces: number[] = []
+
+  // Bottom ring (indices 0..n-1)
+  for (let i = 0; i < n; i++) {
+    const angle = (i * 2 * Math.PI) / n
+    vertices.push(radius * Math.cos(angle), radius * Math.sin(angle), z0)
+  }
+  // Top ring (indices n..2n-1)
+  for (let i = 0; i < n; i++) {
+    const angle = (i * 2 * Math.PI) / n
+    vertices.push(radius * Math.cos(angle), radius * Math.sin(angle), z1)
+  }
+
+  // Bottom cap (viewed from below = clockwise, so reverse for outward normal)
+  for (let i = 1; i < n - 1; i++) {
+    faces.push(0, i + 1, i) // reversed for downward normal
+  }
+
+  // Top cap (viewed from above = counter-clockwise)
+  for (let i = 1; i < n - 1; i++) {
+    faces.push(n, n + i, n + i + 1)
+  }
+
+  // Side faces: two triangles per quad
+  for (let i = 0; i < n; i++) {
+    const next = (i + 1) % n
+    const b0 = i // bottom ring
+    const b1 = next
+    const t0 = n + i // top ring
+    const t1 = n + next
+    // Outward-facing: bottom→top→next-top, bottom→next-top→next-bottom
+    faces.push(b0, t0, t1)
+    faces.push(b0, t1, b1)
+  }
+
+  return { vertices, faces }
+}
+
+/**
+ * Generate vertices and triangular faces for a faceted cone (frustum).
+ *
+ * Same topology as cylinder but with different top/bottom radii.
+ * If one radius is 0, the corresponding ring collapses to a single apex vertex.
+ *
+ * @param radiusBottom - Bottom radius (z=0)
+ * @param radiusTop - Top radius (z=h)
+ * @param height - Cone height
+ * @param segments - Number of segments
+ * @param centered - If true, center on origin
+ * @returns vertices (flat) and faces (flat)
+ */
+export function facetedConeGeometry(
+  radiusBottom: number,
+  radiusTop: number,
+  height: number,
+  segments: number,
+  centered: boolean,
+): { vertices: number[]; faces: number[] } {
+  const n = segments
+  const z0 = centered ? -height / 2 : 0
+  const z1 = centered ? height / 2 : height
+  const vertices: number[] = []
+  const faces: number[] = []
+
+  const hasBottom = radiusBottom > 0
+  const hasTop = radiusTop > 0
+
+  // Bottom ring (indices 0..n-1) — only if r1 > 0
+  let bottomStart = 0
+  if (hasBottom) {
+    bottomStart = 0
+    for (let i = 0; i < n; i++) {
+      const angle = (i * 2 * Math.PI) / n
+      vertices.push(radiusBottom * Math.cos(angle), radiusBottom * Math.sin(angle), z0)
+    }
+  }
+
+  // Top ring — only if r2 > 0
+  let topStart = 0
+  if (hasTop) {
+    topStart = vertices.length / 3
+    for (let i = 0; i < n; i++) {
+      const angle = (i * 2 * Math.PI) / n
+      vertices.push(radiusTop * Math.cos(angle), radiusTop * Math.sin(angle), z1)
+    }
+  }
+
+  if (hasBottom && hasTop) {
+    // Frustum: same as cylinder side
+    // Bottom cap
+    for (let i = 1; i < n - 1; i++) {
+      faces.push(bottomStart, bottomStart + i + 1, bottomStart + i)
+    }
+    // Top cap
+    for (let i = 1; i < n - 1; i++) {
+      faces.push(topStart, topStart + i, topStart + i + 1)
+    }
+    // Side
+    for (let i = 0; i < n; i++) {
+      const next = (i + 1) % n
+      faces.push(bottomStart + i, topStart + i, topStart + next)
+      faces.push(bottomStart + i, topStart + next, bottomStart + next)
+    }
+  } else if (hasBottom && !hasTop) {
+    // Cone with apex at top
+    const apex = vertices.length / 3
+    vertices.push(0, 0, z1)
+    // Bottom cap
+    for (let i = 1; i < n - 1; i++) {
+      faces.push(bottomStart, bottomStart + i + 1, bottomStart + i)
+    }
+    // Side (apex triangles)
+    for (let i = 0; i < n; i++) {
+      const next = (i + 1) % n
+      faces.push(bottomStart + i, apex, bottomStart + next)
+    }
+  } else if (!hasBottom && hasTop) {
+    // Cone with apex at bottom
+    const apex = 0
+    vertices.push(0, 0, z0)
+    // Top cap (now starting at index 1)
+    const topStartAdj = 1
+    for (let i = 1; i < n - 1; i++) {
+      faces.push(topStartAdj, topStartAdj + i, topStartAdj + i + 1)
+    }
+    // Side (apex triangles)
+    for (let i = 0; i < n; i++) {
+      const next = (i + 1) % n
+      faces.push(apex, topStartAdj + i, topStartAdj + next)
+    }
+  }
+
+  return { vertices, faces }
 }

@@ -1,10 +1,12 @@
 /**
- * Parity runner (M8, T803).
+ * Parity runner (M8, T803; M9 §1.3 tessellation overhaul).
  *
  * For each ported example (status=ported in manifest.json):
  *   1. Read cached CSG from tests/fixtures/openscad-examples/csg/
  *   2. Transpile CSG → IR → .fai.js
  *   3. Execute .fai.js via faijs runtime → get candidate mesh (positions + indices)
+ *      M9 §1.3: runtime is created with tessellation options derived from the
+ *      example's $fn/$fa/$fs, so BREP triangulation density matches OpenSCAD.
  *   4. Compute candidate STL metrics
  *   5. Read reference STL from tests/fixtures/openscad-examples/stl/
  *   6. Compute reference STL metrics
@@ -19,7 +21,7 @@
  * Environment variables:
  *   OPENSCAD_BIN   OpenSCAD executable (not needed if CSG files are cached)
  */
-import { readFileSync, existsSync, readdirSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { join, resolve, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { emitFaijs, lowerCsg, parseCsg } from '../src/index'
@@ -27,6 +29,7 @@ import { readStlMetrics, computeMetrics, type MeshMetrics, type StlTriangle } fr
 import { compareMetrics, type ComparisonResult, type ParityVerdict } from '../src/parity/compare-mesh'
 import { buildReport, renderMarkdown, renderJson, type ParityEntry } from '../src/parity/report'
 import { CONVERTER_VERSION } from '../src/version'
+import type { TessellationParams } from '../src/ir/model'
 
 // ── faijs runtime (loaded dynamically) ──────────────────────────────────────
 
@@ -45,11 +48,9 @@ interface FaijsRuntime {
 }
 
 interface FaijsNodeModule {
-  createRuntime: (ports: unknown, mode: string) => FaijsRuntime
+  createRuntime: (ports: unknown, mode: string, libs: unknown, options?: Record<string, unknown>) => FaijsRuntime
   createNodePorts: () => unknown
   initOcctWasm: () => Promise<void>
-  /** M9 §1.3: solidToShape(kernel, solid, segments) — 重新三角化 BREP solid。 */
-  solidToShape: (kernel: unknown, solid: unknown, segments?: number) => FaijsShape
 }
 
 // ── Paths ───────────────────────────────────────────────────────────────────
@@ -94,48 +95,48 @@ async function loadFaijs(): Promise<FaijsNodeModule> {
   return await import('@faicad/faijs/node') as unknown as FaijsNodeModule
 }
 
-let runtime: FaijsRuntime | undefined
-
-async function getRuntime(mod: FaijsNodeModule): Promise<FaijsRuntime> {
-  if (runtime === undefined) {
-    runtime = mod.createRuntime(mod.createNodePorts(), 'brep')
-  }
-  return runtime
+/**
+ * Create a faijs runtime with tessellation options derived from the example's
+ * $fn/$fa/$fs (M9 §1.3 A3).
+ *
+ * Each example gets its own runtime because tessellation is set at construction
+ * time. Runtime creation is cheap (OCCT wasm is initialized once globally).
+ */
+function createRuntimeForTessellation(
+  mod: FaijsNodeModule,
+  tess: TessellationParams,
+): FaijsRuntime {
+  return mod.createRuntime(
+    mod.createNodePorts(),
+    'brep',
+    undefined,
+    {
+      tessellation: {
+        angularDeflection: tess.angularDeflection,
+        linearDeflection: tess.linearDeflection,
+      },
+    },
+  )
 }
 
 /**
  * Execute a .fai.js script and extract the `result` output as a Shape.
  *
- * M9 §1.3: 如果 `segments` 参数提供，使用 `solidToShape` 对 BREP solid 重新
- * 三角化，使 faijs 导出的网格分片密度与 OpenSCAD 的 `$fn` 对齐。
- * 返回 undefined if the script failed or produced no geometry.
+ * M9 §1.3: tessellation density is set at runtime creation time via
+ * CadRuntimeOptions.tessellation. Per-primitive segments (from explicit $fn)
+ * are already baked into the emitted code (cad.sphere(r, { segments })).
  */
 async function executeFaijs(
-  mod: FaijsNodeModule,
+  rt: FaijsRuntime,
   code: string,
-  segments?: number,
 ): Promise<{ shape?: FaijsShape; error?: string }> {
-  const rt = await getRuntime(mod)
   try {
     const r = await rt.execute(code, { topology: 'auto' })
     if (r.failedAt) {
       return { error: String(r.failedAt.message ?? r.failedAt) }
     }
 
-    // M9 §1.3: 如果有 brepSolids 且提供了 segments，重新三角化
-    if (segments !== undefined && (r as any).brepSolids?.size > 0) {
-      const brepSolids = (r as any).brepSolids as Map<string, { solid: unknown; kernel: unknown }>
-      // 取 'result' 或第一个 solid
-      const entry = brepSolids.get('result') ?? brepSolids.values().next().value
-      if (entry) {
-        const shape = mod.solidToShape(entry.kernel, entry.solid, segments)
-        if (shape.positions && shape.indices) {
-          return { shape }
-        }
-      }
-    }
-
-    // 默认路径：直接从 outputs 取 result
+    // 直接从 outputs 取 result
     const out = r.outputs instanceof Map ? r.outputs.get('result') : undefined
     if (out === undefined || out === null) {
       return { error: 'no result variable in script output' }
@@ -175,7 +176,7 @@ async function main() {
   const manifest = loadManifest()
   const ported = manifest.entries.filter((e) => e.status === 'ported')
 
-  console.log('Parity runner (T803)')
+  console.log('Parity runner (T803, M9 tessellation)')
   console.log(`  Ported examples: ${ported.length}`)
   console.log('')
 
@@ -238,12 +239,13 @@ async function main() {
 
     // Check for faceted primitives
     const hasFaceted = lowered.diagnostics.some((d) => d.code === 'OSC3201')
-    // M9 §1.3 A2: 从 lowered.tessellation 获取三角化参数
+    // M9 §1.3 A2: tessellation params from lowered result
     const tessellation = lowered.tessellation
-    const tessSegments = tessellation?.segments
 
-    // 3. Execute via faijs — M9 §1.3 A3: 按 tessellation 参数重新三角化
-    const execResult = await executeFaijs(mod, emitted.code, tessSegments)
+    // 3. Execute via faijs — M9 §1.3 A3: runtime created with tessellation options
+    const rt = createRuntimeForTessellation(mod, tessellation)
+    const execResult = await executeFaijs(rt, emitted.code)
+    rt.dispose()
     if (execResult.error || !execResult.shape) {
       console.log(`    EXEC ERROR: ${execResult.error ?? 'no shape'}`)
       entries.push({
@@ -260,7 +262,7 @@ async function main() {
     // 4. Compute candidate metrics
     const candTriangles = shapeToTriangles(execResult.shape)
     const candMetrics = computeMetrics(candTriangles)
-    const tessInfo = tessSegments !== undefined ? ` (seg=${tessSegments})` : ''
+    const tessInfo = ` (ad=${tessellation.angularDeflection.toFixed(3)}, ld=${tessellation.linearDeflection})`
     console.log(`    candidate: ${candMetrics.triangleCount} tris, vol=${candMetrics.volume.toFixed(4)}${tessInfo}`)
 
     // 5. Read reference STL
@@ -292,13 +294,10 @@ async function main() {
       comparison,
       hasFacetedPrimitives: hasFaceted,
       stepExport: 'exact',
-      ...(tessellation?.fn !== undefined ? { fn: tessellation.fn } : {}),
-      ...(tessSegments !== undefined ? { segments: tessSegments } : {}),
+      ...(tessellation.fn !== undefined ? { fn: tessellation.fn } : {}),
+      ...(tessellation.segments !== undefined ? { segments: tessellation.segments } : {}),
     })
   }
-
-  // Dispose runtime
-  runtime?.dispose()
 
   // Build report
   const report = buildReport(entries, {

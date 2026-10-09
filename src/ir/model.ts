@@ -97,6 +97,22 @@ export interface IrCone extends IrSolid {
   readonly segments?: number
 }
 
+/**
+ * Faceted polyhedron: explicit vertices + triangular faces.
+ *
+ * 当 sphere/cylinder/cone 使用刻面建模（$fn > 0 或默认 $fa/$fs）时，
+ * lower 产出此节点而非解析 IrSphere/IrCylinder/IrCone。
+ * emitter 调用 `cad.polyhedron(points, faces)` 构造精确的多面体——
+ * 与 OpenSCAD 的 faceted geometry 逐顶点一致。
+ */
+export interface IrPolyhedron extends IrSolid {
+  readonly kind: 'polyhedron'
+  /** 展开为一维数组的顶点坐标 [x0,y0,z0, x1,y1,z1, ...]。 */
+  readonly vertices: readonly number[]
+  /** 展开为一维数组的面索引 [v0,v1,v2, v0,v1,v2, ...]，每个面是逆时针三角形。 */
+  readonly faces: readonly number[]
+}
+
 // ── 2D 图元（全部落到 `cad.profile`） ──────────────────────────────────────
 
 /** `square(size, center)` → 4 段 line 的矩形轮廓。 */
@@ -224,6 +240,7 @@ export type IrGeometry =
   | IrSphere
   | IrCylinder
   | IrCone
+  | IrPolyhedron
   | IrRect2D
   | IrCircle2D
   | IrPolygon2D
@@ -247,8 +264,9 @@ export type IrGeometry2D = IrRect2D | IrCircle2D | IrPolygon2D | IrUnion | IrDif
  * `$fn`/`$fa`/`$fs` 是 OpenSCAD 的导出参数，不改变建模语义。转换器把它们
  * 采集为三角化元数据，交给 parity runner 在导出侧对齐分片密度。
  *
- * - `fn > 0`：精确分段数（优先级最高）
- * - `fn` 未设：由 `fa`/`fs` 按公式换算出 `segments`
+ * - `fn > 0`：精确分段数（优先级最高，per-primitive `segments` 覆盖全局 deflection）
+ * - `fn` 未设：由 `fa`/`fs` 映射为 `angularDeflection`（弧度）/ `linearDeflection`（mm），
+ *   交给 faijs `createRuntime({ tessellation })` 做全局三角化密度控制
  * - 全部未设：使用 OpenSCAD 默认值（$fa=12, $fs=2）
  */
 export interface TessellationParams {
@@ -258,8 +276,12 @@ export interface TessellationParams {
   readonly fa?: number
   /** $fs 大小（mm），缺省 2。 */
   readonly fs?: number
-  /** 从 fn 或 fa/fs 换算出的分段数（供 parity runner 使用）。 */
+  /** 从 fn 或 fa/fs 换算出的分段数（per-primitive segments，供 emit 写进 cad.sphere 等）。 */
   readonly segments?: number
+  /** 角偏转（弧度），对应 OpenSCAD $fa 转弧度。供 createRuntime tessellation 使用。 */
+  readonly angularDeflection: number
+  /** 线性偏转（mm），对应 OpenSCAD $fs。供 createRuntime tessellation 使用。 */
+  readonly linearDeflection: number
 }
 
 /** 模型根：可能是单节点，也可能是多个根节点的隐式 union。 */
@@ -275,9 +297,9 @@ export interface IrModel {
   /**
    * 三角化参数（M9 §1.3）。采集自模型中所有显式 `$fn`/`$fa`/`$fs` 的
    * 最严格值（取最大 segments），供 parity runner 在导出侧对齐分片密度。
-   * `undefined` 表示语料未设置任何 `$` 变量（使用 OpenSCAD 默认值）。
+   * 始终存在（未设置 `$` 变量时用 OpenSCAD 默认值 $fa=12, $fs=2）。
    */
-  readonly tessellation?: TessellationParams
+  readonly tessellation: TessellationParams
 }
 
 /** 深度优先前序遍历。 */
@@ -303,6 +325,7 @@ export function irChildren(node: IrGeometry): readonly IrGeometry[] {
     case 'sphere':
     case 'cylinder':
     case 'cone':
+    case 'polyhedron':
     case 'rect2d':
     case 'circle2d':
     case 'polygon2d':

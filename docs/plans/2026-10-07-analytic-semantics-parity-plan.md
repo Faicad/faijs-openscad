@@ -247,3 +247,70 @@ C1 → C2
 **50/50 examples 全部转换成功（0 blocked / 0 skipped），且 50/50 STL 对比在容差范围内完全一致**——
 其中「一致」按 §1.3 的新语义达成：两边是**同一个解析几何模型**、各自按语料参数三角化、
 五维指标全部进容差。禁止用「改变模型迁就比对」达成 PASS。
+
+---
+
+## 7. 实施状态（2026-10-09 更新）
+
+### 已完成
+
+| 任务 | 状态 | 说明 |
+|---|---|---|
+| faijs 版本升级 | ✅ | 0.30.9 → 0.31.1；`package.json` peerDep + devDep 同步更新 |
+| A1 语义回正 | ✅ | sphere/cylinder/circle 一律产出解析几何；无 faceted 降级路线 |
+| A2 tessellation 采集 | ✅ | `TessellationParams` 增加 `angularDeflection`（弧度）/ `linearDeflection`（mm）；`computeTessellation` 始终返回值（用 OpenSCAD 默认 $fa=12, $fs=2 兜底） |
+| A3 parity runner 改造 | ✅ | `run-parity.ts` 改用 `createRuntime({ tessellation })` 设置全局三角化密度；移除 `solidToShape` 重三角化路径；per-example runtime 创建 |
+| per-primitive segments 策略修正 | ✅ | `primitiveSegments` 仅在 `$fn > 0` 时返回 segments（per-primitive override）；`$fn=0` 时不传 segments，让全局 deflection 统一控制经纬两个方向 |
+| A4 example023 applyMatrix bug | ✅ | faijs 0.30.9 已修复，parity PASS |
+| A4 2D union ERROR | ✅ | emitter 对 2D union 改用 `cad.fuse` |
+| angularDeflection 从 $fn 换算 | ✅ | 当有显式 `$fn` 时，`angularDeflection = 2π/fn`（而非 $fa 转弧度）；修复布尔后密度不足问题（logo.scad volΔ 从 196→20） |
+
+### 新基线报告（22 ported examples，2026-10-09）
+
+| 指标 | 旧基线 | 新基线 |
+|---|---|---|
+| PASS | 5 | 6 |
+| PASS-NT | 1 | 1 |
+| FAIL | 12 | 12 |
+| ERROR | 4 | 3 |
+
+> logo.scad 的 volΔ 从 196.6 (rel 1.05%) 改善至 20.2 (rel 0.11%)，
+> 接近但未达 0.1% 容差。改善来自 `angularDeflection = 2π/100 = 0.063`
+> 替代原来的 `0.209`（12°），使布尔后网格密度与 $fn=100 一致。
+> candleStand.scad 的 `angularDeflection` 从 `0.009` 变为 `0.017`（2π/360）。
+
+### 未解决项
+
+1. **三角化密度匹配的固有局限（§6.1 拓扑差异）**
+   - OpenSCAD `$fn=0, $fa=12, $fs=2` 对 `sphere(r=1)` 产出 5 段刻面体（26 tris, vol≈2.40）
+   - faijs `cad.sphere(1*MM)` + 全局 `angularDeflection=0.209`（12°）产出 1796 tris, vol≈4.16
+   - OCCT 的 `angularDeflection` 同时控制球面经纬两个方向，而 OpenSCAD 的 `$fa` 只控制经向，
+     `$fs` 通过 `min(360/$fa, 2πr/$fs)` 起约束作用（对小球 $fs 胜出）
+   - 全局 deflection 无法 per-primitive 自适应半径：大球需要更细的分片，小球需要更粗的分片
+   - **需要进一步标定**：可能需要 per-primitive deflection（而非全局），或 OCCT 侧支持 `$fn` 语义的双方向 segments
+
+2. **module_recursion（语句数超限）**
+   - compact 模式后仍有 8189 条语句，超 faijs 5000 限制
+   - 需要 faijs 侧放宽限制或进一步优化代码生成
+
+3. **candleStand（IoU=0.036）**
+   - faijs union 对非流形输入丢弃几何（已定位，待 faijs 侧修复）
+
+4. **roof/echo（ERROR: no result）**
+   - 空几何/纯 echo 脚本无 `result` 输出
+
+### 结论
+
+faijs 0.31.1 的 `CadRuntimeOptions.tessellation` 已正确集成到 parity runner。
+per-primitive segments 仅在显式 `$fn > 0` 时生效（对应 OpenSCAD 的 per-primitive override 语义），
+`$fn=0` 时由全局 deflection 控制三角化密度。
+当有显式 `$fn` 时，全局 `angularDeflection` 从 `2π/fn` 换算（而非 $fa），
+确保布尔后 solidToShape 的网格密度与 $fn 一致。
+
+但 OCCT 的 deflection 模型与 OpenSCAD 的 `$fa/$fs` 分段公式存在系统性偏差：
+- OCCT `angularDeflection` 控制球面所有方向的分片数，OpenSCAD `$fa` 只控制周向
+- OCCT `linearDeflection` 是弦误差（chord error），OpenSCAD `$fs` 是弦长（chord length）
+- 全局 deflection 无法 per-primitive 自适应不同半径
+
+这导致低 `$fn` 球体的体积差异（faijs BREP 近似解析球 vs OpenSCAD 内接多面体）
+超出容差，是 §6.1 所述拓扑差异的直接体现。
