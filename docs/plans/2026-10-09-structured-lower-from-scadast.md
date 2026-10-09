@@ -289,35 +289,37 @@ emitter 在生成物头部注入需要的 helper：
 
 ### Phase 1：基础控制流 + 表达式（覆盖 ~60% examples）
 
-- [ ] `IrExpr` 类型定义 + `lowerExpr`（ScadAST Expr → IrExpr）
-- [ ] `IrForLoop` / `IrIf` / `IrLet` 节点
-- [ ] `lowerScad` 处理 AssignmentStmt / IfStmt / for 循环 / 内置 module
-- [ ] emitter 发射 for / if / let + 表达式
-- [ ] helper 注入（matMul、内置函数映射）
-- [ ] 测试：简单 for 循环 example（如 `example004.scad`）
+- [x] `IrExpr` 类型定义 + `lowerExpr`（ScadAST Expr → IrExpr）
+- [x] `IrForLoop` / `IrIf` / `IrLet` 节点
+- [x] `lowerScad` 处理 AssignmentStmt / IfStmt / for 循环 / 内置 module
+- [x] emitter 发射 for / if / let + 表达式
+- [x] helper 注入（matMul、内置函数映射）
+- [x] 测试：简单 for 循环 example（如 `example004.scad`）
 
 ### Phase 2：递归 module + 用户函数（覆盖 ~85% examples）
 
-- [ ] `IrModuleDef` / `IrFunctionDef` / `IrModuleCall` 节点
-- [ ] `lowerScad` 处理 ModuleDefStmt / FunctionDefStmt / 用户 module 调用
-- [ ] emitter 发射 async function 声明 + 递归调用
-- [ ] `rands` helper（确定性随机）
-- [ ] 测试：`module_recursion.scad`（8189 → ~20 行）
+- [x] `IrModuleDef` / `IrFunctionDef` / `IrModuleCall` 节点
+- [x] `lowerScad` 处理 ModuleDefStmt / FunctionDefStmt / 用户 module 调用
+- [x] emitter 发射 async function 声明 + 递归调用
+- [x] `rands` helper（确定性随机）
+- [x] 测试：`module_recursion.scad`（8189 → 28 行）
 
 ### Phase 3：高级特性（覆盖 ~95% examples）
 
-- [ ] `children()` 映射（回调函数）
-- [ ] `intersection_for` → for + intersection
-- [ ] 列表推导式（lcfor/lclet/lcif/lceach）→ JS 数组方法
-- [ ] `use` / `include` 跨文件
-- [ ] 特殊变量 `$fn` / `$fa` / `$fs` / `$t`
-- [ ] 测试：全部 50 个官方 examples
+- [x] `children()` 映射（回调函数）
+- [x] `intersection_for` → for + intersection
+- [x] 列表推导式（lcfor/lclet/lcif/lceach）→ JS 数组方法
+- [x] `use` / `include` 跨文件
+- [x] 特殊变量 `$fn` / `$fa` / `$fs` / `$t`
+- [x] 测试：全部 50 个官方 examples
 
 ### Phase 4：接入主 pipeline + 对账
 
-- [ ] `transpile` 命令增加 `--structured` 选项走 `lowerScad` 路径
-- [ ] parity runner 对结构化输出做几何对账（与展开路径结果一致）
-- [ ] 决定默认路径（结构化 vs 展开）
+- [x] `transpile` 命令增加 `--structured` 选项走 `lowerScad` 路径
+- [ ] parity runner 对结构化输出做几何对账（与展开路径结果一致）→ 见 roadmap Phase 6
+- [ ] 决定默认路径（结构化 vs 展开）→ 见 roadmap Phase 7
+
+> **后续工作详见** `docs/plans/2026-10-09-structured-lower-roadmap.md`
 
 ## 6. 关键设计决策
 
