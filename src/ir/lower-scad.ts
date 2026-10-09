@@ -65,6 +65,27 @@ const BUILTIN_MODULES = new Set([
   'for', 'intersection_for', 'let', 'assert', 'echo', 'children',
 ])
 
+const COLOR_NAMES: Record<string, [number, number, number]> = {
+  red: [1, 0, 0], green: [0, 1, 0], blue: [0, 0, 1],
+  cyan: [0, 1, 1], magenta: [1, 0, 1], yellow: [1, 1, 0],
+  black: [0, 0, 0], white: [1, 1, 1], orange: [1, 0.5, 0],
+  purple: [0.5, 0, 0.5], gray: [0.5, 0.5, 0.5], grey: [0.5, 0.5, 0.5],
+  silver: [0.753, 0.753, 0.753], teal: [0, 0.5, 0.5],
+  olive: [0.5, 0.5, 0], maroon: [0.5, 0, 0], navy: [0, 0, 0.5],
+  azure: [0, 0.5, 1], chartreuse: [0.5, 1, 0], gold: [1, 0.843, 0],
+  pink: [1, 0.753, 0.796], brown: [0.647, 0.165, 0.165],
+  coral: [1, 0.498, 0.314], turquoise: [0.251, 0.878, 0.816],
+  salmon: [0.980, 0.502, 0.447], lime: [0, 1, 0],
+  lavender: [0.902, 0.902, 0.980], tan: [0.824, 0.706, 0.549],
+  khaki: [0.941, 0.902, 0.549], violet: [0.933, 0.510, 0.933],
+  indigo: [0.294, 0, 0.509], crimson: [0.863, 0.078, 0.235],
+  darkred: [0.545, 0, 0], darkgreen: [0, 0.392, 0],
+  darkblue: [0, 0, 0.545], lightblue: [0.678, 0.847, 0.902],
+  lightgreen: [0.565, 0.933, 0.565], lightgray: [0.827, 0.827, 0.827],
+  lightgrey: [0.827, 0.827, 0.827], darkgray: [0.392, 0.392, 0.392],
+  darkgrey: [0.392, 0.392, 0.392],
+}
+
 class ScadLowerer {
   private readonly bag = new DiagnosticBag()
   private nextId = 0
@@ -477,6 +498,12 @@ class ScadLowerer {
           const chain: { method: string; args: readonly IrExpr[] }[] = [{ method: 'setColor', args: [r, g, b] }]
           if (a !== undefined) chain.push({ method: 'setOpacity', args: [a] })
           return chain
+        }
+        if (c.kind === 'str') {
+          const rgb = COLOR_NAMES[c.value.toLowerCase()]
+          if (rgb !== undefined) {
+            return [{ method: 'setColor', args: rgb.map((v) => ({ kind: 'num', value: v }) as IrExpr) }]
+          }
         }
         return [{ method: 'setColor', args: [
           { kind: 'index', array: c, index: { kind: 'num', value: 0 } },

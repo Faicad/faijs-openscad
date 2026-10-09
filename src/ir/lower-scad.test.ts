@@ -214,4 +214,14 @@ cube([a[0], a[1], a[2]]);
     expect(result.code).toContain('axis')
     expect(result.code).toContain('angle')
   })
+
+  it('颜色名 "red" → setColor(1, 0, 0)', () => {
+    const scad = `color("red") cube([1, 1, 1]);`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model } = lowerScad(document, { path: 'test.scad' })
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('setColor(1, 0, 0)')
+    expect(result.code).not.toContain('"red"[0]')
+  })
 })
