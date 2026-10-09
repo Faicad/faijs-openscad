@@ -254,6 +254,11 @@ export type IrExpr =
   | { readonly kind: 'vector'; readonly elements: readonly IrExpr[] }
   | { readonly kind: 'range'; readonly start: IrExpr; readonly end: IrExpr; readonly step?: IrExpr }
   | { readonly kind: 'matrixMul'; readonly matrices: readonly IrExpr[] }
+  | { readonly kind: 'lcfor'; readonly iterators: readonly IrIterator[]; readonly body: IrExpr }
+  | { readonly kind: 'lcif'; readonly cond: IrExpr; readonly then: IrExpr; readonly els?: IrExpr }
+  | { readonly kind: 'lclet'; readonly bindings: readonly { readonly name: string; readonly value: IrExpr }[]; readonly body: IrExpr }
+  | { readonly kind: 'lceach'; readonly body: IrExpr }
+  | { readonly kind: 'object'; readonly fields: readonly { readonly key: string; readonly value: IrExpr }[] }
 
 /** OpenSCAD `for(i=[0:n], j=expr) { ... }` → JS 嵌套 for 循环。 */
 export interface IrForLoop extends IrCommon {
@@ -261,6 +266,8 @@ export interface IrForLoop extends IrCommon {
   readonly dimension: IrDimension
   readonly iterators: readonly IrIterator[]
   readonly body: readonly IrGeometry[]
+  /** intersection_for 时为 true，合并用 cad.intersect 而非 cad.union。 */
+  readonly intersection?: boolean
 }
 
 export interface IrIterator {
@@ -313,6 +320,13 @@ export interface IrExprCall extends IrCommon {
   readonly chain: readonly { readonly method: string; readonly args: readonly IrExpr[] }[]
 }
 
+/** OpenSCAD `children()` / `children(i)` → 引用 module 的子内容参数。 */
+export interface IrChildrenRef extends IrCommon {
+  readonly kind: 'childrenRef'
+  readonly dimension: IrDimension
+  readonly index?: IrExpr
+}
+
 export type IrGeometry =
   | IrBox
   | IrSphere
@@ -337,6 +351,7 @@ export type IrGeometry =
   | IrLet
   | IrModuleCall
   | IrExprCall
+  | IrChildrenRef
 
 /** 保维度为 2D 的几何子集（`linear_extrude` 的输入约束）。 */
 export type IrGeometry2D = IrRect2D | IrCircle2D | IrPolygon2D | IrUnion | IrDifference | IrIntersection
@@ -435,6 +450,7 @@ export function irChildren(node: IrGeometry): readonly IrGeometry[] {
     case 'moduleCall':
       return node.children ?? []
     case 'exprCall':
+    case 'childrenRef':
       return []
     case 'box':
     case 'sphere':

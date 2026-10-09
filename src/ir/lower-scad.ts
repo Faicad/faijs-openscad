@@ -62,7 +62,7 @@ const BUILTIN_MODULES = new Set([
   'translate', 'rotate', 'scale', 'mirror', 'multmatrix', 'color',
   'union', 'difference', 'intersection', 'linear_extrude', 'rotate_extrude',
   'render', 'hull', 'minkowski', 'offset', 'fill', 'projection',
-  'for', 'intersection_for', 'let', 'assert', 'echo',
+  'for', 'intersection_for', 'let', 'assert', 'echo', 'children',
 ])
 
 class ScadLowerer {
@@ -206,7 +206,7 @@ class ScadLowerer {
 
   private lowerForLoop(stmt: ModuleInstantiationStmt, scope: Scope, isIntersection: boolean): IrForLoop {
     const iterators: IrIterator[] = stmt.args.map((arg) => {
-      const source = this.lowerForSource(arg.value, scope)
+      const source = this.lowerForSource(arg.value)
       return {
         varName: arg.name ?? '_',
         source,
@@ -225,10 +225,11 @@ class ScadLowerer {
       dimension: '3d',
       iterators,
       body,
+      ...(isIntersection ? { intersection: true } : {}),
     }
   }
 
-  private lowerForSource(expr: Expr, scope: Scope): IrRangeSource | IrExpr {
+  private lowerForSource(expr: Expr): IrRangeSource | IrExpr {
     const irExpr = this.lowerExpr(expr)
     if (irExpr.kind === 'range') {
       return {
@@ -303,6 +304,19 @@ class ScadLowerer {
   }
 
   private lowerBuiltinModule(stmt: ModuleInstantiationStmt, scope: Scope): IrGeometry[] {
+    if (stmt.name === 'children') {
+      const getPos = (idx: number): Expr | undefined =>
+        stmt.args.filter((a) => a.name === undefined)[idx]?.value
+      const indexExpr = getPos(0)
+      return [{
+        kind: 'childrenRef',
+        id: this.nextId++,
+        origin: this.origin(stmt.span, 'children'),
+        dimension: '3d',
+        ...(indexExpr !== undefined ? { index: this.lowerExpr(indexExpr) } : {}),
+      }]
+    }
+
     const childGeometries = stmt.children
       .map((child) => this.lowerStatement(child, scope))
       .flat()
@@ -355,7 +369,8 @@ class ScadLowerer {
         const rExpr = getArg('r') ?? getPos(0)
         const dExpr = getArg('d') ?? getPos(0)
         const r = rExpr !== undefined ? this.lenExpr(this.lowerExpr(rExpr)) : this.lenExpr(this.halfExpr(this.lowerExpr(dExpr ?? { kind: 'literal', type: 'number', value: 1, span: stmt.span })))
-        return [{ method: 'cad.sphere', args: [r] }]
+        const seg = this.segmentsExpr(stmt)
+        return [{ method: 'cad.sphere', args: seg !== undefined ? [r, { kind: 'object', fields: [{ key: 'segments', value: seg }] }] : [r] }]
       }
       case 'cylinder': {
         const hExpr = getArg('h') ?? getPos(0)
@@ -365,13 +380,15 @@ class ScadLowerer {
         const centerExpr = getArg('center')
         const h = this.lenExpr(this.lowerExpr(hExpr ?? { kind: 'literal', type: 'number', value: 1, span: stmt.span }))
         const centered = this.boolExpr(this.evalBool(centerExpr, scope, false))
+        const seg = this.segmentsExpr(stmt)
+        const segOpt = seg !== undefined ? [{ kind: 'object', fields: [{ key: 'segments', value: seg }] } as IrExpr] : []
         if (rExpr !== undefined) {
           const r = this.lenExpr(this.lowerExpr(rExpr))
-          return [{ method: 'cad.cylinder', args: [r, h, centered] }]
+          return [{ method: 'cad.cylinder', args: [r, h, centered, ...segOpt] }]
         }
         const r1 = this.lenExpr(this.lowerExpr(r1Expr ?? { kind: 'literal', type: 'number', value: 1, span: stmt.span }))
         const r2 = this.lenExpr(this.lowerExpr(r2Expr ?? { kind: 'literal', type: 'number', value: 1, span: stmt.span }))
-        return [{ method: 'cad.cone', args: [r1, r2, h, centered] }]
+        return [{ method: 'cad.cone', args: [r1, r2, h, centered, ...segOpt] }]
       }
       case 'square': {
         const sizeExpr = getArg('size') ?? getPos(0)
@@ -508,13 +525,33 @@ class ScadLowerer {
       case 'let':
       case 'assert':
       case 'echo':
-      case 'lcfor':
-      case 'lcforc':
-      case 'lceach':
-      case 'lclet':
-      case 'lcif':
       case 'member':
         return { kind: 'num', value: 0 }
+      case 'lcfor': {
+        const iterators: IrIterator[] = expr.args.map((arg) => ({
+          varName: arg.name ?? '_',
+          source: this.lowerForSource(arg.value),
+        }))
+        return { kind: 'lcfor', iterators, body: this.lowerExpr(expr.body) }
+      }
+      case 'lcforc':
+        return { kind: 'num', value: 0 }
+      case 'lceach':
+        return { kind: 'lceach', body: this.lowerExpr(expr.body) }
+      case 'lclet': {
+        const bindings = expr.args.map((arg) => ({
+          name: arg.name ?? '_',
+          value: this.lowerExpr(arg.value),
+        }))
+        return { kind: 'lclet', bindings, body: this.lowerExpr(expr.body) }
+      }
+      case 'lcif':
+        return {
+          kind: 'lcif',
+          cond: this.lowerExpr(expr.cond),
+          then: this.lowerExpr(expr.then),
+          ...(expr.els !== undefined ? { els: this.lowerExpr(expr.els) } : {}),
+        }
     }
   }
 
@@ -718,6 +755,12 @@ class ScadLowerer {
     return isTrue(v)
   }
 
+  private segmentsExpr(stmt: ModuleInstantiationStmt): IrExpr | undefined {
+    const fnExpr = stmt.args.find((a) => a.name === '$fn')?.value
+    if (fnExpr !== undefined) return this.lowerExpr(fnExpr)
+    return undefined
+  }
+
   private sizeToExprs(sizeExpr: Expr | undefined, scope: Scope): [IrExpr, IrExpr, IrExpr] {
     if (sizeExpr === undefined) return [this.lenExpr({ kind: 'num', value: 1 }), this.lenExpr({ kind: 'num', value: 1 }), this.lenExpr({ kind: 'num', value: 1 })]
     const ir = this.lowerExpr(sizeExpr)
@@ -800,6 +843,7 @@ function irChildrenLocal(node: IrGeometry): readonly IrGeometry[] {
     case 'moduleCall':
       return node.children ?? []
     case 'exprCall':
+    case 'childrenRef':
     case 'box':
     case 'sphere':
     case 'cylinder':

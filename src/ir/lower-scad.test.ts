@@ -136,4 +136,59 @@ tree();
     expect(result.code).toContain('setColor(0.5, 0.3, 0.1)')
     expect(result.code).not.toContain('[0.5, 0.3, 0.1][0]')
   })
+
+  it('intersection_for → cad.intersect（非 cad.union）', () => {
+    const scad = `
+intersection_for(i = [0:3]) {
+  translate([i * 10, 0, 0]) cube([1, 1, 1]);
+}
+`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('cad.intersect')
+    expect(result.code).not.toContain('cad.union(...')
+  })
+
+  it('children() → __unionChildren(__children)', () => {
+    const scad = `
+module place() {
+  children();
+}
+place() cube([1, 1, 1]);
+`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('...__children')
+    expect(result.code).toContain('__unionChildren')
+  })
+
+  it('列表推导式 [for (i = [0:3]) i * 2] → JS IIFE 数组', () => {
+    const scad = `
+a = [for (i = [0:3]) i * 2];
+cube([a[0], a[1], a[2]]);
+`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('for (let i =')
+    expect(result.code).toContain('.push(')
+  })
+
+  it('$fn 传递给 sphere → segments 参数', () => {
+    const scad = `sphere(r = 5, $fn = 32);`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('cad.sphere(')
+  })
 })

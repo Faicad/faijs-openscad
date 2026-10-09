@@ -71,7 +71,7 @@ class Emitter {
   /** 强制容器化（`export default async (cad) => { ... }`），未指定则按语句数自动判定。 */
   private readonly forceContainer: boolean
   /** Helpers needed (collected during emit, injected before body). */
-  private readonly neededHelpers = new Set<'rect' | 'circle' | '__rect' | '__circle' | 'rands' | 'matMul' | '__len' | '__concat' | '__str' | '__cross'>()
+  private readonly neededHelpers = new Set<'rect' | 'circle' | '__rect' | '__circle' | 'rands' | 'matMul' | '__len' | '__concat' | '__str' | '__cross' | '__unionChildren' | '__each'>()
 
   constructor(options: EmitOptions) {
     this.prefix = options.variablePrefix ?? 'part'
@@ -200,6 +200,17 @@ class Emitter {
           'a[2]*b[0]-a[0]*b[2],' +
           'a[0]*b[1]-a[1]*b[0]]}',
       )
+    }
+    if (this.neededHelpers.has('__unionChildren')) {
+      defs.push(
+        'async function __unionChildren(children){' +
+          'if(children.length===0)return undefined;' +
+          'if(children.length===1)return children[0];' +
+          'return cad.union(...children)}',
+      )
+    }
+    if (this.neededHelpers.has('__each')) {
+      defs.push('function __each(v){return Array.isArray(v)?v:[v]}')
     }
     return defs
   }
@@ -334,6 +345,12 @@ class Emitter {
         return this.emitModuleCall(node)
       case 'exprCall':
         return this.emitExprCall(node)
+      case 'childrenRef':
+        if (node.index !== undefined) {
+          return this.assign(`__children[${this.emitExpr(node.index)}]`, node.id)
+        }
+        this.neededHelpers.add('__unionChildren')
+        return this.assign(`await __unionChildren(__children)`, node.id)
     }
   }
 
@@ -380,6 +397,26 @@ class Emitter {
       case 'matrixMul':
         this.neededHelpers.add('matMul')
         return `matMul(${expr.matrices.map((m) => this.emitExpr(m)).join(', ')})`
+      case 'lcfor': {
+        const arrVar = `__lc_${this.counter++}`
+        const parts: string[] = [`(() => { const ${arrVar} = []`]
+        this.emitForIterators(expr.iterators, 0, () => {
+          parts.push(`${arrVar}.push(${this.emitExpr(expr.body)})`)
+        })
+        parts.push(`return ${arrVar} })()`)
+        return parts.join(' ')
+      }
+      case 'lcif':
+        return `(${this.emitExpr(expr.cond)} ? ${this.emitExpr(expr.then)} : ${expr.els !== undefined ? this.emitExpr(expr.els) : '[]'})`
+      case 'lclet': {
+        const bindings = expr.bindings.map((b) => `const ${b.name} = ${this.emitExpr(b.value)}`).join('; ')
+        return `(() => { ${bindings}; return ${this.emitExpr(expr.body)} })()`
+      }
+      case 'lceach':
+        this.neededHelpers.add('__each')
+        return `__each(${this.emitExpr(expr.body)})`
+      case 'object':
+        return `{ ${expr.fields.map((f) => `${f.key}: ${this.emitExpr(f.value)}`).join(', ')} }`
     }
   }
 
@@ -399,7 +436,8 @@ class Emitter {
       }
     })
 
-    return this.assign(`cad.union(...${partsVar})`, node.id)
+    const combiner = node.intersection === true ? 'cad.intersect' : 'cad.union'
+    return this.assign(`${combiner}(...${partsVar})`, node.id)
   }
 
   private emitForIterators(iterators: readonly IrIterator[], idx: number, emitBody: () => void): void {
@@ -455,6 +493,11 @@ class Emitter {
 
   private emitModuleCall(node: IrModuleCall): string | undefined {
     const args = node.args.map((a) => this.emitExpr(a)).join(', ')
+    if (node.children !== undefined && node.children.length > 0) {
+      const childNames = this.emitAll(node.children)
+      const childrenArr = `[${childNames.join(', ')}]`
+      return this.assign(`await ${node.functionName}(cad, ${args}, ${childrenArr})`, node.id)
+    }
     return this.assign(`await ${node.functionName}(cad, ${args})`, node.id)
   }
 
@@ -489,7 +532,7 @@ class Emitter {
       return p.name
     })
     const lines: string[] = []
-    lines.push(`async function ${mod.name}(cad, ${params.join(', ')}) {`)
+    lines.push(`async function ${mod.name}(cad, ${params.join(', ')}, ...__children) {`)
     const savedLines = this.lines
     const savedCounter = this.counter
     this.lines = []
