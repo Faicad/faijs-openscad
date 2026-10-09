@@ -40,6 +40,9 @@ import type {
   TessellationParams,
 } from './model'
 import { DEFAULT_FA, DEFAULT_FS } from './faceted-geometry'
+import { readFileSync } from 'node:fs'
+import { resolve, dirname, basename } from 'node:path'
+import { parseScad } from '../scad/parser'
 
 const callExpr = (callee: string, args: readonly IrExpr[]): IrExpr => ({ kind: 'call', callee, args })
 
@@ -110,6 +113,13 @@ class ScadLowerer {
   run(doc: ScadDocument): LowerScadResult {
     const scope = createGlobalScope()
 
+    // 处理 use/include：先收集导入的 module/function 定义
+    const importedStmts = this.processImports(doc.statements)
+
+    for (const stmt of importedStmts) {
+      this.lowerTopStatement(stmt, scope)
+    }
+
     for (const stmt of doc.statements) {
       this.lowerTopStatement(stmt, scope)
     }
@@ -133,7 +143,7 @@ class ScadLowerer {
         root,
         nodes: collectNodes(root),
         source: {
-          ...(this.path === undefined ? {} : { path: this.path }),
+          ...(this.path === undefined ? {} : { path: basename(this.path) }),
           ...(this.openscadVersion === undefined ? {} : { openscadVersion: this.openscadVersion }),
         },
         tessellation,
@@ -143,6 +153,42 @@ class ScadLowerer {
       },
       diagnostics: this.bag.all(),
     }
+  }
+
+  private processImports(statements: readonly Stmt[], visited = new Set<string>()): Stmt[] {
+    const imported: Stmt[] = []
+    const basePath = this.path ?? process.cwd()
+    const dir = dirname(basePath)
+
+    for (const stmt of statements) {
+      if (stmt.kind !== 'use' && stmt.kind !== 'include') continue
+      const importPath = resolve(dir, stmt.path)
+      if (visited.has(importPath)) continue
+      visited.add(importPath)
+
+      let text: string
+      try {
+        text = readFileSync(importPath, 'utf8')
+      } catch {
+        this.bag.add({ code: 'OSC5003', severity: 'warning', message: `Cannot read import: ${stmt.path}` })
+        continue
+      }
+
+      const parsed = parseScad(text, { path: importPath })
+      const nested = this.processImports(parsed.document.statements, visited)
+      for (const s of nested) imported.push(s)
+
+      for (const s of parsed.document.statements) {
+        if (stmt.kind === 'use') {
+          if (s.kind === 'moduleDef' || s.kind === 'functionDef' || s.kind === 'assignment') {
+            imported.push(s)
+          }
+        } else {
+          if (s.kind !== 'use' && s.kind !== 'include') imported.push(s)
+        }
+      }
+    }
+    return imported
   }
 
   private lowerTopStatement(stmt: Stmt, scope: Scope): void {

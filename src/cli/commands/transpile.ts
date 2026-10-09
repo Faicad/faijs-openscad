@@ -292,7 +292,7 @@ async function transpileStructured(
   diags.push(...parsed.diagnostics)
 
   // Step 3: Lower AST → Model IR (structured)
-  const lowered = lowerScad(parsed.document, { path: label })
+  const lowered = lowerScad(parsed.document, { path: abs })
   diags.push(...lowered.diagnostics)
 
   // Step 4: Emit IR → .fai.js
@@ -346,7 +346,7 @@ async function emitToStdout(
     const text = readFileSync(abs, 'utf8')
     const label = basename(abs)
     const parsed = parseScad(text, { path: label })
-    const lowered = lowerScad(parsed.document, { path: label })
+    const lowered = lowerScad(parsed.document, { path: abs })
     const emitted = emitFaijs(lowered.model)
     return emitted.ok ? emitted.code : undefined
   }
