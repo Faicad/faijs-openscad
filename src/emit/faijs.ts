@@ -71,7 +71,7 @@ class Emitter {
   /** 强制容器化（`export default async (cad) => { ... }`），未指定则按语句数自动判定。 */
   private readonly forceContainer: boolean
   /** Helpers needed (collected during emit, injected before body). */
-  private readonly neededHelpers = new Set<'rect' | 'circle' | '__rect' | '__circle' | 'rands' | 'matMul' | '__len' | '__concat' | '__str' | '__cross' | '__unionChildren' | '__each'>()
+  private readonly neededHelpers = new Set<'rect' | 'circle' | '__rect' | '__circle' | 'rands' | 'matMul' | '__len' | '__concat' | '__str' | '__cross' | '__unionChildren' | '__each' | '__polygon'>()
 
   constructor(options: EmitOptions) {
     this.prefix = options.variablePrefix ?? 'part'
@@ -211,6 +211,15 @@ class Emitter {
     }
     if (this.neededHelpers.has('__each')) {
       defs.push('function __each(v){return Array.isArray(v)?v:[v]}')
+    }
+    if (this.neededHelpers.has('__polygon')) {
+      defs.push(
+        'function __polygon(points,paths){' +
+          'const loops=paths||[points.map((_,i)=>i)];' +
+          'const contours=loops.map(loop=>{const segs=[];for(let i=0;i<loop.length;i++){const j=(i+1)%loop.length;' +
+          'segs.push({from:[points[loop[i]][0],points[loop[i]][1]],to:[points[loop[j]][0],points[loop[j]][1]]})}' +
+          'return{segments:segs}});return cad.profile({contours:contours})}',
+      )
     }
     return defs
   }
@@ -503,6 +512,9 @@ class Emitter {
 
   private emitExprCall(node: IrExprCall): string | undefined {
     if (node.chain.length === 0) return undefined
+    for (const link of node.chain) {
+      if (link.method === '__polygon') this.neededHelpers.add('__polygon')
+    }
     const parts: string[] = []
     for (let i = 0; i < node.chain.length; i++) {
       const link = node.chain[i]

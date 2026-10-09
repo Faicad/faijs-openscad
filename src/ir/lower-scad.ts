@@ -523,6 +523,14 @@ class ScadLowerer {
         if (!hasChildren) return []
         return [{ method: 'cad.intersection', args: [{ kind: 'var', name: '__children' }] }]
       }
+      case 'polygon': {
+        const pointsExpr = getArg('points') ?? getPos(0)
+        const pathsExpr = getArg('paths') ?? getPos(1)
+        if (pointsExpr === undefined) return []
+        const args: IrExpr[] = [this.lowerExpr(pointsExpr)]
+        if (pathsExpr !== undefined) args.push(this.lowerExpr(pathsExpr))
+        return [{ method: '__polygon', args }]
+      }
       default:
         return []
     }

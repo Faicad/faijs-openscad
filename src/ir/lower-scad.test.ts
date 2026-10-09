@@ -224,4 +224,15 @@ cube([a[0], a[1], a[2]]);
     expect(result.code).toContain('setColor(1, 0, 0)')
     expect(result.code).not.toContain('"red"[0]')
   })
+
+  it('polygon → __polygon helper + cad.profile', () => {
+    const scad = `polygon([[0,0],[10,0],[10,10],[0,10]]);`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('__polygon(')
+    expect(result.code).toContain('function __polygon')
+  })
 })
