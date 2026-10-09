@@ -76,6 +76,10 @@ class ScadLowerer {
   private readonly topBindings: { name: string; value: IrExpr }[] = []
   private readonly userModules = new Map<string, { params: readonly Parameter[]; body: readonly Stmt[] }>()
   private readonly userFunctions = new Map<string, { params: readonly Parameter[]; body: Expr }>()
+  /** 返回矩阵的函数名集合（用于矩阵乘法类型推断）。 */
+  private readonly matrixFunctions = new Set<string>()
+  /** 矩阵变量名集合（module 参数默认值为矩阵，或顶层赋值为矩阵）。 */
+  private readonly matrixVariables = new Set<string>()
 
   constructor(options: LowerScadOptions) {
     this.path = options.path
@@ -125,11 +129,17 @@ class ScadLowerer {
       case 'assignment': {
         const v = evalExpr(stmt.value, scope)
         scope.set(stmt.name, v)
+        if (this.exprIsMatrix(stmt.value)) this.matrixVariables.add(stmt.name)
         this.topBindings.push({ name: stmt.name, value: this.lowerExpr(stmt.value) })
         break
       }
       case 'moduleDef': {
         this.userModules.set(stmt.name, { params: stmt.params, body: stmt.body })
+        for (const param of stmt.params) {
+          if (param.defaultValue !== undefined && this.exprIsMatrix(param.defaultValue)) {
+            this.matrixVariables.add(param.name)
+          }
+        }
         this.moduleDefs.push({
           name: stmt.name,
           params: stmt.params.map((p) => ({
@@ -145,6 +155,7 @@ class ScadLowerer {
       }
       case 'functionDef': {
         this.userFunctions.set(stmt.name, { params: stmt.params, body: stmt.body })
+        if (this.exprIsMatrix(stmt.body)) this.matrixFunctions.add(stmt.name)
         this.functionDefs.push({
           name: stmt.name,
           params: stmt.params.map((p) => ({
@@ -398,9 +409,20 @@ class ScadLowerer {
         const cExpr = getPos(0) ?? getArg('c')
         if (cExpr === undefined) return []
         const c = this.lowerExpr(cExpr)
-        return [
-          { method: 'setColor', args: [{ kind: 'index', array: c, index: { kind: 'num', value: 0 } }, { kind: 'index', array: c, index: { kind: 'num', value: 1 } }, { kind: 'index', array: c, index: { kind: 'num', value: 2 } }] },
-        ]
+        if (c.kind === 'vector') {
+          const r = c.elements[0] ?? { kind: 'num', value: 0 }
+          const g = c.elements[1] ?? { kind: 'num', value: 0 }
+          const b = c.elements[2] ?? { kind: 'num', value: 0 }
+          const a = c.elements[3]
+          const chain: { method: string; args: readonly IrExpr[] }[] = [{ method: 'setColor', args: [r, g, b] }]
+          if (a !== undefined) chain.push({ method: 'setOpacity', args: [a] })
+          return chain
+        }
+        return [{ method: 'setColor', args: [
+          { kind: 'index', array: c, index: { kind: 'num', value: 0 } },
+          { kind: 'index', array: c, index: { kind: 'num', value: 1 } },
+          { kind: 'index', array: c, index: { kind: 'num', value: 2 } },
+        ] }]
       }
       case 'union': {
         if (!hasChildren) return []
@@ -461,7 +483,7 @@ class ScadLowerer {
       case 'call': {
         const callee = expr.callee.kind === 'lookup' ? expr.callee.name : ''
         const args = expr.args.map((a) => this.lowerExpr(a.value))
-        return { kind: 'call', callee, args }
+        return this.lowerBuiltinCall(callee, args)
       }
 
       case 'index':
@@ -498,8 +520,61 @@ class ScadLowerer {
 
   // ── 矩阵辅助 ──────────────────────────────────────────────────────────────
 
+  private deg2rad(e: IrExpr): IrExpr {
+    return { kind: 'binary', op: '*', left: e, right: { kind: 'binary', op: '/', left: { kind: 'num', value: Math.PI }, right: { kind: 'num', value: 180 } } }
+  }
+
+  private lowerBuiltinCall(callee: string, args: readonly IrExpr[]): IrExpr {
+    switch (callee) {
+      case 'sin': return callExpr('Math.sin', [this.deg2rad(args[0])])
+      case 'cos': return callExpr('Math.cos', [this.deg2rad(args[0])])
+      case 'tan': return callExpr('Math.tan', [this.deg2rad(args[0])])
+      case 'asin': return { kind: 'binary', op: '*', left: callExpr('Math.asin', [args[0]]), right: { kind: 'num', value: 180 / Math.PI } }
+      case 'acos': return { kind: 'binary', op: '*', left: callExpr('Math.acos', [args[0]]), right: { kind: 'num', value: 180 / Math.PI } }
+      case 'atan': return { kind: 'binary', op: '*', left: callExpr('Math.atan', [args[0]]), right: { kind: 'num', value: 180 / Math.PI } }
+      case 'atan2': return { kind: 'binary', op: '*', left: callExpr('Math.atan2', [args[0], args[1]]), right: { kind: 'num', value: 180 / Math.PI } }
+      case 'sqrt': return callExpr('Math.sqrt', [args[0]])
+      case 'pow': return callExpr('Math.pow', [args[0], args[1]])
+      case 'exp': return callExpr('Math.exp', [args[0]])
+      case 'log': return callExpr('Math.log10', [args[0]])
+      case 'ln': return callExpr('Math.log', [args[0]])
+      case 'abs': return callExpr('Math.abs', [args[0]])
+      case 'sign': return { kind: 'ternary', cond: { kind: 'binary', op: '<', left: args[0], right: { kind: 'num', value: 0 } }, then: { kind: 'num', value: -1 }, els: { kind: 'ternary', cond: { kind: 'binary', op: '>', left: args[0], right: { kind: 'num', value: 0 } }, then: { kind: 'num', value: 1 }, els: { kind: 'num', value: 0 } } }
+      case 'floor': return callExpr('Math.floor', [args[0]])
+      case 'ceil': return callExpr('Math.ceil', [args[0]])
+      case 'round': return callExpr('Math.round', [args[0]])
+      case 'trunc': return callExpr('Math.trunc', [args[0]])
+      case 'min': return callExpr('Math.min', args)
+      case 'max': return callExpr('Math.max', args)
+      case 'len': return callExpr('__len', [args[0]])
+      case 'rands': return callExpr('rands', args)
+      case 'concat': return callExpr('__concat', args)
+      case 'str': return callExpr('__str', args)
+      case 'chr': return callExpr('String.fromCharCode', args.map((a) => callExpr('Math.round', [a])))
+      case 'norm': return callExpr('Math.hypot', args)
+      case 'cross': return callExpr('__cross', args)
+      default: return { kind: 'call', callee, args }
+    }
+  }
+
+  // ── 矩阵辅助 ──────────────────────────────────────────────────────────────
+
+  private exprIsMatrix(e: Expr): boolean {
+    if (e.kind === 'vector') return true
+    if (e.kind === 'call' && e.callee.kind === 'lookup') {
+      return this.matrixFunctions.has(e.callee.name)
+    }
+    if (e.kind === 'binary' && e.op === '*') {
+      return this.exprIsMatrix(e.left) && this.exprIsMatrix(e.right)
+    }
+    if (e.kind === 'lookup') {
+      return this.matrixVariables.has(e.name)
+    }
+    return false
+  }
+
   private looksLikeMatrix(left: Expr, right: Expr): boolean {
-    return left.kind === 'vector' && right.kind === 'vector'
+    return this.exprIsMatrix(left) && this.exprIsMatrix(right)
   }
 
   private collectMatrixMul(expr: Expr): IrExpr[] {

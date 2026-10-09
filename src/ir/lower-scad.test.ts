@@ -88,4 +88,52 @@ tree(100, 5);
     const lineCount = result.code.split('\n').length
     expect(lineCount).toBeLessThan(50)
   })
+
+  it('rands helper 与 evaluator 算法一致（确定性）', () => {
+    const scad = `x = rands(0, 1, 5, 42)[0]; cube([x, x, x]);`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model } = lowerScad(document, { path: 'test.scad' })
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('function rands(')
+    expect(result.code).toContain('rands(0, 1, 5, 42)')
+  })
+
+  it('cos/sin 正确映射为 Math.cos/Math.sin（角度转弧度）', () => {
+    const scad = `a = cos(45); cube([a, a, a]);`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model } = lowerScad(document, { path: 'test.scad' })
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('Math.cos')
+    expect(result.code).toContain('3.14159')
+    expect(result.code).toContain('180')
+  })
+
+  it('矩阵乘法 m * mt(...) 转为 matMul', () => {
+    const scad = `
+identity = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]];
+function mt(x, y) = [[1,0,0,x],[0,1,0,y],[0,0,1,0],[0,0,0,1]];
+module tree(m = identity) {
+  multmatrix(m * mt(10, 20)) cube([1, 1, 1]);
+}
+tree();
+`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model } = lowerScad(document, { path: 'test.scad' })
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('matMul(')
+    expect(result.code).toContain('function matMul(')
+  })
+
+  it('setColor 直接取元素（非 [r,g,b][0]）', () => {
+    const scad = `color([0.5, 0.3, 0.1]) cube([1, 1, 1]);`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model } = lowerScad(document, { path: 'test.scad' })
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('setColor(0.5, 0.3, 0.1)')
+    expect(result.code).not.toContain('[0.5, 0.3, 0.1][0]')
+  })
 })

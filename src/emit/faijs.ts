@@ -70,8 +70,8 @@ class Emitter {
   private readonly compact: boolean
   /** 强制容器化（`export default async (cad) => { ... }`），未指定则按语句数自动判定。 */
   private readonly forceContainer: boolean
-  /** Helpers needed in compact mode (collected during emit, injected before body). */
-  private readonly neededHelpers = new Set<'rect' | 'circle'>()
+  /** Helpers needed (collected during emit, injected before body). */
+  private readonly neededHelpers = new Set<'rect' | 'circle' | '__rect' | '__circle' | 'rands' | 'matMul' | '__len' | '__concat' | '__str' | '__cross'>()
 
   constructor(options: EmitOptions) {
     this.prefix = options.variablePrefix ?? 'part'
@@ -91,10 +91,6 @@ class Emitter {
     if (this.withHeader) body.push(...this.header(model))
 
     const inner: string[] = []
-    // In compact mode, inject helper definitions before the body.
-    if (this.compact && this.neededHelpers.size > 0) {
-      inner.push(...this.helperDefs())
-    }
     // 结构化路径：发射顶层变量、function 定义、module 定义
     if (model.topBindings !== undefined && model.topBindings.length > 0) {
       for (const binding of model.topBindings) {
@@ -112,6 +108,10 @@ class Emitter {
       }
     }
     inner.push(...this.lines)
+    // Inject helper definitions after collecting all needed helpers.
+    if (this.neededHelpers.size > 0) {
+      inner.unshift(...this.helperDefs())
+    }
     if (rootVar === undefined) {
       inner.push('// the CSG produced no geometry (every subtree is background `%` or an empty group)')
     } else {
@@ -147,17 +147,17 @@ class Emitter {
    */
   private helperDefs(): string[] {
     const defs: string[] = []
-    if (this.neededHelpers.has('rect')) {
+    if (this.neededHelpers.has('rect') || this.neededHelpers.has('__rect')) {
       defs.push(
-        'function __rect(w,h){return cad.profile({contours:[{segments:[' +
+        'function __rect(w,h,c){const p=cad.profile({contours:[{segments:[' +
           "{kind:'line',x1:0,y1:0,x2:w,y2:0}," +
           "{kind:'line',x1:w,y1:0,x2:w,y2:h}," +
           "{kind:'line',x1:w,y1:h,x2:0,y2:h}," +
           "{kind:'line',x1:0,y1:h,x2:0,y2:0}" +
-          ']}]})}',
+          ']}]});return c?cad.applyMatrix(p,[[-1,0,0,w/2],[0,-1,0,h/2],[0,0,1,0],[0,0,0,1]]):p}',
       )
     }
-    if (this.neededHelpers.has('circle')) {
+    if (this.neededHelpers.has('circle') || this.neededHelpers.has('__circle')) {
       defs.push(
         'function __circle(r){const P=Math.PI;return cad.profile({contours:[{segments:[' +
           "{kind:'arc',cx:0,cy:0,radius:r,startAngle:0,endAngle:P,ccw:true,x1:r,y1:0,x2:-r,y2:0}," +
@@ -165,8 +165,45 @@ class Emitter {
           ']}]})}',
       )
     }
+    if (this.neededHelpers.has('rands')) {
+      defs.push(
+        'function rands(min,max,count,seed){' +
+          'function hashFP(d){const b=new Float64Array(1);b[0]=d;const v=new DataView(b.buffer);' +
+          'return((v.getUint32(0,true)^v.getUint32(4,true))>>>0)}' +
+          'function RNG(s){this.s=(s>>>0)||1;this.next=function(){let x=this.s;' +
+          'x^=x<<13;x^=x>>>17;x^=x<<5;this.s=x>>>0;return this.s/4294967295}}' +
+          'const rng=new RNG(hashFP(seed));const lo=Math.min(min,max),hi=Math.max(min,max);' +
+          'const a=[];for(let i=0;i<count;i++)a.push(lo+rng.next()*(hi-lo));return a}',
+      )
+    }
+    if (this.neededHelpers.has('matMul')) {
+      defs.push(
+        'function matMul(){const r=arguments[0];for(let k=1;k<arguments.length;k++){' +
+          'const m=arguments[k],t=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];' +
+          'for(let i=0;i<4;i++)for(let j=0;j<4;j++)for(let l=0;l<4;l++)t[i][j]+=r[i][l]*m[l][j];' +
+          'r=t}return r}',
+      )
+    }
+    if (this.neededHelpers.has('__len')) {
+      defs.push('function __len(v){return v.length}')
+    }
+    if (this.neededHelpers.has('__concat')) {
+      defs.push('function __concat(){return [].concat.apply([],arguments)}')
+    }
+    if (this.neededHelpers.has('__str')) {
+      defs.push('function __str(){return Array.from(arguments).map(a=>typeof a==="number"?String(a):a).join("")}')
+    }
+    if (this.neededHelpers.has('__cross')) {
+      defs.push(
+        'function __cross(a,b){return[' +
+          'a[1]*b[2]-a[2]*b[1],' +
+          'a[2]*b[0]-a[0]*b[2],' +
+          'a[0]*b[1]-a[1]*b[0]]}',
+      )
+    }
     return defs
   }
+
 
   // ── 头部 ─────────────────────────────────────────────────────────────────
 
@@ -328,6 +365,11 @@ class Emitter {
       case 'ternary':
         return `(${this.emitExpr(expr.cond)} ? ${this.emitExpr(expr.then)} : ${this.emitExpr(expr.els)})`
       case 'call':
+        if (expr.callee === 'rands') this.neededHelpers.add('rands')
+        if (expr.callee === '__len') this.neededHelpers.add('__len')
+        if (expr.callee === '__concat') this.neededHelpers.add('__concat')
+        if (expr.callee === '__str') this.neededHelpers.add('__str')
+        if (expr.callee === '__cross') this.neededHelpers.add('__cross')
         return `${expr.callee}(${expr.args.map((a) => this.emitExpr(a)).join(', ')})`
       case 'index':
         return `${this.emitExpr(expr.array)}[${this.emitExpr(expr.index)}]`
@@ -336,6 +378,7 @@ class Emitter {
       case 'range':
         return `[${this.emitExpr(expr.start)}, ${this.emitExpr(expr.end)}]`
       case 'matrixMul':
+        this.neededHelpers.add('matMul')
         return `matMul(${expr.matrices.map((m) => this.emitExpr(m)).join(', ')})`
     }
   }
