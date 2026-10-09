@@ -17,7 +17,7 @@
  *    绝不生成「看起来能跑」的近似几何（plan §5.4）。
  */
 import { CONVERTER_VERSION } from '../version'
-import type { IrGeometry, IrModel, Matrix4, Vec2, Vec4 } from '../ir/model'
+import type { IrGeometry, IrModel, IrExpr, IrForLoop, IrIterator, IrIf, IrLet, IrModuleCall, IrExprCall, Matrix4, Vec2, Vec4 } from '../ir/model'
 import { exactNumber, formatNumber, lengthLiteral } from './units'
 
 export interface EmitOptions {
@@ -61,7 +61,7 @@ export function emitFaijs(model: IrModel, options: EmitOptions = {}): EmitResult
 const TOP_LEVEL_STATEMENT_LIMIT = 4900
 
 class Emitter {
-  private readonly lines: string[] = []
+  private lines: string[] = []
   private readonly statementNodes: number[] = []
   private readonly blocked = new Set<string>()
   private counter = 0
@@ -94,6 +94,22 @@ class Emitter {
     // In compact mode, inject helper definitions before the body.
     if (this.compact && this.neededHelpers.size > 0) {
       inner.push(...this.helperDefs())
+    }
+    // 结构化路径：发射顶层变量、function 定义、module 定义
+    if (model.topBindings !== undefined && model.topBindings.length > 0) {
+      for (const binding of model.topBindings) {
+        inner.push(`const ${binding.name} = ${this.emitExpr(binding.value)}`)
+      }
+    }
+    if (model.functionDefs !== undefined && model.functionDefs.length > 0) {
+      for (const fn of model.functionDefs) {
+        inner.push(this.emitFunctionDef(fn))
+      }
+    }
+    if (model.moduleDefs !== undefined && model.moduleDefs.length > 0) {
+      for (const mod of model.moduleDefs) {
+        inner.push(...this.emitModuleDef(mod))
+      }
     }
     inner.push(...this.lines)
     if (rootVar === undefined) {
@@ -271,6 +287,16 @@ class Emitter {
       case 'blocked':
         this.blocked.add(node.origin.csgNode)
         return undefined
+      case 'forLoop':
+        return this.emitForLoop(node)
+      case 'if':
+        return this.emitIf(node)
+      case 'let':
+        return this.emitLet(node)
+      case 'moduleCall':
+        return this.emitModuleCall(node)
+      case 'exprCall':
+        return this.emitExprCall(node)
     }
   }
 
@@ -281,6 +307,162 @@ class Emitter {
       if (name !== undefined) out.push(name)
     }
     return out
+  }
+
+  // ── 表达式发射（结构化路径专用）─────────────────────────────────────────────
+
+  private emitExpr(expr: IrExpr): string {
+    switch (expr.kind) {
+      case 'num':
+        return formatNumber(expr.value)
+      case 'str':
+        return JSON.stringify(expr.value)
+      case 'bool':
+        return String(expr.value)
+      case 'var':
+        return expr.name
+      case 'binary':
+        return `(${this.emitExpr(expr.left)} ${expr.op} ${this.emitExpr(expr.right)})`
+      case 'unary':
+        return `(${expr.op}${this.emitExpr(expr.operand)})`
+      case 'ternary':
+        return `(${this.emitExpr(expr.cond)} ? ${this.emitExpr(expr.then)} : ${this.emitExpr(expr.els)})`
+      case 'call':
+        return `${expr.callee}(${expr.args.map((a) => this.emitExpr(a)).join(', ')})`
+      case 'index':
+        return `${this.emitExpr(expr.array)}[${this.emitExpr(expr.index)}]`
+      case 'vector':
+        return `[${expr.elements.map((e) => this.emitExpr(e)).join(', ')}]`
+      case 'range':
+        return `[${this.emitExpr(expr.start)}, ${this.emitExpr(expr.end)}]`
+      case 'matrixMul':
+        return `matMul(${expr.matrices.map((m) => this.emitExpr(m)).join(', ')})`
+    }
+  }
+
+  // ── 控制流发射 ────────────────────────────────────────────────────────────
+
+  private emitForLoop(node: IrForLoop): string | undefined {
+    const partsVar = `${this.prefix}_parts_${this.counter++}`
+    this.lines.push(`const ${partsVar} = []`)
+    this.statementNodes.push(node.id)
+
+    this.emitForIterators(node.iterators, 0, () => {
+      for (const child of node.body) {
+        const name = this.emitNode(child)
+        if (name !== undefined) {
+          this.lines.push(`${partsVar}.push(${name})`)
+        }
+      }
+    })
+
+    return this.assign(`cad.union(...${partsVar})`, node.id)
+  }
+
+  private emitForIterators(iterators: readonly IrIterator[], idx: number, emitBody: () => void): void {
+    if (idx >= iterators.length) {
+      emitBody()
+      return
+    }
+    const iter = iterators[idx]
+    if (iter.source.kind === 'range') {
+      const r = iter.source
+      const stepExpr = r.step !== undefined ? this.emitExpr(r.step) : '1'
+      this.lines.push(`for (let ${iter.varName} = ${this.emitExpr(r.start)}; ${iter.varName} <= ${this.emitExpr(r.end)}; ${iter.varName} += ${stepExpr}) {`)
+      this.emitForIterators(iterators, idx + 1, emitBody)
+      this.lines.push('}')
+    } else {
+      this.lines.push(`for (const ${iter.varName} of ${this.emitExpr(iter.source)}) {`)
+      this.emitForIterators(iterators, idx + 1, emitBody)
+      this.lines.push('}')
+    }
+  }
+
+  private emitIf(node: IrIf): string | undefined {
+    const partsVar = `${this.prefix}_parts_${this.counter++}`
+    this.lines.push(`const ${partsVar} = []`)
+    this.statementNodes.push(node.id)
+
+    this.lines.push(`if (${this.emitExpr(node.cond)}) {`)
+    for (const child of node.then) {
+      const name = this.emitNode(child)
+      if (name !== undefined) this.lines.push(`${partsVar}.push(${name})`)
+    }
+    if (node.els !== undefined && node.els.length > 0) {
+      this.lines.push('} else {')
+      for (const child of node.els) {
+        const name = this.emitNode(child)
+        if (name !== undefined) this.lines.push(`${partsVar}.push(${name})`)
+      }
+    }
+    this.lines.push('}')
+
+    return this.assign(`cad.union(...${partsVar})`, node.id)
+  }
+
+  private emitLet(node: IrLet): string | undefined {
+    for (const binding of node.bindings) {
+      this.lines.push(`const ${binding.name} = ${this.emitExpr(binding.value)}`)
+    }
+    const names = this.emitAll(node.body)
+    if (names.length === 0) return undefined
+    if (names.length === 1) return names[0]
+    return this.assign(`await cad.union(${names.join(', ')})`, node.id)
+  }
+
+  private emitModuleCall(node: IrModuleCall): string | undefined {
+    const args = node.args.map((a) => this.emitExpr(a)).join(', ')
+    return this.assign(`await ${node.functionName}(cad, ${args})`, node.id)
+  }
+
+  private emitExprCall(node: IrExprCall): string | undefined {
+    if (node.chain.length === 0) return undefined
+    const parts: string[] = []
+    for (let i = 0; i < node.chain.length; i++) {
+      const link = node.chain[i]
+      const args = link.args.map((a) => this.emitExpr(a)).join(', ')
+      if (i === 0) {
+        parts.push(`await ${link.method}(${args})`)
+      } else {
+        parts.push(`${link.method}(${args})`)
+      }
+    }
+    return this.assign(parts.join('.'), node.id)
+  }
+
+  // ── function / module 定义发射 ─────────────────────────────────────────────
+
+  private emitFunctionDef(fn: { name: string; params: readonly { name: string; defaultValue?: IrExpr }[]; body: IrExpr }): string {
+    const params = fn.params.map((p) => {
+      if (p.defaultValue !== undefined) return `${p.name} = ${this.emitExpr(p.defaultValue)}`
+      return p.name
+    })
+    return `function ${fn.name}(${params.join(', ')}) { return ${this.emitExpr(fn.body)} }`
+  }
+
+  private emitModuleDef(mod: { name: string; params: readonly { name: string; defaultValue?: IrExpr }[]; body: readonly IrGeometry[] }): string[] {
+    const params = mod.params.map((p) => {
+      if (p.defaultValue !== undefined) return `${p.name} = ${this.emitExpr(p.defaultValue)}`
+      return p.name
+    })
+    const lines: string[] = []
+    lines.push(`async function ${mod.name}(cad, ${params.join(', ')}) {`)
+    const savedLines = this.lines
+    const savedCounter = this.counter
+    this.lines = []
+    const names = this.emitAll(mod.body)
+    lines.push(...this.lines.map((l) => `  ${l}`))
+    if (names.length === 0) {
+      lines.push('  return undefined')
+    } else if (names.length === 1) {
+      lines.push(`  return ${names[0]}`)
+    } else {
+      lines.push(`  return await cad.union(${names.join(', ')})`)
+    }
+    this.lines = savedLines
+    this.counter = savedCounter
+    lines.push('}')
+    return lines
   }
 
   private assign(expr: string, nodeId: number): string {

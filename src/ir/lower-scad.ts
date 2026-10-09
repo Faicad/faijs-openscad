@@ -1,0 +1,740 @@
+/**
+ * lowerScad：ScadAST → 结构化 Model IR（保留循环/递归/函数）。
+ *
+ * 与 lowerCsg（展开路径）的区别：lowerCsg 接收的是 OpenSCAD 前端完全展开后的
+ * CSG AST，所有 for/if/module/递归已被展平。lowerScad 直接接收 ScadAST，
+ * 保留 for → IrForLoop、if → IrIf、let → IrLet、用户 module → IrModuleCall，
+ * emitter 据此发射 JS 的 for/if/递归 function，而非展开后的扁平语句。
+ *
+ * 内置 module 调用在 for/if 体内时参数可能依赖循环变量，此时用 IrExprCall
+ * （参数化 faijs API 调用链）而非常量几何 IR（IrBox 等）。
+ */
+import type { Stmt, Expr, Argument, ModuleInstantiationStmt, IfStmt, Parameter } from '../scad/ast'
+import type { ScadDocument } from '../scad/ast'
+import { evalExpr } from '../scad/evaluator'
+import {
+  Scope,
+  type Value,
+  UNDEF,
+  isNumber,
+  isVector,
+  isTrue,
+  num,
+  toNumber,
+} from '../scad/value'
+import { DiagnosticBag, type Diagnostic, type Span } from '../diagnostics/diagnostic'
+import type {
+  IrExpr,
+  IrGeometry,
+  IrModel,
+  IrOrigin,
+  IrForLoop,
+  IrIterator,
+  IrRangeSource,
+  IrIf,
+  IrLet,
+  IrExprCall,
+  IrModuleDef,
+  IrFunctionDef,
+  IrModuleCall,
+  TessellationParams,
+} from './model'
+import { DEFAULT_FA, DEFAULT_FS } from './faceted-geometry'
+
+const callExpr = (callee: string, args: readonly IrExpr[]): IrExpr => ({ kind: 'call', callee, args })
+
+export interface LowerScadOptions {
+  readonly path?: string
+  readonly openscadVersion?: string
+}
+
+export interface LowerScadResult {
+  readonly model: IrModel
+  readonly diagnostics: readonly Diagnostic[]
+}
+
+export function lowerScad(doc: ScadDocument, options: LowerScadOptions = {}): LowerScadResult {
+  return new ScadLowerer(options).run(doc)
+}
+
+const BUILTIN_MODULES = new Set([
+  'cube', 'sphere', 'cylinder', 'square', 'circle', 'polygon', 'polyhedron',
+  'translate', 'rotate', 'scale', 'mirror', 'multmatrix', 'color',
+  'union', 'difference', 'intersection', 'linear_extrude', 'rotate_extrude',
+  'render', 'hull', 'minkowski', 'offset', 'fill', 'projection',
+  'for', 'intersection_for', 'let', 'assert', 'echo',
+])
+
+class ScadLowerer {
+  private readonly bag = new DiagnosticBag()
+  private nextId = 0
+  private nextNodeId = 0
+  private readonly path?: string
+  private readonly openscadVersion?: string
+  private readonly moduleDefs: IrModuleDef[] = []
+  private readonly functionDefs: IrFunctionDef[] = []
+  private readonly topBindings: { name: string; value: IrExpr }[] = []
+  private readonly userModules = new Map<string, { params: readonly Parameter[]; body: readonly Stmt[] }>()
+  private readonly userFunctions = new Map<string, { params: readonly Parameter[]; body: Expr }>()
+
+  constructor(options: LowerScadOptions) {
+    this.path = options.path
+    this.openscadVersion = options.openscadVersion
+  }
+
+  run(doc: ScadDocument): LowerScadResult {
+    const scope = createGlobalScope()
+
+    for (const stmt of doc.statements) {
+      this.lowerTopStatement(stmt, scope)
+    }
+
+    const geometries: IrGeometry[] = []
+    for (const stmt of doc.statements) {
+      if (stmt.kind === 'moduleInst' || stmt.kind === 'if' || stmt.kind === 'empty') {
+        const g = this.lowerStatement(stmt, scope)
+        geometries.push(...g)
+      }
+    }
+
+    const root = this.combine(geometries, doc.span, 'root')
+    const tessellation: TessellationParams = {
+      angularDeflection: (DEFAULT_FA * Math.PI) / 180,
+      linearDeflection: DEFAULT_FS,
+    }
+
+    return {
+      model: {
+        root,
+        nodes: collectNodes(root),
+        source: {
+          ...(this.path === undefined ? {} : { path: this.path }),
+          ...(this.openscadVersion === undefined ? {} : { openscadVersion: this.openscadVersion }),
+        },
+        tessellation,
+        moduleDefs: this.moduleDefs,
+        functionDefs: this.functionDefs,
+        topBindings: this.topBindings,
+      },
+      diagnostics: this.bag.all(),
+    }
+  }
+
+  private lowerTopStatement(stmt: Stmt, scope: Scope): void {
+    switch (stmt.kind) {
+      case 'assignment': {
+        const v = evalExpr(stmt.value, scope)
+        scope.set(stmt.name, v)
+        this.topBindings.push({ name: stmt.name, value: this.lowerExpr(stmt.value) })
+        break
+      }
+      case 'moduleDef': {
+        this.userModules.set(stmt.name, { params: stmt.params, body: stmt.body })
+        this.moduleDefs.push({
+          name: stmt.name,
+          params: stmt.params.map((p) => ({
+            name: p.name,
+            ...(p.defaultValue !== undefined ? { defaultValue: this.lowerExpr(p.defaultValue) } : {}),
+          })),
+          body: stmt.body
+            .map((s) => this.lowerStatement(s, scope))
+            .flat()
+            .filter((g): g is IrGeometry => g !== undefined),
+        })
+        break
+      }
+      case 'functionDef': {
+        this.userFunctions.set(stmt.name, { params: stmt.params, body: stmt.body })
+        this.functionDefs.push({
+          name: stmt.name,
+          params: stmt.params.map((p) => ({
+            name: p.name,
+            ...(p.defaultValue !== undefined ? { defaultValue: this.lowerExpr(p.defaultValue) } : {}),
+          })),
+          body: this.lowerExpr(stmt.body),
+        })
+        break
+      }
+    }
+  }
+
+  private lowerStatement(stmt: Stmt, scope: Scope): IrGeometry[] {
+    switch (stmt.kind) {
+      case 'moduleInst':
+        return this.lowerModuleInst(stmt, scope)
+      case 'if':
+        return [this.lowerIf(stmt, scope)]
+      case 'assignment':
+      case 'moduleDef':
+      case 'functionDef':
+      case 'use':
+      case 'include':
+      case 'empty':
+        return []
+    }
+  }
+
+  private lowerModuleInst(stmt: ModuleInstantiationStmt, scope: Scope): IrGeometry[] {
+    if (stmt.name === 'for' || stmt.name === 'intersection_for') {
+      return [this.lowerForLoop(stmt, scope, stmt.name === 'intersection_for')]
+    }
+    if (stmt.name === 'let') {
+      return [this.lowerLetModule(stmt, scope)]
+    }
+
+    if (BUILTIN_MODULES.has(stmt.name) && !this.userModules.has(stmt.name)) {
+      return this.lowerBuiltinModule(stmt, scope)
+    }
+
+    if (this.userModules.has(stmt.name)) {
+      return [this.lowerUserModuleCall(stmt, scope)]
+    }
+
+    return []
+  }
+
+  private lowerForLoop(stmt: ModuleInstantiationStmt, scope: Scope, isIntersection: boolean): IrForLoop {
+    const iterators: IrIterator[] = stmt.args.map((arg) => {
+      const source = this.lowerForSource(arg.value, scope)
+      return {
+        varName: arg.name ?? '_',
+        source,
+      }
+    })
+
+    const body = stmt.children
+      .map((child) => this.lowerStatement(child, scope))
+      .flat()
+      .filter((g): g is IrGeometry => g !== undefined)
+
+    return {
+      kind: 'forLoop',
+      id: this.nextId++,
+      origin: this.origin(stmt.span, stmt.name),
+      dimension: '3d',
+      iterators,
+      body,
+    }
+  }
+
+  private lowerForSource(expr: Expr, scope: Scope): IrRangeSource | IrExpr {
+    const irExpr = this.lowerExpr(expr)
+    if (irExpr.kind === 'range') {
+      return {
+        kind: 'range',
+        start: irExpr.start,
+        end: irExpr.end,
+        ...(irExpr.step !== undefined ? { step: irExpr.step } : {}),
+      }
+    }
+    return irExpr
+  }
+
+  private lowerIf(stmt: IfStmt, scope: Scope): IrIf {
+    const thenBody = stmt.then
+      .map((s) => this.lowerStatement(s, scope))
+      .flat()
+      .filter((g): g is IrGeometry => g !== undefined)
+
+    const elsBody = stmt.els
+      ?.map((s) => this.lowerStatement(s, scope))
+      .flat()
+      .filter((g): g is IrGeometry => g !== undefined)
+
+    return {
+      kind: 'if',
+      id: this.nextId++,
+      origin: this.origin(stmt.span, 'if'),
+      dimension: '3d',
+      cond: this.lowerExpr(stmt.cond),
+      then: thenBody,
+      ...(elsBody !== undefined ? { els: elsBody } : {}),
+    }
+  }
+
+  private lowerLetModule(stmt: ModuleInstantiationStmt, scope: Scope): IrLet {
+    const bindings = stmt.args.map((arg) => ({
+      name: arg.name ?? '_',
+      value: this.lowerExpr(arg.value),
+    }))
+
+    const body = stmt.children
+      .map((child) => this.lowerStatement(child, scope))
+      .flat()
+      .filter((g): g is IrGeometry => g !== undefined)
+
+    return {
+      kind: 'let',
+      id: this.nextId++,
+      origin: this.origin(stmt.span, 'let'),
+      dimension: '3d',
+      bindings,
+      body,
+    }
+  }
+
+  private lowerUserModuleCall(stmt: ModuleInstantiationStmt, scope: Scope): IrModuleCall {
+    const args = stmt.args.map((arg) => this.lowerExpr(arg.value))
+    const children = stmt.children
+      .map((child) => this.lowerStatement(child, scope))
+      .flat()
+      .filter((g): g is IrGeometry => g !== undefined)
+
+    return {
+      kind: 'moduleCall',
+      id: this.nextId++,
+      origin: this.origin(stmt.span, stmt.name),
+      dimension: '3d',
+      functionName: stmt.name,
+      args,
+      ...(children.length > 0 ? { children } : {}),
+    }
+  }
+
+  private lowerBuiltinModule(stmt: ModuleInstantiationStmt, scope: Scope): IrGeometry[] {
+    const childGeometries = stmt.children
+      .map((child) => this.lowerStatement(child, scope))
+      .flat()
+      .filter((g): g is IrGeometry => g !== undefined)
+
+    const TRANSFORMS = new Set(['translate', 'rotate', 'scale', 'mirror', 'multmatrix', 'color'])
+    if (TRANSFORMS.has(stmt.name)) {
+      const transformChain = this.builtinChain(stmt, scope, false)
+      if (transformChain.length === 0) return childGeometries
+      return childGeometries.map((g) => {
+        if (g.kind === 'exprCall') {
+          return { ...g, chain: [...g.chain, ...transformChain] }
+        }
+        return g
+      })
+    }
+
+    const chain = this.builtinChain(stmt, scope, childGeometries.length > 0)
+    if (chain.length === 0) return []
+
+    const exprCall: IrExprCall = {
+      kind: 'exprCall',
+      id: this.nextId++,
+      origin: this.origin(stmt.span, stmt.name),
+      dimension: '3d',
+      chain,
+    }
+    return [exprCall]
+  }
+
+  private builtinChain(
+    stmt: ModuleInstantiationStmt,
+    scope: Scope,
+    hasChildren: boolean,
+  ): { method: string; args: readonly IrExpr[] }[] {
+    const getArg = (name: string): Expr | undefined =>
+      stmt.args.find((a) => a.name === name)?.value
+    const getPos = (idx: number): Expr | undefined =>
+      stmt.args.filter((a) => a.name === undefined)[idx]?.value
+
+    switch (stmt.name) {
+      case 'cube': {
+        const sizeExpr = getArg('size') ?? getPos(0)
+        const centerExpr = getArg('center') ?? getPos(1)
+        const [w, d, h] = this.sizeToExprs(sizeExpr, scope)
+        const centered = this.evalBool(centerExpr, scope, false)
+        return [{ method: 'cad.box', args: [w, d, h, this.boolExpr(centered)] }]
+      }
+      case 'sphere': {
+        const rExpr = getArg('r') ?? getPos(0)
+        const dExpr = getArg('d') ?? getPos(0)
+        const r = rExpr !== undefined ? this.lenExpr(this.lowerExpr(rExpr)) : this.lenExpr(this.halfExpr(this.lowerExpr(dExpr ?? { kind: 'literal', type: 'number', value: 1, span: stmt.span })))
+        return [{ method: 'cad.sphere', args: [r] }]
+      }
+      case 'cylinder': {
+        const hExpr = getArg('h') ?? getPos(0)
+        const rExpr = getArg('r') ?? getPos(1)
+        const r1Expr = getArg('r1') ?? getPos(1)
+        const r2Expr = getArg('r2') ?? getPos(2)
+        const centerExpr = getArg('center')
+        const h = this.lenExpr(this.lowerExpr(hExpr ?? { kind: 'literal', type: 'number', value: 1, span: stmt.span }))
+        const centered = this.boolExpr(this.evalBool(centerExpr, scope, false))
+        if (rExpr !== undefined) {
+          const r = this.lenExpr(this.lowerExpr(rExpr))
+          return [{ method: 'cad.cylinder', args: [r, h, centered] }]
+        }
+        const r1 = this.lenExpr(this.lowerExpr(r1Expr ?? { kind: 'literal', type: 'number', value: 1, span: stmt.span }))
+        const r2 = this.lenExpr(this.lowerExpr(r2Expr ?? { kind: 'literal', type: 'number', value: 1, span: stmt.span }))
+        return [{ method: 'cad.cone', args: [r1, r2, h, centered] }]
+      }
+      case 'square': {
+        const sizeExpr = getArg('size') ?? getPos(0)
+        const centerExpr = getArg('center') ?? getPos(1)
+        const [w, h] = this.sizeToExprs(sizeExpr, scope)
+        const centered = this.evalBool(centerExpr, scope, false)
+        return [{ method: '__rect', args: [w, h, this.boolExpr(centered)] }]
+      }
+      case 'circle': {
+        const rExpr = getArg('r') ?? getPos(0)
+        const dExpr = getArg('d') ?? getPos(0)
+        const r = rExpr !== undefined ? this.lenExpr(this.lowerExpr(rExpr)) : this.lenExpr(this.halfExpr(this.lowerExpr(dExpr ?? { kind: 'literal', type: 'number', value: 1, span: stmt.span })))
+        return [{ method: '__circle', args: [r] }]
+      }
+      case 'translate': {
+        const vExpr = getArg('v') ?? getPos(0)
+        const m = this.translateMatrix(vExpr, scope)
+        return [{ method: 'applyMatrix', args: [m] }]
+      }
+      case 'rotate': {
+        const m = this.rotateMatrix(stmt, scope)
+        return [{ method: 'applyMatrix', args: [m] }]
+      }
+      case 'scale': {
+        const vExpr = getArg('v') ?? getPos(0)
+        const m = this.scaleMatrix(vExpr, scope)
+        return [{ method: 'applyMatrix', args: [m] }]
+      }
+      case 'multmatrix': {
+        const mExpr = getPos(0) ?? getArg('m')
+        if (mExpr === undefined) return []
+        return [{ method: 'applyMatrix', args: [this.lowerExpr(mExpr)] }]
+      }
+      case 'color': {
+        const cExpr = getPos(0) ?? getArg('c')
+        if (cExpr === undefined) return []
+        const c = this.lowerExpr(cExpr)
+        return [
+          { method: 'setColor', args: [{ kind: 'index', array: c, index: { kind: 'num', value: 0 } }, { kind: 'index', array: c, index: { kind: 'num', value: 1 } }, { kind: 'index', array: c, index: { kind: 'num', value: 2 } }] },
+        ]
+      }
+      case 'union': {
+        if (!hasChildren) return []
+        return [{ method: 'cad.union', args: [{ kind: 'var', name: '__children' }] }]
+      }
+      case 'difference': {
+        if (!hasChildren) return []
+        return [{ method: 'cad.difference', args: [{ kind: 'var', name: '__children' }] }]
+      }
+      case 'intersection': {
+        if (!hasChildren) return []
+        return [{ method: 'cad.intersection', args: [{ kind: 'var', name: '__children' }] }]
+      }
+      default:
+        return []
+    }
+  }
+
+  // ── 表达式 lower ──────────────────────────────────────────────────────────
+
+  private lowerExpr(expr: Expr): IrExpr {
+    switch (expr.kind) {
+      case 'literal':
+        if (expr.type === 'number') return { kind: 'num', value: expr.value as number }
+        if (expr.type === 'string') return { kind: 'str', value: expr.value as string }
+        if (expr.type === 'boolean') return { kind: 'bool', value: expr.value as boolean }
+        return { kind: 'num', value: 0 }
+
+      case 'lookup':
+        return { kind: 'var', name: expr.name }
+
+      case 'binary':
+        if (expr.op === '*' && this.looksLikeMatrix(expr.left, expr.right)) {
+          return { kind: 'matrixMul', matrices: this.collectMatrixMul(expr) }
+        }
+        return {
+          kind: 'binary',
+          op: expr.op,
+          left: this.lowerExpr(expr.left),
+          right: this.lowerExpr(expr.right),
+        }
+
+      case 'unary':
+        return {
+          kind: 'unary',
+          op: expr.op,
+          operand: this.lowerExpr(expr.operand),
+        }
+
+      case 'ternary':
+        return {
+          kind: 'ternary',
+          cond: this.lowerExpr(expr.cond),
+          then: this.lowerExpr(expr.then),
+          els: this.lowerExpr(expr.els),
+        }
+
+      case 'call': {
+        const callee = expr.callee.kind === 'lookup' ? expr.callee.name : ''
+        const args = expr.args.map((a) => this.lowerExpr(a.value))
+        return { kind: 'call', callee, args }
+      }
+
+      case 'index':
+        return {
+          kind: 'index',
+          array: this.lowerExpr(expr.array),
+          index: this.lowerExpr(expr.index),
+        }
+
+      case 'vector':
+        return { kind: 'vector', elements: expr.elements.map((e) => this.lowerExpr(e)) }
+
+      case 'range':
+        return {
+          kind: 'range',
+          start: this.lowerExpr(expr.start),
+          end: this.lowerExpr(expr.end),
+          ...(expr.step !== undefined ? { step: this.lowerExpr(expr.step) } : {}),
+        }
+
+      case 'funcdef':
+      case 'let':
+      case 'assert':
+      case 'echo':
+      case 'lcfor':
+      case 'lcforc':
+      case 'lceach':
+      case 'lclet':
+      case 'lcif':
+      case 'member':
+        return { kind: 'num', value: 0 }
+    }
+  }
+
+  // ── 矩阵辅助 ──────────────────────────────────────────────────────────────
+
+  private looksLikeMatrix(left: Expr, right: Expr): boolean {
+    return left.kind === 'vector' && right.kind === 'vector'
+  }
+
+  private collectMatrixMul(expr: Expr): IrExpr[] {
+    const parts: IrExpr[] = []
+    const collect = (e: Expr): void => {
+      if (e.kind === 'binary' && e.op === '*' && this.looksLikeMatrix(e.left, e.right)) {
+        collect(e.left)
+        collect(e.right)
+      } else {
+        parts.push(this.lowerExpr(e))
+      }
+    }
+    collect(expr)
+    return parts
+  }
+
+  private translateMatrix(vExpr: Expr | undefined, scope: Scope): IrExpr {
+    const [x, y, z] = this.vec3Exprs(vExpr, scope)
+    return {
+      kind: 'vector',
+      elements: [
+        { kind: 'vector', elements: [{ kind: 'num', value: 1 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }, x] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 1 }, { kind: 'num', value: 0 }, y] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 1 }, z] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 1 }] },
+      ],
+    }
+  }
+
+  private rotateMatrix(stmt: ModuleInstantiationStmt, scope: Scope): IrExpr {
+    const getArg = (name: string): Expr | undefined =>
+      stmt.args.find((a) => a.name === name)?.value
+    const getPos = (idx: number): Expr | undefined =>
+      stmt.args.filter((a) => a.name === undefined)[idx]?.value
+
+    const aExpr = getArg('a') ?? getPos(0)
+    if (aExpr === undefined) return this.identityMatrixExpr()
+
+    const aVal = evalExpr(aExpr, scope)
+    if (isVector(aVal)) {
+      const [rx, ry, rz] = aVal.items.map((v) => toNumber(v))
+      return this.matrixMulExprs([
+        this.rotZExpr({ kind: 'num', value: rz }),
+        this.rotYExpr({ kind: 'num', value: ry }),
+        this.rotXExpr({ kind: 'num', value: rx }),
+      ])
+    }
+    const angle = this.lowerExpr(aExpr)
+    return this.rotZExpr(angle)
+  }
+
+  private scaleMatrix(vExpr: Expr | undefined, scope: Scope): IrExpr {
+    const [sx, sy, sz] = this.vec3Exprs(vExpr, scope, [1, 1, 1])
+    return {
+      kind: 'vector',
+      elements: [
+        { kind: 'vector', elements: [sx, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, sy, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 0 }, sz, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 1 }] },
+      ],
+    }
+  }
+
+  private rotZExpr(angle: IrExpr): IrExpr {
+    const cos = callExpr('Math.cos', [angle])
+    const sin = callExpr('Math.sin', [angle])
+    const neg = (e: IrExpr): IrExpr => ({ kind: 'unary', op: '-', operand: e })
+    return {
+      kind: 'vector',
+      elements: [
+        { kind: 'vector', elements: [cos, neg(sin), { kind: 'num', value: 0 }, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [sin, cos, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 1 }, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 1 }] },
+      ],
+    }
+  }
+
+  private rotYExpr(angle: IrExpr): IrExpr {
+    const cos = callExpr('Math.cos', [angle])
+    const sin = callExpr('Math.sin', [angle])
+    return {
+      kind: 'vector',
+      elements: [
+        { kind: 'vector', elements: [cos, { kind: 'num', value: 0 }, sin, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 1 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'unary', op: '-', operand: sin }, { kind: 'num', value: 0 }, cos, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 1 }] },
+      ],
+    }
+  }
+
+  private rotXExpr(angle: IrExpr): IrExpr {
+    const cos = callExpr('Math.cos', [angle])
+    const sin = callExpr('Math.sin', [angle])
+    return {
+      kind: 'vector',
+      elements: [
+        { kind: 'vector', elements: [{ kind: 'num', value: 1 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, cos, { kind: 'unary', op: '-', operand: sin }, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, sin, cos, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 1 }] },
+      ],
+    }
+  }
+
+  private matrixMulExprs(matrices: IrExpr[]): IrExpr {
+    return { kind: 'matrixMul', matrices }
+  }
+
+  private identityMatrixExpr(): IrExpr {
+    return {
+      kind: 'vector',
+      elements: [
+        { kind: 'vector', elements: [{ kind: 'num', value: 1 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 1 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 1 }, { kind: 'num', value: 0 }] },
+        { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 1 }] },
+      ],
+    }
+  }
+
+  // ── 表达式辅助 ────────────────────────────────────────────────────────────
+
+  private lenExpr(e: IrExpr): IrExpr {
+    return { kind: 'binary', op: '*', left: e, right: { kind: 'var', name: 'MM' } }
+  }
+
+  private halfExpr(e: IrExpr): IrExpr {
+    return { kind: 'binary', op: '/', left: e, right: { kind: 'num', value: 2 } }
+  }
+
+  private boolExpr(b: boolean): IrExpr {
+    return { kind: 'bool', value: b }
+  }
+
+  private evalBool(expr: Expr | undefined, scope: Scope, def: boolean): boolean {
+    if (expr === undefined) return def
+    const v = evalExpr(expr, scope)
+    return isTrue(v)
+  }
+
+  private sizeToExprs(sizeExpr: Expr | undefined, scope: Scope): [IrExpr, IrExpr, IrExpr] {
+    if (sizeExpr === undefined) return [this.lenExpr({ kind: 'num', value: 1 }), this.lenExpr({ kind: 'num', value: 1 }), this.lenExpr({ kind: 'num', value: 1 })]
+    const ir = this.lowerExpr(sizeExpr)
+    if (ir.kind === 'vector') {
+      const w = this.lenExpr(ir.elements[0] ?? { kind: 'num', value: 1 })
+      const d = this.lenExpr(ir.elements[1] ?? { kind: 'num', value: 1 })
+      const h = this.lenExpr(ir.elements[2] ?? { kind: 'num', value: 1 })
+      return [w, d, h]
+    }
+    const e = this.lenExpr(ir)
+    return [e, e, e]
+  }
+
+  private vec3Exprs(vExpr: Expr | undefined, scope: Scope, def: number[] = [0, 0, 0]): [IrExpr, IrExpr, IrExpr] {
+    if (vExpr === undefined) return [this.lenExpr({ kind: 'num', value: def[0] }), this.lenExpr({ kind: 'num', value: def[1] }), this.lenExpr({ kind: 'num', value: def[2] })]
+    const ir = this.lowerExpr(vExpr)
+    if (ir.kind === 'vector') {
+      return [
+        this.lenExpr(ir.elements[0] ?? { kind: 'num', value: def[0] }),
+        this.lenExpr(ir.elements[1] ?? { kind: 'num', value: def[1] }),
+        this.lenExpr(ir.elements[2] ?? { kind: 'num', value: def[2] }),
+      ]
+    }
+    return [this.lenExpr(ir), this.lenExpr({ kind: 'num', value: 0 }), this.lenExpr({ kind: 'num', value: 0 })]
+  }
+
+  // ── 通用辅助 ──────────────────────────────────────────────────────────────
+
+  private origin(span: Span, csgNode: string): IrOrigin {
+    return { nodeId: this.nextNodeId++, span, csgNode, ...(this.path !== undefined ? { path: this.path } : {}) }
+  }
+
+  private combine(geometries: IrGeometry[], span: Span, csgNode: string): IrGeometry {
+    if (geometries.length === 0) {
+      return { kind: 'empty', id: this.nextId++, origin: this.origin(span, csgNode) }
+    }
+    if (geometries.length === 1) return geometries[0]
+    return {
+      kind: 'union',
+      id: this.nextId++,
+      origin: this.origin(span, csgNode),
+      dimension: '3d',
+      children: geometries,
+    }
+  }
+}
+
+function createGlobalScope(): Scope {
+  return new Scope()
+}
+
+function collectNodes(root: IrGeometry): IrGeometry[] {
+  const nodes: IrGeometry[] = []
+  const visit = (n: IrGeometry): void => {
+    nodes.push(n)
+    for (const child of irChildrenLocal(n)) visit(child)
+  }
+  visit(root)
+  return nodes
+}
+
+function irChildrenLocal(node: IrGeometry): readonly IrGeometry[] {
+  switch (node.kind) {
+    case 'union':
+    case 'difference':
+    case 'intersection':
+      return node.children
+    case 'transform':
+    case 'extrude':
+    case 'revolve':
+    case 'color':
+    case 'passthrough':
+      return [node.child]
+    case 'forLoop':
+      return node.body
+    case 'if':
+      return [...node.then, ...(node.els ?? [])]
+    case 'let':
+      return node.body
+    case 'moduleCall':
+      return node.children ?? []
+    case 'exprCall':
+    case 'box':
+    case 'sphere':
+    case 'cylinder':
+    case 'cone':
+    case 'polyhedron':
+    case 'rect2d':
+    case 'circle2d':
+    case 'polygon2d':
+    case 'empty':
+    case 'blocked':
+      return []
+  }
+}

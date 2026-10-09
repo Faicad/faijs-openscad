@@ -235,6 +235,84 @@ export interface IrBlocked extends IrCommon {
   readonly reason: string
 }
 
+// ── 表达式 IR（结构化路径专用）────────────────────────────────────────────
+/**
+ * OpenSCAD 表达式的 IR 表示。与几何 IR 不同：表达式求值为标量/向量/矩阵，
+ * 不是 Shape。emitter 把 IrExpr 直接映射为 JS 表达式字符串。
+ * 仅在 lowerScad（结构化路径）中产出；lowerCsg（展开路径）不使用。
+ */
+export type IrExpr =
+  | { readonly kind: 'num'; readonly value: number }
+  | { readonly kind: 'str'; readonly value: string }
+  | { readonly kind: 'bool'; readonly value: boolean }
+  | { readonly kind: 'var'; readonly name: string }
+  | { readonly kind: 'binary'; readonly op: string; readonly left: IrExpr; readonly right: IrExpr }
+  | { readonly kind: 'unary'; readonly op: string; readonly operand: IrExpr }
+  | { readonly kind: 'ternary'; readonly cond: IrExpr; readonly then: IrExpr; readonly els: IrExpr }
+  | { readonly kind: 'call'; readonly callee: string; readonly args: readonly IrExpr[] }
+  | { readonly kind: 'index'; readonly array: IrExpr; readonly index: IrExpr }
+  | { readonly kind: 'vector'; readonly elements: readonly IrExpr[] }
+  | { readonly kind: 'range'; readonly start: IrExpr; readonly end: IrExpr; readonly step?: IrExpr }
+  | { readonly kind: 'matrixMul'; readonly matrices: readonly IrExpr[] }
+
+/** OpenSCAD `for(i=[0:n], j=expr) { ... }` → JS 嵌套 for 循环。 */
+export interface IrForLoop extends IrCommon {
+  readonly kind: 'forLoop'
+  readonly dimension: IrDimension
+  readonly iterators: readonly IrIterator[]
+  readonly body: readonly IrGeometry[]
+}
+
+export interface IrIterator {
+  readonly varName: string
+  readonly source: IrRangeSource | IrExpr
+}
+
+export interface IrRangeSource {
+  readonly kind: 'range'
+  readonly start: IrExpr
+  readonly end: IrExpr
+  readonly step?: IrExpr
+}
+
+/** OpenSCAD `if (cond) { ... } else { ... }` → JS if 语句。 */
+export interface IrIf extends IrCommon {
+  readonly kind: 'if'
+  readonly dimension: IrDimension
+  readonly cond: IrExpr
+  readonly then: readonly IrGeometry[]
+  readonly els?: readonly IrGeometry[]
+}
+
+/** OpenSCAD `let(x=1, y=x*2) { ... }` → JS const 声明 + 块。 */
+export interface IrLet extends IrCommon {
+  readonly kind: 'let'
+  readonly dimension: IrDimension
+  readonly bindings: readonly { readonly name: string; readonly value: IrExpr }[]
+  readonly body: readonly IrGeometry[]
+}
+
+/** 用户自定义 module 调用 → JS 函数调用。 */
+export interface IrModuleCall extends IrCommon {
+  readonly kind: 'moduleCall'
+  readonly dimension: IrDimension
+  readonly functionName: string
+  readonly args: readonly IrExpr[]
+  readonly children?: readonly IrGeometry[]
+}
+
+/**
+ * 参数化 faijs API 调用链（结构化路径专用）。
+ * 在 for 循环体内，当几何参数依赖循环变量时使用。
+ * chain 是方法链：第一个是创建调用（如 `cad.box`），后续是变换（如 `applyMatrix`）。
+ * 参数单位（`* MM`）在 lowerScad 时加进 IrExpr，emitter 只做 IrExpr → JS 字符串映射。
+ */
+export interface IrExprCall extends IrCommon {
+  readonly kind: 'exprCall'
+  readonly dimension: IrDimension
+  readonly chain: readonly { readonly method: string; readonly args: readonly IrExpr[] }[]
+}
+
 export type IrGeometry =
   | IrBox
   | IrSphere
@@ -254,9 +332,30 @@ export type IrGeometry =
   | IrPassthrough
   | IrEmpty
   | IrBlocked
+  | IrForLoop
+  | IrIf
+  | IrLet
+  | IrModuleCall
+  | IrExprCall
 
 /** 保维度为 2D 的几何子集（`linear_extrude` 的输入约束）。 */
 export type IrGeometry2D = IrRect2D | IrCircle2D | IrPolygon2D | IrUnion | IrDifference | IrIntersection
+
+// ── Module / Function 定义（结构化路径专用）─────────────────────────────────
+
+/** OpenSCAD `module ID(params) { body }` → JS async function 声明。 */
+export interface IrModuleDef {
+  readonly name: string
+  readonly params: readonly { readonly name: string; readonly defaultValue?: IrExpr }[]
+  readonly body: readonly IrGeometry[]
+}
+
+/** OpenSCAD `function ID(params) = expr` → JS function 声明。 */
+export interface IrFunctionDef {
+  readonly name: string
+  readonly params: readonly { readonly name: string; readonly defaultValue?: IrExpr }[]
+  readonly body: IrExpr
+}
 
 /**
  * 三角化参数（M9 §1.3 铁律 2）。
@@ -300,6 +399,12 @@ export interface IrModel {
    * 始终存在（未设置 `$` 变量时用 OpenSCAD 默认值 $fa=12, $fs=2）。
    */
   readonly tessellation: TessellationParams
+  /** 用户自定义 module 定义（结构化路径专用，展开路径为空数组）。 */
+  readonly moduleDefs?: readonly IrModuleDef[]
+  /** 用户自定义 function 定义（结构化路径专用，展开路径为空数组）。 */
+  readonly functionDefs?: readonly IrFunctionDef[]
+  /** 顶层变量赋值 `x = expr;`（结构化路径专用，展开路径为空数组）。 */
+  readonly topBindings?: readonly { readonly name: string; readonly value: IrExpr }[]
 }
 
 /** 深度优先前序遍历。 */
@@ -321,6 +426,16 @@ export function irChildren(node: IrGeometry): readonly IrGeometry[] {
     case 'color':
     case 'passthrough':
       return [node.child]
+    case 'forLoop':
+      return node.body
+    case 'if':
+      return [...node.then, ...(node.els ?? [])]
+    case 'let':
+      return node.body
+    case 'moduleCall':
+      return node.children ?? []
+    case 'exprCall':
+      return []
     case 'box':
     case 'sphere':
     case 'cylinder':
