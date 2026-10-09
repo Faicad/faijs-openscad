@@ -24,7 +24,7 @@ import { CONVERTER_NAME, CONVERTER_VERSION, EMIT_PROTOCOL } from '../version'
 const USAGE = `${CONVERTER_NAME} ${CONVERTER_VERSION}
 
 Usage:
-  faijs-openscad transpile <input.scad|input.csg> [-o output.fai.js] [--openscad-bin <path>] [--timeout <ms>] [--dump-csg] [--json]
+  faijs-openscad transpile <input.scad|input.csg> [-o output.fai.js] [--openscad-bin <path>] [--timeout <ms>] [--dump-csg] [--json] [--structured]
   faijs-openscad check <input.scad|input.csg> [--openscad-bin <path>] [--strict] [--json]
   faijs-openscad run <input.scad|input.csg> [-o output.stl] [--mode brep|mesh] [--openscad-bin <path>] [--json]
   faijs-openscad dump <input.scad> [-o output.csg] [--openscad-bin <path>]
@@ -156,6 +156,7 @@ export async function main(argv: readonly string[]): Promise<number> {
         dumpCsg: flagBool(flags, 'dump-csg'),
         allowPartial: flagBool(flags, 'allow-partial'),
         json: flagBool(flags, 'json'),
+        structured: flagBool(flags, 'structured'),
       })
     }
     case 'dump': {

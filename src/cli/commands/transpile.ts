@@ -16,6 +16,8 @@ import { resolve, extname, basename } from 'node:path'
 import { createHash } from 'node:crypto'
 import { parseCsg } from '../../csg/parser'
 import { lowerCsg } from '../../ir/lower'
+import { parseScad } from '../../scad/parser'
+import { lowerScad } from '../../ir/lower-scad'
 import { emitFaijs } from '../../emit/faijs'
 import { OpenScadCliFrontend } from '../../frontend/openscad-cli'
 import type { CsgArtifact } from '../../frontend/types'
@@ -39,6 +41,8 @@ export interface TranspileOptions {
   readonly extraArgs?: readonly string[]
   /** Use compact mode (helper functions + inline formatting) to reduce output size. */
   readonly compact?: boolean
+  /** Use structured lower path (parseScad → lowerScad), skipping CSG expansion. */
+  readonly structured?: boolean
 }
 
 export interface TranspileReport {
@@ -64,6 +68,11 @@ export async function transpileFile(
 ): Promise<TranspileReport> {
   const abs = resolve(inputPath)
   const ext = extname(abs).toLowerCase()
+
+  // ── Structured path: parseScad → lowerScad → emitFaijs (no CSG expansion) ──
+  if (options.structured && ext === '.scad') {
+    return transpileStructured(abs, options)
+  }
 
   // ── Step 1: Obtain CSG text ────────────────────────────────────────────
   let artifact: CsgArtifact
@@ -259,6 +268,69 @@ export async function runTranspile(
 }
 
 /**
+ * Structured path: `.scad` → parseScad → lowerScad → emitFaijs.
+ * Skips CSG expansion entirely — preserves loops, recursion, modules as JS constructs.
+ */
+async function transpileStructured(
+  abs: string,
+  options: TranspileOptions,
+): Promise<TranspileReport> {
+  const label = basename(abs)
+  const diags: Diagnostic[] = []
+
+  // Step 1: Read source
+  let text: string
+  try {
+    text = readFileSync(abs, 'utf8')
+  } catch {
+    diags.push({ code: 'OSC5003', severity: 'error', message: `Cannot read file: ${abs}` })
+    return { ok: false, input: abs, parsedNodes: 0, emittedStatements: 0, blockedNodes: [], diagnostics: diags }
+  }
+
+  // Step 2: Parse SCAD → AST
+  const parsed = parseScad(text, { path: label })
+  diags.push(...parsed.diagnostics)
+
+  // Step 3: Lower AST → Model IR (structured)
+  const lowered = lowerScad(parsed.document, { path: label })
+  diags.push(...lowered.diagnostics)
+
+  // Step 4: Emit IR → .fai.js
+  let emitted = emitFaijs(lowered.model, options.compact ? { compact: true } : {})
+  if (!options.compact && emitted.ok && emitted.code.length > 1_000_000) {
+    const compactEmitted = emitFaijs(lowered.model, { compact: true })
+    if (compactEmitted.ok && compactEmitted.code.length < emitted.code.length) {
+      emitted = compactEmitted
+    }
+  }
+
+  const errors = diags.filter((d) => d.severity === 'error')
+  const hasErrors = errors.length > 0
+  const isBlocked = !emitted.ok
+
+  if (isBlocked && !hasErrors) {
+    diags.push({ code: 'OSC3002', severity: 'error', message: `Conversion blocked: ${emitted.blocked.join(', ')}` })
+  }
+
+  const ok = !isBlocked && !hasErrors
+  const report: TranspileReport = {
+    ok,
+    input: abs,
+    ...(options.out !== undefined ? { output: options.out } : {}),
+    parsedNodes: countScadNodes(parsed.document),
+    emittedStatements: emitted.statementNodes.length,
+    blockedNodes: emitted.blocked,
+    diagnostics: diags,
+  }
+
+  if (ok && emitted.code.length > 0 && options.out !== undefined) {
+    writeFileSync(options.out, emitted.code, 'utf8')
+  }
+
+  return report
+}
+
+/**
  * For `transpile` without `-o`: run the pipeline and return the code string.
  * Returns `undefined` if the pipeline fails (diagnostics already printed).
  */
@@ -268,6 +340,16 @@ async function emitToStdout(
 ): Promise<string | undefined> {
   const abs = resolve(inputPath)
   const ext = extname(abs).toLowerCase()
+
+  // Structured path — no OpenSCAD binary needed.
+  if (options.structured && ext === '.scad') {
+    const text = readFileSync(abs, 'utf8')
+    const label = basename(abs)
+    const parsed = parseScad(text, { path: label })
+    const lowered = lowerScad(parsed.document, { path: label })
+    const emitted = emitFaijs(lowered.model)
+    return emitted.ok ? emitted.code : undefined
+  }
 
   let csgText: string
   if (ext === '.csg') {
@@ -302,6 +384,10 @@ async function emitToStdout(
 
 function countNodes(doc: { readonly nodes: readonly unknown[] }): number {
   return doc.nodes.length
+}
+
+function countScadNodes(doc: { readonly statements: readonly unknown[] }): number {
+  return doc.statements.length
 }
 
 function sha256Of(text: string): string {
