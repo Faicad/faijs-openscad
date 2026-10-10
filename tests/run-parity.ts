@@ -30,6 +30,11 @@ import { compareMetrics, type ComparisonResult, type ParityVerdict } from '../sr
 import { buildReport, renderMarkdown, renderJson, type ParityEntry } from '../src/parity/report'
 import { CONVERTER_VERSION } from '../src/version'
 import type { TessellationParams } from '../src/ir/model'
+import { setLoadBaseDir } from '../packages/ext/src/ops/load'
+
+// ── faijs runtime (loaded dynamically) ──────────────────────────────────────
+
+// ext library: provides the `openscad` namespace (hull, polyhedron, twistExtrude, etc.)
 
 // ── faijs runtime (loaded dynamically) ──────────────────────────────────────
 
@@ -344,6 +349,8 @@ async function main() {
       continue
     }
 
+    // Set base directory for openscad.load() file path resolution
+    setLoadBaseDir(dirname(join(EXAMPLES_ROOT, entry.source)))
     const rt = createRuntimeForTessellation(mod, tessellation)
     const execResult = await executeFaijs(rt, emitted.code)
     rt.dispose()
