@@ -20,9 +20,9 @@ export interface OpenSCADNamespace {
   /** K01: convex hull of a set of shapes. */
   hull(shapes: ShapeHandle[]): Promise<ShapeHandle>
   /** K02: 2D text profile from font rendering. */
-  text(text: string, opts?: { size?: number; font?: string }): Promise<never>
+  text(text: string, opts?: { size?: number; font?: string }): Promise<ShapeHandle>
   /** K03: external mesh asset loading (STL/DXF). */
-  load(opts: { file: string }): Promise<never>
+  load(opts: { file: string }): Promise<ShapeHandle>
   /** K04: polyhedron from points and faces (face indices fan-triangulated). */
   polyhedron(points: Vec3[], faces: number[][]): Promise<ShapeHandle>
   /** K06: linear extrude with twist and optional scale. */
