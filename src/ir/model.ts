@@ -319,6 +319,8 @@ export interface IrExprCall extends IrCommon {
   readonly dimension: IrDimension
   readonly chain: readonly { readonly method: string; readonly args: readonly IrExpr[] }[]
   /** Optional child geometry for ops like cad.extrude(child, opts). */
+  /** Multiple child geometries for ops like openscad.hull([child1, child2]). */
+  readonly children?: readonly IrGeometry[]
   readonly child?: IrGeometry
 }
 

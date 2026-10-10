@@ -236,36 +236,122 @@ cube([a[0], a[1], a[2]]);
     expect(result.code).toContain('function __polygon')
   })
 
-  it('unsupported module hull → OSC3004 warning (not silently ignored)', () => {
+  it('K01 hull → openscad.hull([children]) (no OSC3004 warning)', () => {
     const scad = `hull() { cube([1, 1, 1]); sphere(2); }`
     const { document } = parseScad(scad, { path: 'test.scad' })
     const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    // No warnings — hull is now supported
     const warnings = diagnostics.filter((d) => d.code === 'OSC3004')
-    expect(warnings.length).toBeGreaterThan(0)
-    expect(warnings[0].severity).toBe('warning')
-    expect(warnings[0].message).toContain('hull')
-    // Model should still be emitted (no errors)
+    expect(warnings).toHaveLength(0)
     expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
     const result = emitFaijs(model, { header: false })
     expect(result.ok).toBe(true)
+    expect(result.code).toContain('openscad.hull(')
   })
 
-  it('unsupported module text → OSC3004 warning', () => {
+  it('K02 text → cad.text(text, { size, font }) (no OSC3004 warning)', () => {
     const scad = `text("Hello");`
     const { document } = parseScad(scad, { path: 'test.scad' })
     const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
     const warnings = diagnostics.filter((d) => d.code === 'OSC3004')
-    expect(warnings.length).toBeGreaterThan(0)
-    expect(warnings[0].message).toContain('text')
+    expect(warnings).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('cad.text(')
   })
 
-  it('unsupported module projection → OSC3004 warning', () => {
+  it('K08 projection(cut=true) → openscad.projectCut(child) (no OSC3004 warning)', () => {
     const scad = `projection(cut = true) { cube([1, 1, 1]); }`
     const { document } = parseScad(scad, { path: 'test.scad' })
     const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
     const warnings = diagnostics.filter((d) => d.code === 'OSC3004')
-    expect(warnings.length).toBeGreaterThan(0)
-    expect(warnings[0].message).toContain('projection')
+    expect(warnings).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('openscad.projectCut(')
+  })
+
+  it('K09 projection(cut=false) → openscad.projectOutline(child)', () => {
+    const scad = `projection(cut = false) { cube([1, 1, 1]); }`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    const warnings = diagnostics.filter((d) => d.code === 'OSC3004')
+    expect(warnings).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('openscad.projectOutline(')
+  })
+
+  it('K04 polyhedron → openscad.polyhedron(points, faces)', () => {
+    const scad = `polyhedron(points=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1]], faces=[[0,1,2,3],[0,1,4],[1,2,4],[2,3,4],[3,0,4]]);`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('openscad.polyhedron(')
+  })
+
+  it('K06 linear_extrude(twist) → openscad.twistExtrude', () => {
+    const scad = `linear_extrude(height=10, twist=360) circle(r=5);`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('openscad.twistExtrude(')
+  })
+
+  it('K06 linear_extrude(twist, scale) → openscad.twistExtrude with scale', () => {
+    const scad = `linear_extrude(height=10, twist=180, scale=0.5) circle(r=5);`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('openscad.twistExtrude(')
+  })
+
+  it('K06 linear_extrude without twist → cad.extrude (unchanged)', () => {
+    const scad = `linear_extrude(height=10) circle(r=5);`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('cad.extrude(')
+    expect(result.code).not.toContain('openscad.twistExtrude')
+  })
+
+  it('K13 offset → openscad.offset2d(child, delta, chamfer)', () => {
+    const scad = `offset(delta=2, chamfer=false) square([10, 10]);`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('openscad.offset2d(')
+  })
+
+  it('K03 import → cad.load({ file })', () => {
+    const scad = `import("example.stl");`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('cad.load(')
+    expect(result.code).toContain('example.stl')
+  })
+
+  it('K11 surface → openscad.surface(file)', () => {
+    const scad = `surface("heightmap.dat");`
+    const { document } = parseScad(scad, { path: 'test.scad' })
+    const { model, diagnostics } = lowerScad(document, { path: 'test.scad' })
+    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0)
+    const result = emitFaijs(model, { header: false })
+    expect(result.ok).toBe(true)
+    expect(result.code).toContain('openscad.surface(')
   })
 
   it('supported module cube → no OSC3004 warning', () => {

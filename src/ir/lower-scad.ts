@@ -65,6 +65,7 @@ const BUILTIN_MODULES = new Set([
   'translate', 'rotate', 'scale', 'mirror', 'multmatrix', 'color',
   'union', 'difference', 'intersection', 'linear_extrude', 'rotate_extrude',
   'render', 'hull', 'minkowski', 'offset', 'fill', 'projection', 'text', 'surface',
+  'import',
   'for', 'intersection_for', 'let', 'assert', 'echo', 'children',
 ])
 
@@ -74,8 +75,7 @@ const BUILTIN_MODULES = new Set([
  * user knows the output may be incomplete (instead of silently dropping geometry).
  */
 const UNSUPPORTED_STRUCTURED_MODULES = new Set([
-  'hull', 'minkowski', 'offset', 'projection', 'polyhedron',
-  'surface', 'text', 'fill',
+  'minkowski', 'fill',
 ])
 
 const COLOR_NAMES: Record<string, [number, number, number]> = {
@@ -417,11 +417,28 @@ class ScadLowerer {
     }
 
     // linear_extrude(height) { 2D profile } → cad.extrude(profile, { length })
+    // K06: with twist/scale → openscad.twistExtrude(profile, height, twist, scale)
     if (stmt.name === 'linear_extrude') {
       const getArg = (name: string): Expr | undefined => stmt.args.find((a) => a.name === name)?.value
       const getPos = (idx: number): Expr | undefined => stmt.args.filter((a) => a.name === undefined)[idx]?.value
       const hExpr = getArg('height') ?? getPos(0)
       const h: IrExpr = hExpr !== undefined ? this.lowerExpr(hExpr) : { kind: 'num', value: 1 }
+      const twistExpr = getArg('twist')
+      const scaleExpr = getArg('scale')
+      // If twist or scale is present, use openscad.twistExtrude
+      if (twistExpr !== undefined || scaleExpr !== undefined) {
+        const twist: IrExpr = twistExpr !== undefined ? this.lowerExpr(twistExpr) : { kind: 'num', value: 0 }
+        const twistArgs: IrExpr[] = [h, twist]
+        if (scaleExpr !== undefined) twistArgs.push(this.lowerExpr(scaleExpr))
+        return childGeometries.map((g): IrExprCall => ({
+          kind: 'exprCall',
+          id: this.nextId++,
+          origin: this.origin(stmt.span, 'linear_extrude'),
+          dimension: '3d',
+          child: g,
+          chain: [{ method: 'openscad.twistExtrude', args: twistArgs }],
+        }))
+      }
       return childGeometries.map((g): IrExprCall => ({
         kind: 'exprCall',
         id: this.nextId++,
@@ -452,6 +469,122 @@ class ScadLowerer {
         child: g,
         chain: [{ method: 'cad.revolve', args: [{ kind: 'object', fields }] }],
       }))
+    }
+
+    // Helper argument accessors for builtin modules below.
+    const getArg = (name: string): Expr | undefined => stmt.args.find((a) => a.name === name)?.value
+    const getPos = (idx: number): Expr | undefined => stmt.args.filter((a) => a.name === undefined)[idx]?.value
+
+    // K01: hull → openscad.hull([children])
+    if (stmt.name === 'hull') {
+      if (childGeometries.length === 0) return []
+      return [{
+        kind: 'exprCall',
+        id: this.nextId++,
+        origin: this.origin(stmt.span, 'hull'),
+        dimension: '3d',
+        children: childGeometries,
+        chain: [{ method: 'openscad.hull', args: [] }],
+      }]
+    }
+
+    // K02: text → cad.text(text, { size, font })
+    if (stmt.name === 'text') {
+      const textExpr = getPos(0) ?? getArg('text')
+      if (textExpr === undefined) return []
+      const text = this.lowerExpr(textExpr)
+      const sizeExpr = getArg('size')
+      const fontExpr = getArg('font')
+      const fields: { key: string; value: IrExpr }[] = []
+      if (sizeExpr !== undefined) fields.push({ key: 'size', value: this.lowerExpr(sizeExpr) })
+      if (fontExpr !== undefined) fields.push({ key: 'font', value: this.lowerExpr(fontExpr) })
+      const textArgs: IrExpr[] = [text]
+      if (fields.length > 0) textArgs.push({ kind: 'object', fields })
+      return [{
+        kind: 'exprCall',
+        id: this.nextId++,
+        origin: this.origin(stmt.span, 'text'),
+        dimension: '2d',
+        chain: [{ method: 'cad.text', args: textArgs }],
+      }]
+    }
+
+    // K03: import → cad.load({ file })
+    if (stmt.name === 'import') {
+      const fileExpr = getPos(0) ?? getArg('file')
+      if (fileExpr === undefined) return []
+      const file = this.lowerExpr(fileExpr)
+      return [{
+        kind: 'exprCall',
+        id: this.nextId++,
+        origin: this.origin(stmt.span, 'import'),
+        dimension: '3d',
+        chain: [{ method: 'cad.load', args: [{ kind: 'object', fields: [{ key: 'file', value: file }] }] }],
+      }]
+    }
+
+    // K04: polyhedron → openscad.polyhedron(points, faces)
+    if (stmt.name === 'polyhedron') {
+      const pointsExpr = getArg('points') ?? getPos(0)
+      const facesExpr = getArg('faces') ?? getArg('triangles') ?? getPos(1)
+      if (pointsExpr === undefined) return []
+      const points = this.lowerExpr(pointsExpr)
+      const faces: IrExpr = facesExpr !== undefined ? this.lowerExpr(facesExpr) : { kind: 'vector', elements: [] }
+      return [{
+        kind: 'exprCall',
+        id: this.nextId++,
+        origin: this.origin(stmt.span, 'polyhedron'),
+        dimension: '3d',
+        chain: [{ method: 'openscad.polyhedron', args: [points, faces] }],
+      }]
+    }
+
+    // K13: offset → openscad.offset2d(child, delta, chamfer)
+    if (stmt.name === 'offset') {
+      const deltaArg = getArg('delta')
+      const rArg = getArg('r')
+      const chamferExpr = getArg('chamfer')
+      const delta: IrExpr = deltaArg !== undefined ? this.lowerExpr(deltaArg)
+        : rArg !== undefined ? this.lowerExpr(rArg)
+        : { kind: 'num', value: 0 }
+      const chamfer = this.evalBool(chamferExpr, scope, false)
+      return childGeometries.map((g): IrExprCall => ({
+        kind: 'exprCall',
+        id: this.nextId++,
+        origin: this.origin(stmt.span, 'offset'),
+        dimension: '2d',
+        child: g,
+        chain: [{ method: 'openscad.offset2d', args: [delta, this.boolExpr(chamfer)] }],
+      }))
+    }
+
+    // K08/K09: projection → openscad.projectCut(child) or openscad.projectOutline(child)
+    if (stmt.name === 'projection') {
+      const cutExpr = getArg('cut')
+      const cut = this.evalBool(cutExpr, scope, false)
+      const method = cut ? 'openscad.projectCut' : 'openscad.projectOutline'
+      return childGeometries.map((g): IrExprCall => ({
+        kind: 'exprCall',
+        id: this.nextId++,
+        origin: this.origin(stmt.span, 'projection'),
+        dimension: '2d',
+        child: g,
+        chain: [{ method, args: [] }],
+      }))
+    }
+
+    // K11: surface → openscad.surface(file)
+    if (stmt.name === 'surface') {
+      const fileExpr = getPos(0) ?? getArg('file')
+      if (fileExpr === undefined) return []
+      const file = this.lowerExpr(fileExpr)
+      return [{
+        kind: 'exprCall',
+        id: this.nextId++,
+        origin: this.origin(stmt.span, 'surface'),
+        dimension: '3d',
+        chain: [{ method: 'openscad.surface', args: [file] }],
+      }]
     }
 
     const chain = this.builtinChain(stmt, scope, childGeometries.length > 0)
