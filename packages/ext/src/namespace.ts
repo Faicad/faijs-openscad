@@ -12,11 +12,17 @@ import { twistExtrude } from './ops/twist-extrude'
 import { projectCut, projectOutline } from './ops/projection'
 import { surfaceInterp, surface } from './ops/surface-interp'
 import { offset2d } from './ops/offset-hardened'
+import { text } from './ops/text'
+import { load } from './ops/load'
 import type { ShapeHandle, Vec3 } from 'occt-wasm'
 
 export interface OpenSCADNamespace {
   /** K01: convex hull of a set of shapes. */
   hull(shapes: ShapeHandle[]): Promise<ShapeHandle>
+  /** K02: 2D text profile from font rendering. */
+  text(text: string, opts?: { size?: number; font?: string }): Promise<never>
+  /** K03: external mesh asset loading (STL/DXF). */
+  load(opts: { file: string }): Promise<never>
   /** K04: polyhedron from points and faces (face indices fan-triangulated). */
   polyhedron(points: Vec3[], faces: number[][]): Promise<ShapeHandle>
   /** K06: linear extrude with twist and optional scale. */
@@ -36,6 +42,8 @@ export interface OpenSCADNamespace {
 export function createOpenSCADNamespace(): OpenSCADNamespace {
   return {
     hull,
+    text,
+    load,
     polyhedron,
     twistExtrude,
     projectCut,

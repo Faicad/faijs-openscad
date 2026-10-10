@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-09T03:27:26.982Z",
+  "timestamp": "2026-10-10T05:36:13.257Z",
   "converterVersion": "0.29.5",
   "tolerance": {
     "volumeAbs": 0.01,
@@ -12,6 +12,20 @@
     "triangleCountRel": 0.1
   },
   "entries": [
+    {
+      "name": "Advanced/GEB.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] text: E_OP_FAILED: openscad.text(\"B\") is not yet implemented — requires font rendering (opentype.js) to convert glyph outlines to 2D profiles"
+    },
+    {
+      "name": "Advanced/animation.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": true,
+      "stepExport": "n/a",
+      "error": "[faijs/op] applyMatrix: APPLY_MATRIX_FAILED: applyMatrix: kernel transform failed: transform: "
+    },
     {
       "name": "Advanced/assert.scad",
       "verdict": "PASS",
@@ -97,11 +111,39 @@
       "stepExport": "exact"
     },
     {
+      "name": "Advanced/children.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": true,
+      "stepExport": "n/a",
+      "error": "[faijs/op] text: E_OP_FAILED: openscad.text(\"SCAD\") is not yet implemented — requires font rendering (opentype.js) to convert glyph outlines to 2D profiles"
+    },
+    {
+      "name": "Advanced/children_indexed.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] text: E_OP_FAILED: openscad.text(\"Nothing...\") is not yet implemented — requires font rendering (opentype.js) to convert glyph outlines to 2D profiles"
+    },
+    {
       "name": "Advanced/module_recursion.scad",
       "verdict": "PASS-NT",
       "hasFacetedPrimitives": false,
       "stepExport": "n/a",
       "error": "Reference STL not found"
+    },
+    {
+      "name": "Advanced/offset.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": true,
+      "stepExport": "n/a",
+      "error": "[faijs/op] offset2d: E_OP_FAILED: offset2d failed even with near-zero delta"
+    },
+    {
+      "name": "Advanced/surface_image.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] surface: ENOENT: ENOENT: no such file or directory, open 'surface_image.png'"
     },
     {
       "name": "Basics/CSG-modules.scad",
@@ -275,6 +317,117 @@
       "segments": 30
     },
     {
+      "name": "Basics/LetterBlock.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] text: E_OP_FAILED: openscad.text(\"Y\") is not yet implemented — requires font rendering (opentype.js) to convert glyph outlines to 2D profiles"
+    },
+    {
+      "name": "Basics/hull.scad",
+      "verdict": "FAIL",
+      "comparison": {
+        "verdict": "FAIL",
+        "ref": {
+          "triangleCount": 476,
+          "vertexCount": 240,
+          "bbox": {
+            "min": [
+              -10,
+              -30.5,
+              -9
+            ],
+            "max": [
+              10,
+              30.9945,
+              40
+            ],
+            "extent": [
+              20,
+              61.4945,
+              49
+            ]
+          },
+          "volume": 8568.706761555843,
+          "surfaceArea": 3162.422856220608,
+          "centroid": [
+            -2.6681109297429713e-18,
+            -2.9423482477513274,
+            0.6933232284476836
+          ],
+          "connectedComponents": 1,
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
+        },
+        "cand": {
+          "triangleCount": 324,
+          "vertexCount": 164,
+          "bbox": {
+            "min": [
+              -10,
+              -30.5,
+              -9
+            ],
+            "max": [
+              10,
+              30,
+              40
+            ],
+            "extent": [
+              20,
+              60.5,
+              49
+            ]
+          },
+          "volume": 8473.642718200841,
+          "surfaceArea": 3131.92856012466,
+          "centroid": [
+            1.5663776903882943e-7,
+            -3.226604990150609,
+            0.6931495642541782
+          ],
+          "connectedComponents": 1,
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
+        },
+        "volumeDelta": 95.06404335500156,
+        "volumeRelDelta": 0.01109432800075662,
+        "surfaceAreaDelta": 30.494296095947902,
+        "surfaceAreaRelDelta": 0.009642700385865363,
+        "bboxOverlap": 59290,
+        "bboxIoU": 0.9838278220003412,
+        "centroidDistance": 0.28425679544863697,
+        "triangleCountDelta": 152,
+        "maxSurfaceDistance": 0,
+        "meanSurfaceDistance": 0,
+        "hausdorffDistance": 0,
+        "message": "volume: Δ=95.064043 (rel 0.011094); surface area: Δ=30.494296 (rel 0.009643); bbox IoU: 0.983828 (need > 0.999000); centroid distance: 0.284257"
+      },
+      "hasFacetedPrimitives": false,
+      "stepExport": "exact",
+      "segments": 30
+    },
+    {
+      "id": "Basics__linear_extrude.scad.csg",
+      "source": "Basics/linear_extrude.scad",
+      "status": "ported",
+      "blockedBy": [],
+      "parsedNodes": 4,
+      "emittedStatements": 13,
+      "nodeHistogram": {
+        "color": 4,
+        "multmatrix": 4,
+        "linear_extrude": 4,
+        "square": 4
+      },
+      "blockedNodes": [],
+      "errorCodes": [],
+      "verdict": "ERROR",
+      "error": "CRASH SKIP: known segfault in twistExtrude/sweepFull — process would terminate"
+    },
+    {
       "name": "Basics/logo.scad",
       "verdict": "FAIL",
       "comparison": {
@@ -362,11 +515,39 @@
       "segments": 100
     },
     {
+      "name": "Basics/logo_and_text.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": true,
+      "stepExport": "n/a",
+      "error": "[faijs/op] text: E_OP_FAILED: openscad.text(\"Open\") is not yet implemented — requires font rendering (opentype.js) to convert glyph outlines to 2D profiles"
+    },
+    {
+      "name": "Basics/projection.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] load: E_OP_FAILED: openscad.load({ file: \"projection.stl\" }) is not yet implemented — requires file I/O and STL/DXF parser"
+    },
+    {
       "name": "Basics/roof.scad",
       "verdict": "PASS-NT",
       "hasFacetedPrimitives": false,
       "stepExport": "n/a",
       "error": "empty geometry (no result)"
+    },
+    {
+      "name": "Basics/rotate_extrude.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] text: E_OP_FAILED: openscad.text(\"  J\") is not yet implemented — requires font rendering (opentype.js) to convert glyph outlines to 2D profiles"
+    },
+    {
+      "name": "Basics/text_on_cube.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] text: E_OP_FAILED: openscad.text(\"C\") is not yet implemented — requires font rendering (opentype.js) to convert glyph outlines to 2D profiles"
     },
     {
       "name": "Functions/echo.scad",
@@ -467,6 +648,20 @@
       "hasFacetedPrimitives": false,
       "stepExport": "n/a",
       "error": "Reference STL not found"
+    },
+    {
+      "name": "Functions/polygon_areas.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] text: E_OP_FAILED: openscad.text(\"Areas:\") is not yet implemented — requires font rendering (opentype.js) to convert glyph outlines to 2D profiles"
+    },
+    {
+      "name": "Functions/recursion.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] text: E_OP_FAILED: openscad.text(\"6! = 720\") is not yet implemented — requires font rendering (opentype.js) to convert glyph outlines to 2D profiles"
     },
     {
       "name": "Old/example001.scad",
@@ -897,6 +1092,141 @@
       "segments": 30
     },
     {
+      "name": "Old/example006.scad",
+      "verdict": "FAIL",
+      "comparison": {
+        "verdict": "FAIL",
+        "ref": {
+          "triangleCount": 11884,
+          "vertexCount": 5944,
+          "bbox": {
+            "min": [
+              -50,
+              -49.9452,
+              -49.9452
+            ],
+            "max": [
+              50,
+              49.9452,
+              49.9452
+            ],
+            "extent": [
+              100,
+              99.8904,
+              99.8904
+            ]
+          },
+          "volume": 930475.7928903778,
+          "surfaceArea": 61164.00614854812,
+          "centroid": [
+            -0.6104104809122148,
+            1.0056102893444592,
+            0.20112281623322922
+          ],
+          "connectedComponents": 1,
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
+        },
+        "cand": {
+          "triangleCount": 7222,
+          "vertexCount": 3606,
+          "bbox": {
+            "min": [
+              -40,
+              -40,
+              -50
+            ],
+            "max": [
+              40,
+              40,
+              50
+            ],
+            "extent": [
+              80,
+              80,
+              100
+            ]
+          },
+          "volume": 625454.1970615279,
+          "surfaceArea": 46985.771283494316,
+          "centroid": [
+            -5.556865069137901e-15,
+            -5.42878214609781e-15,
+            0.26595280145226113
+          ],
+          "connectedComponents": 1,
+          "isManifold": 0,
+          "boundaryEdges": 14,
+          "nonManifoldEdges": 14
+        },
+        "volumeDelta": 305021.59582884994,
+        "volumeRelDelta": 0.3278124999698788,
+        "surfaceAreaDelta": 14178.234865053804,
+        "surfaceAreaRelDelta": 0.23180683800566193,
+        "bboxOverlap": 639298.56,
+        "bboxIoU": 0.6402521251265318,
+        "centroidDistance": 1.1781578570914988,
+        "triangleCountDelta": 4662,
+        "maxSurfaceDistance": 0,
+        "meanSurfaceDistance": 0,
+        "hausdorffDistance": 0,
+        "message": "volume: Δ=305021.595829 (rel 0.327812); surface area: Δ=14178.234865 (rel 0.231807); bbox IoU: 0.640252 (need > 0.999000); centroid distance: 1.178158"
+      },
+      "hasFacetedPrimitives": false,
+      "stepExport": "exact",
+      "segments": 30
+    },
+    {
+      "name": "Old/example007.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] load: E_OP_FAILED: openscad.load({ file: \"example007.dxf\" }) is not yet implemented — requires file I/O and STL/DXF parser"
+    },
+    {
+      "name": "Old/example008.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] load: E_OP_FAILED: openscad.load({ file: \"example008.dxf\" }) is not yet implemented — requires file I/O and STL/DXF parser"
+    },
+    {
+      "name": "Old/example009.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] load: E_OP_FAILED: openscad.load({ file: \"example009.dxf\" }) is not yet implemented — requires file I/O and STL/DXF parser"
+    },
+    {
+      "name": "Old/example010.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] surface: ENOENT: ENOENT: no such file or directory, open 'example010.dat'"
+    },
+    {
+      "name": "Old/example011.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] polyhedron: CONSTRUCTION_FAILED: buildTriFace: wire construction failed"
+    },
+    {
+      "name": "Old/example012.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] load: E_OP_FAILED: openscad.load({ file: \"example012.stl\" }) is not yet implemented — requires file I/O and STL/DXF parser"
+    },
+    {
+      "name": "Old/example013.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] load: E_OP_FAILED: openscad.load({ file: \"example013.dxf\" }) is not yet implemented — requires file I/O and STL/DXF parser"
+    },
+    {
       "name": "Old/example014.scad",
       "verdict": "PASS",
       "comparison": {
@@ -979,6 +1309,20 @@
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact"
+    },
+    {
+      "name": "Old/example015.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] load: E_OP_FAILED: openscad.load({ file: \"example009.dxf\" }) is not yet implemented — requires file I/O and STL/DXF parser"
+    },
+    {
+      "name": "Old/example016.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
+      "error": "[faijs/op] load: E_OP_FAILED: openscad.load({ file: \"example016.stl\" }) is not yet implemented — requires file I/O and STL/DXF parser"
     },
     {
       "name": "Old/example017.scad",
@@ -1237,6 +1581,99 @@
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
       "segments": 19
+    },
+    {
+      "name": "Old/example020.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": true,
+      "stepExport": "n/a",
+      "error": "[faijs/op] twistExtrude: KERNEL_ERROR: sweepFull: BRepFill_Section: bad shape type of section"
+    },
+    {
+      "name": "Old/example021.scad",
+      "verdict": "FAIL",
+      "comparison": {
+        "verdict": "FAIL",
+        "ref": {
+          "triangleCount": 1280,
+          "vertexCount": 666,
+          "bbox": {
+            "min": [
+              -51.6577,
+              -23.8481,
+              -21.4612
+            ],
+            "max": [
+              53.4875,
+              21.7394,
+              24.0646
+            ],
+            "extent": [
+              105.14519999999999,
+              45.5875,
+              45.525800000000004
+            ]
+          },
+          "volume": 3756.3152383680417,
+          "surfaceArea": 15921.554853465319,
+          "centroid": [
+            19.205701032473602,
+            -1.1115085799115543,
+            0.981853120160212
+          ],
+          "connectedComponents": 15,
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
+        },
+        "cand": {
+          "triangleCount": 4596,
+          "vertexCount": 2328,
+          "bbox": {
+            "min": [
+              -52.151058197021484,
+              -24.09588050842285,
+              -22.36756134033203
+            ],
+            "max": [
+              54.09587860107422,
+              22.23944664001465,
+              24.223997116088867
+            ],
+            "extent": [
+              106.2469367980957,
+              46.3353271484375,
+              46.5915584564209
+            ]
+          },
+          "volume": 4440.482711221012,
+          "surfaceArea": 18656.255859598856,
+          "centroid": [
+            18.950801148235374,
+            -1.128823303590399,
+            1.2925929727490655
+          ],
+          "connectedComponents": 15,
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
+        },
+        "volumeDelta": 684.1674728529706,
+        "volumeRelDelta": 0.15407502232225628,
+        "surfaceAreaDelta": 2734.701006133537,
+        "surfaceAreaRelDelta": 0.14658359248040126,
+        "bboxOverlap": 218219.126943069,
+        "bboxIoU": 0.9513863692806218,
+        "centroidDistance": 0.40228473327691533,
+        "triangleCountDelta": 3316,
+        "maxSurfaceDistance": 0,
+        "meanSurfaceDistance": 0,
+        "hausdorffDistance": 0,
+        "message": "volume: Δ=684.167473 (rel 0.154075); surface area: Δ=2734.701006 (rel 0.146584); bbox IoU: 0.951386 (need > 0.999000); centroid distance: 0.402285"
+      },
+      "hasFacetedPrimitives": false,
+      "stepExport": "exact",
+      "segments": 12
     },
     {
       "name": "Old/example022.scad",
@@ -1578,15 +2015,22 @@
       "stepExport": "exact",
       "fn": 360,
       "segments": 360
+    },
+    {
+      "name": "Parametric/sign.scad",
+      "verdict": "ERROR",
+      "hasFacetedPrimitives": true,
+      "stepExport": "n/a",
+      "error": "[faijs/op] text: E_OP_FAILED: openscad.text(\"Welcome to...\") is not yet implemented — requires font rendering (opentype.js) to convert glyph outlines to 2D profiles"
     }
   ],
   "summary": {
-    "total": 22,
+    "total": 50,
     "pass": 6,
     "passAnalytic": 0,
     "passNT": 4,
-    "fail": 12,
-    "error": 0,
-    "blocked": 0
+    "fail": 15,
+    "error": 25,
+    "blocked": 1
   }
 }

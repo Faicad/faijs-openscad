@@ -729,7 +729,7 @@ class Lowerer {
     }
   }
 
-  /** K02: text → cad.text(text, { size, font }) */
+  /** K02: text → openscad.text(text, { size, font }) */
   private lowerText(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
     this.reportUnknownArgs(node)
     const textArg = argumentOf(node, 'text')
@@ -744,7 +744,7 @@ class Lowerer {
       origin,
       dimension: '2d',
       chain: [{
-        method: 'cad.text',
+        method: 'openscad.text',
         args: [
           { kind: 'str', value: textStr },
           { kind: 'object', fields: [
@@ -818,7 +818,7 @@ class Lowerer {
     }
   }
 
-  /** K03: import → cad.load({ file }); dimension inferred from file extension */
+  /** K03: import → openscad.load({ file }); dimension inferred from file extension */
   private lowerImport(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
     this.reportUnknownArgs(node)
     const fileArg = argumentOf(node, 'file')
@@ -831,7 +831,7 @@ class Lowerer {
       origin,
       dimension,
       chain: [{
-        method: 'cad.load',
+        method: 'openscad.load',
         args: [{ kind: 'object', fields: [{ key: 'file', value: { kind: 'str', value: fileStr } }] }],
       }],
     }

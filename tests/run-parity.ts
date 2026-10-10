@@ -33,6 +33,10 @@ import type { TessellationParams } from '../src/ir/model'
 
 // ── faijs runtime (loaded dynamically) ──────────────────────────────────────
 
+// ext library: provides the `openscad` namespace (hull, polyhedron, twistExtrude, etc.)
+const EXT_DIST = join(dirname(fileURLToPath(import.meta.url)), '..', 'packages', 'ext', 'dist')
+let extNamespace: Record<string, unknown> | null = null
+
 interface FaijsShape {
   readonly positions: Float32Array | number[]
   readonly indices: Uint32Array | number[]
@@ -106,7 +110,7 @@ function createRuntimeForTessellation(
   mod: FaijsNodeModule,
   tess: TessellationParams,
 ): FaijsRuntime {
-  return mod.createRuntime(
+  const rt = mod.createRuntime(
     mod.createNodePorts(),
     'brep',
     undefined,
@@ -117,6 +121,13 @@ function createRuntimeForTessellation(
       },
     },
   )
+  // Register the openscad namespace from the ext library so generated code
+  // can call openscad.hull(), openscad.polyhedron(), openscad.twistExtrude(), etc.
+  if (extNamespace) {
+    ;(rt as unknown as { registerLib: (binding: string, ns: Record<string, unknown>) => void })
+      .registerLib('openscad', extNamespace)
+  }
+  return rt
 }
 
 /**
@@ -185,7 +196,72 @@ async function main() {
   const mod = await loadFaijs()
   await mod.initOcctWasm()
   console.log('  faijs OCCT wasm initialized')
+
+  // Pre-load the ext library and create a wrapper namespace that converts
+  // between faijs Shape objects and raw OCCT ShapeHandles.
+  try {
+    const EXT_SRC = join(dirname(fileURLToPath(import.meta.url)), '..', 'packages', 'ext', 'src', 'index.ts')
+    const extMod = await import('file://' + EXT_SRC) as { createOpenSCADNamespace: () => Record<string, unknown> }
+    const faijsSdk = await import('@faicad/faijs/sdk') as {
+      brepOf: (s: unknown) => unknown
+      fromBrep: (mesh: unknown, holder: { solid: unknown }) => unknown
+    }
+    const faijsBrep = await import('@faicad/faijs/brep/brep-ops') as {
+      solidToShape: (kernel: unknown, handle: unknown, segments?: number) => unknown
+    }
+    const occtKernelMod = await import('@faicad/faijs/occt-kernel/occtKernel') as {
+      initOcctWasm: () => Promise<unknown>
+    }
+    const kernel = await occtKernelMod.initOcctWasm()
+    const rawNs = extMod.createOpenSCADNamespace()
+
+    // Wrap each ext op to convert faijs Shape ↔ OCCT ShapeHandle
+    function unwrapShape(arg: unknown): unknown {
+      // If it's a faijs Shape (has positions/indices), extract BREP handle
+      if (arg && typeof arg === 'object' && 'positions' in (arg as Record<string, unknown>)) {
+        const handle = faijsSdk.brepOf(arg)
+        if (handle !== undefined && handle !== null) return handle
+      }
+      return arg
+    }
+    function wrapResult(handle: unknown): unknown {
+      if (handle === undefined || handle === null || typeof handle === 'number') {
+        // It's a raw OCCT handle — convert to faijs Shape
+        const mesh = faijsBrep.solidToShape(kernel, handle)
+        return faijsSdk.fromBrep(mesh, { solid: handle })
+      }
+      return handle
+    }
+
+    extNamespace = {}
+    for (const [name, fn] of Object.entries(rawNs)) {
+      if (typeof fn === 'function') {
+        extNamespace[name] = async (...args: unknown[]) => {
+          // Unwrap shape args (convert faijs Shape → OCCT handle)
+          const unwrapped = args.map(a => {
+            if (Array.isArray(a)) return a.map(unwrapShape)
+            return unwrapShape(a)
+          })
+          const result = await (fn as (...a: unknown[]) => Promise<unknown>)(...unwrapped)
+          // Wrap result (convert OCCT handle → faijs Shape)
+          if (Array.isArray(result)) return result.map(wrapResult)
+          return wrapResult(result)
+        }
+      } else {
+        extNamespace[name] = fn
+      }
+    }
+    console.log('  openscad namespace loaded (wrapped):', Object.keys(extNamespace).join(', '))
+  } catch (e) {
+    console.log('  WARNING: ext library not loaded:', String(e))
+  }
   console.log('')
+
+  // Examples that segfault the OCCT wasm process (twistExtrude sweepFull).
+  // These skip with a CRASH verdict to avoid killing the whole run.
+  const CRASH_SKIP = new Set([
+    'Basics__linear_extrude.scad.csg',  // twistExtrude → sweepFull segfault
+  ])
 
   const entries: ParityEntry[] = []
   const failures: Array<{ name: string; error: string }> = []
@@ -258,6 +334,16 @@ async function main() {
     const tessellation = lowered.tessellation
 
     // 3. Execute via faijs — M9 §1.3 A3: runtime created with tessellation options
+    if (CRASH_SKIP.has(entry.id)) {
+      console.log(`    CRASH SKIP: known segfault (twistExtrude)`)
+      entries.push({
+        ...entry,
+        verdict: 'ERROR',
+        error: 'CRASH SKIP: known segfault in twistExtrude/sweepFull — process would terminate',
+      })
+      continue
+    }
+
     const rt = createRuntimeForTessellation(mod, tessellation)
     const execResult = await executeFaijs(rt, emitted.code)
     rt.dispose()
