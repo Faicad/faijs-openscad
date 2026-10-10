@@ -38,10 +38,10 @@ describe('probe: hull (static)', () => {
     expect(set.has('convexHull')).toBe(true)
   })
 
-  it('OpenSCAD hull is classified unsupported until a shape-hull spike passes', () => {
+  it('OpenSCAD hull is classified direct (ported via ext library)', () => {
     const entry = capabilityOf('hull')
-    expect(entry.capability).toBe('unsupported')
-    expect(entry.note).toContain('points')
+    expect(entry.capability).toBe('direct')
+    expect(entry.note).toContain('openscad.hull')
   })
 
   it('two disjoint boxes are the canonical hull fixture', () => {

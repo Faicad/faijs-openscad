@@ -36,6 +36,9 @@ import {
 } from './faceted-geometry'
 import type {
   IrBlocked,
+  IrDimension,
+  IrExpr,
+  IrExprCall,
   IrGeometry,
   IrGeometry2D,
   IrModel,
@@ -223,6 +226,20 @@ class Lowerer {
         return this.lowerColor(node, id, origin)
       case 'render':
         return this.lowerRender(node, id, origin)
+      case 'hull':
+        return this.lowerHull(node, id, origin)
+      case 'polyhedron':
+        return this.lowerPolyhedron(node, id, origin)
+      case 'text':
+        return this.lowerText(node, id, origin)
+      case 'projection':
+        return this.lowerProjection(node, id, origin)
+      case 'offset':
+        return this.lowerOffset(node, id, origin)
+      case 'surface':
+        return this.lowerSurface(node, id, origin)
+      case 'import':
+        return this.lowerImport(node, id, origin)
       default:
         // live in vocabulary but not in P0 — guarded above; defensive only.
         return this.blocked(node, id, origin, 'not implemented in v0')
@@ -535,17 +552,8 @@ class Lowerer {
     //   (COMPLEX_EXTRUDE_LAW_UNSUPPORTED / TWIST_EXTRUDE_LAW_UNSUPPORTED)。
     const twist = this.numArg(node, 'twist', id)
     const scale = this.scaleArg(node, id)
-    const unsupported: string[] = []
-    if (twist && twist.value !== 0) unsupported.push(`twist=${twist.value}`)
-    if (scale && (scale[0] !== 1 || scale[1] !== 1)) unsupported.push(`scale=[${scale[0]},${scale[1]}]`)
-    if (unsupported.length > 0) {
-      return this.blocked(
-        node,
-        id,
-        origin,
-        `linear_extrude with ${unsupported.join(' / ')} — faijs has no exact equivalent (twistExtrude takes wire not face; scaling law unsupported)`,
-      )
-    }
+    const hasTwist = twist !== undefined && twist.value !== 0
+    const hasScale = scale !== undefined && (scale[0] !== 1 || scale[1] !== 1)
 
     const centered = this.boolArg(node, 'center', false, id)
     if (centered === undefined) return { kind: 'empty', id, origin }
@@ -571,6 +579,32 @@ class Lowerer {
 
     // linear_extrude 的 $fn 作用于其轮廓上的弧（如圆），与图元同一条政策。
     this.reportFaceting(node, id)
+
+    // K06: twist / non-uniform scale → openscad.twistExtrude via ext library
+    if (hasTwist || hasScale) {
+      const twistVal = twist?.value ?? 0
+      const scaleVal = scale ?? [1, 1]
+      return {
+        kind: 'exprCall',
+        id,
+        origin,
+        dimension: '3d',
+        child: planar,
+        chain: [{
+          method: 'openscad.twistExtrude',
+          args: [
+            { kind: 'num', value: height.value },
+            { kind: 'num', value: twistVal },
+            { kind: 'vector', elements: [
+              { kind: 'num', value: scaleVal[0] },
+              { kind: 'num', value: scaleVal[1] },
+            ] },
+            { kind: 'bool', value: centered },
+          ],
+        }],
+      }
+    }
+
     return { kind: 'extrude', id, origin, dimension: '3d', child: planar, length: height.value, centered }
   }
 
@@ -634,6 +668,173 @@ class Lowerer {
     // `convexity` 只影响 OpenSCAD 的 CGAL 预览提示，对 BREP 无几何语义：
     // 它已在 KNOWN_ARGS 里，故既不报 OSC1004，也不写进 IR。
     return { kind: 'passthrough', id, origin, dimension, child }
+  }
+
+  // ── K01-K13 扩展模块（openscad namespace via ext library） ──────────────
+
+  /** K01: hull → openscad.hull([children]) */
+  private lowerHull(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
+    this.reportUnknownArgs(node)
+    const children = this.lowerChildren(node).filter((c) => c.kind !== 'empty')
+    if (children.length === 0) return { kind: 'empty', id, origin }
+    // If any child is blocked, propagate
+    for (const c of children) if (c.kind === 'blocked') return c
+    return {
+      kind: 'exprCall',
+      id,
+      origin,
+      dimension: '3d',
+      children,
+      chain: [{ method: 'openscad.hull', args: [] }],
+    }
+  }
+
+  /** K04: polyhedron → openscad.polyhedron(points, faces) */
+  private lowerPolyhedron(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
+    this.reportUnknownArgs(node)
+    const pointsArg = argumentOf(node, 'points')
+    const facesArg = argumentOf(node, 'faces') ?? argumentOf(node, 'triangles')
+    if (!pointsArg || pointsArg.value.kind !== 'vector') {
+      return this.missing(node, id, 'polyhedron needs points')
+    }
+    // Build IrExpr for points: [[x,y,z], ...]
+    const pointsExpr: IrExpr = {
+      kind: 'vector',
+      elements: pointsArg.value.items.map((p) => {
+        if (p.kind === 'vector') {
+          return { kind: 'vector', elements: p.items.map((v) => ({ kind: 'num', value: v.kind === 'number' ? v.value : 0 })) }
+        }
+        return { kind: 'vector', elements: [{ kind: 'num', value: 0 }, { kind: 'num', value: 0 }, { kind: 'num', value: 0 }] }
+      }),
+    }
+    // Build IrExpr for faces: [[i,j,k,...], ...]
+    let facesExpr: IrExpr = { kind: 'vector', elements: [] }
+    if (facesArg && facesArg.value.kind === 'vector') {
+      facesExpr = {
+        kind: 'vector',
+        elements: facesArg.value.items.map((f) => {
+          if (f.kind === 'vector') {
+            return { kind: 'vector', elements: f.items.map((v) => ({ kind: 'num', value: v.kind === 'number' ? v.value : 0 })) }
+          }
+          return { kind: 'vector', elements: [] }
+        }),
+      }
+    }
+    return {
+      kind: 'exprCall',
+      id,
+      origin,
+      dimension: '3d',
+      chain: [{ method: 'openscad.polyhedron', args: [pointsExpr, facesExpr] }],
+    }
+  }
+
+  /** K02: text → cad.text(text, { size, font }) */
+  private lowerText(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
+    this.reportUnknownArgs(node)
+    const textArg = argumentOf(node, 'text')
+    const textStr = textArg && textArg.value.kind === 'string' ? textArg.value.value : ''
+    const sizeArg = argumentOf(node, 'size')
+    const sizeNum = sizeArg && sizeArg.value.kind === 'number' ? sizeArg.value.value : 10
+    const fontArg = argumentOf(node, 'font')
+    const fontStr = fontArg && fontArg.value.kind === 'string' ? fontArg.value.value : 'Liberation Sans'
+    return {
+      kind: 'exprCall',
+      id,
+      origin,
+      dimension: '2d',
+      chain: [{
+        method: 'cad.text',
+        args: [
+          { kind: 'str', value: textStr },
+          { kind: 'object', fields: [
+            { key: 'size', value: { kind: 'num', value: sizeNum } },
+            { key: 'font', value: { kind: 'str', value: fontStr } },
+          ] },
+        ],
+      }],
+    }
+  }
+
+  /** K08/K09: projection → openscad.projectCut or openscad.projectOutline */
+  private lowerProjection(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
+    this.reportUnknownArgs(node)
+    const cut = this.boolArg(node, 'cut', false, id)
+    if (cut === undefined) return { kind: 'empty', id, origin }
+    const children = this.lowerChildren(node).filter((c) => c.kind !== 'empty')
+    if (children.length === 0) return { kind: 'empty', id, origin }
+    const child = children.length === 1 ? children[0] : this.combine('union', children, node.span, 'projection')
+    if (child.kind === 'blocked') return child
+    const method = cut ? 'openscad.projectCut' : 'openscad.projectOutline'
+    return {
+      kind: 'exprCall',
+      id,
+      origin,
+      dimension: '2d',
+      child,
+      chain: [{ method, args: [] }],
+    }
+  }
+
+  /** K13: offset → openscad.offset2d(child, delta, chamfer) */
+  private lowerOffset(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
+    this.reportUnknownArgs(node)
+    const rArg = this.numArg(node, 'r', id)
+    const deltaArg = this.numArg(node, 'delta', id)
+    const delta = rArg ? rArg.value : (deltaArg ? deltaArg.value : 0)
+    const chamfer = this.boolArg(node, 'chamfer', false, id)
+    if (chamfer === undefined) return { kind: 'empty', id, origin }
+    const children = this.lowerChildren(node).filter((c) => c.kind !== 'empty')
+    if (children.length === 0) return { kind: 'empty', id, origin }
+    const child = children.length === 1 ? children[0] : this.combine('union', children, node.span, 'offset')
+    if (child.kind === 'blocked') return child
+    return {
+      kind: 'exprCall',
+      id,
+      origin,
+      dimension: '2d',
+      child,
+      chain: [{
+        method: 'openscad.offset2d',
+        args: [
+          { kind: 'num', value: delta },
+          { kind: 'bool', value: chamfer },
+        ],
+      }],
+    }
+  }
+
+  /** K11: surface → openscad.surface(file) */
+  private lowerSurface(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
+    this.reportUnknownArgs(node)
+    const fileArg = argumentOf(node, 'file')
+    const fileStr = fileArg && fileArg.value.kind === 'string' ? fileArg.value.value : ''
+    return {
+      kind: 'exprCall',
+      id,
+      origin,
+      dimension: '3d',
+      chain: [{ method: 'openscad.surface', args: [{ kind: 'str', value: fileStr }] }],
+    }
+  }
+
+  /** K03: import → cad.load({ file }); dimension inferred from file extension */
+  private lowerImport(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
+    this.reportUnknownArgs(node)
+    const fileArg = argumentOf(node, 'file')
+    const fileStr = fileArg && fileArg.value.kind === 'string' ? fileArg.value.value : ''
+    // DXF → 2D, STL/3MF/OBJ → 3D, unknown → 3D (STL is most common)
+    const dimension: IrDimension = fileStr.endsWith('.dxf') ? '2d' : '3d'
+    return {
+      kind: 'exprCall',
+      id,
+      origin,
+      dimension,
+      chain: [{
+        method: 'cad.load',
+        args: [{ kind: 'object', fields: [{ key: 'file', value: { kind: 'str', value: fileStr } }] }],
+      }],
+    }
   }
 
   // ── 参数读取（default-args pass 1） ──────────────────────────────────────

@@ -63,10 +63,10 @@ import { describe, expect, it } from 'vitest'
 import { capabilityOf } from './capability'
 
 describe('probe: projection cut=true/false (T602)', () => {
-  it('projection is classified as unsupported', () => {
+  it('projection is classified as direct (ported via ext library openscad.projectCut/projectOutline)', () => {
     const entry = capabilityOf('projection')
-    expect(entry.capability).toBe('unsupported')
-    expect(entry.phase).toBe('P2')
+    expect(entry.capability).toBe('direct')
+    expect(entry.phase).toBe('P1')
   })
 
   it('cut=true: sectionByPlane returns 1D wire, not 2D face (not equivalent)', () => {

@@ -61,10 +61,10 @@ import { describe, expect, it } from 'vitest'
 import { capabilityOf } from './capability'
 
 describe('probe: 2D offset (T603)', () => {
-  it('offset is classified as unsupported', () => {
+  it('offset is classified as direct (ported via ext library openscad.offset2d)', () => {
     const entry = capabilityOf('offset')
-    expect(entry.capability).toBe('unsupported')
-    expect(entry.phase).toBe('P2')
+    expect(entry.capability).toBe('direct')
+    expect(entry.phase).toBe('P1')
   })
 
   it('cad.offset is 3D full-surface offset, not 2D profile offset (name collision trap)', () => {

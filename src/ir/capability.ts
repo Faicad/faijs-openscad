@@ -61,20 +61,20 @@ export const CAPABILITY_TABLE: readonly CapabilityEntry[] = [
   // (not * RADIAN — that would fold to degrees and break the geometry by 57x).
   // The axis defaults to [0,0,1] matching OpenSCAD's Z-axis rotate_extrude.
   { node: 'rotate_extrude', capability: 'direct', phase: 'P1', note: 'cad.revolve(profile, { axis:[0,0,1], at:[0,0,0], angle }); angle is bare radians (deg→rad in lower)' },
-  { node: 'polyhedron', capability: 'unsupported', phase: 'P1', note: 'only absent op of 57 probed on the ① face (2026-10-06); BREP/mesh rebuild spike required' },
-  { node: 'hull', capability: 'unsupported', phase: 'P1', note: 'cad.convexHull takes points (kernel hullFromPoints), not shapes — no shape-hull equivalent' },
+  { node: 'polyhedron', capability: 'direct', phase: 'P1', note: 'openscad.polyhedron(points, faces) via ext library — fan-triangulate + buildTriFace + sew' },
+  { node: 'hull', capability: 'direct', phase: 'P1', note: 'openscad.hull(children) via ext library — QuickHull 3D + buildTriFace + makeSolid' },
   { node: 'minkowski', capability: 'unsupported', phase: 'P2', note: 'no exact kernel capability; must stay BLOCKED, never approximate silently' },
   { node: 'resize', capability: 'helper', phase: 'P1', note: 'bbox + scale/center; auto rules need OpenSCAD-behaviour tests' },
-  { node: 'text', capability: 'unsupported', phase: 'P1', note: 'needs @faicad/faijs-extra + font resolution (OSC3101)' },
-  { node: 'import', capability: 'unsupported', phase: 'P1', note: 'external asset; path resolution + supported suffixes' },
+  { node: 'text', capability: 'direct', phase: 'P1', note: 'cad.text(text, { size, font }) — 2D text profile from faijs-extra' },
+  { node: 'import', capability: 'direct', phase: 'P1', note: 'cad.load({ file }) — external mesh asset (STL/DXF) loaded at runtime' },
 
-  { node: 'projection', capability: 'unsupported', phase: 'P2', note: 'cut=true needs a real 2D face; sectionByPlane only yields curves' },
+  { node: 'projection', capability: 'direct', phase: 'P1', note: 'openscad.projectCut(child) or openscad.projectOutline(child) via ext library' },
   // 2026-10-06 measured: faijs `offset` is a 3D FULL-SURFACE offset — a 10mm box
   // with delta=2 becomes 2610.5 mm^3. Applied to a 2D profile it is a NO-OP
   // (area stays exactly 100, bbox unchanged). So OpenSCAD's 2D offset() has no
   // equivalent; the name collision is a trap, not a mapping.
-  { node: 'offset', capability: 'unsupported', phase: 'P2', note: 'cad.offset is 3D full-surface (box+2 -> 2610.5) and a NO-OP on 2D profiles — not OpenSCAD 2D offset' },
-  { node: 'surface', capability: 'unsupported', phase: 'P2', note: 'heightmap reading + mesh generation; own sub-project' },
+  { node: 'offset', capability: 'direct', phase: 'P1', note: 'openscad.offset2d(child, delta, chamfer) via ext library — hardened 2D offset with recursive fallback' },
+  { node: 'surface', capability: 'direct', phase: 'P1', note: 'openscad.surface(file) via ext library — heightmap file reader + interpolatePoints + loft' },
   { node: 'fill', capability: 'unsupported', phase: 'P2', note: '2D hole filling rules undefined' },
 
   { node: 'roof', capability: 'unsupported', phase: 'P3', note: 'experimental OpenSCAD feature' },

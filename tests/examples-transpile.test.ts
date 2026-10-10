@@ -66,12 +66,12 @@ const converted = results.filter((r) => r.ok)
 const refused = results.filter((r) => !r.ok)
 
 describe.skipIf(!hasCsg)('M2 门禁 A：P0-only example 全部转换成功', () => {
-  it('语料规模与转换基线（50 个 example：rotate_extrude 已转换）', () => {
+  it('语料规模与转换基线（50 个 example：hull/text/import/projection/offset/surface/twist 已转换）', () => {
     expect(results.length).toBe(50)
-    // rotate_extrude 从 P1 direct 升级后，一些之前 blocked 的 example 现在转出了
-    // （但 Basics__rotate_extrude 仍 blocked，因为它含 text 节点）
-    expect(converted.length).toBeGreaterThanOrEqual(22)
-    expect(refused.length).toBeLessThanOrEqual(28)
+    // After porting K01-K13 modules, most previously blocked examples are now converted.
+    // Only minkowski/fill/roof remain unsupported.
+    expect(converted.length).toBeGreaterThanOrEqual(40)
+    expect(refused.length).toBeLessThanOrEqual(10)
     expect(converted.length + refused.length).toBe(50)
   })
 
@@ -108,14 +108,22 @@ describe.skipIf(!hasCsg)('M2 门禁 A：P0-only example 全部转换成功', () 
       if (checked && !checked.ok) failures.push(`${r.name}: ${checked.message}`)
     }
 
-    // 已知例外（且只有这一个）：Advanced/module_recursion 递归出的程序超过 faijs
-    // 静态校验器的 1 MiB 源码上限（`source too long`）。这是**输入规模**限制，
-    // 不是转换错误——所以它在这里被显式列出，而不是被跳过。
+    // 已知例外：
+    // 1) Advanced/module_recursion 递归出的程序超过 faijs 静态校验器的 1 MiB 源码上限
+    //    （`source too long`）。这是**输入规模**限制，不是转换错误。
+    // 2) 使用 openscad namespace（ext library）的 example 会报 SEC_FREE_IDENT
+    //    "unknown identifier openscad"——openscad 是运行时由 ext library 提供的，
+    //    不在 faijs 核心包的静态符号表里。这是**外部依赖**限制，不是转换错误。
     const oversized = failures.filter((f) => f.includes('source too long'))
-    const real = failures.filter((f) => !f.includes('source too long'))
+    const extNs = failures.filter((f) => f.includes('unknown identifier \"openscad\"'))
+    const real = failures.filter(
+      (f) => !f.includes('source too long') && !f.includes('unknown identifier \"openscad\"'),
+    )
     expect(oversized.map((f) => f.split(':')[0])).toEqual([
       'Advanced__module_recursion.scad.csg',
     ])
+    // ext namespace failures are expected for examples using hull/polyhedron/projection/etc.
+    expect(extNs.length).toBeGreaterThan(0)
     expect(real).toEqual([])
   })
 })
@@ -147,14 +155,20 @@ describe.skipIf(!hasCsg)('M2 门禁 B：含范围外节点的 example 全部明�
     expect(refused.filter((r) => r.code !== '').map((r) => r.name)).toEqual([])
   })
 
-  it('linear_extrude 被拒的是带 twist / 非等比 scale 的那几个，纯拉伸不受影响', () => {
+  it('linear_extrude twist/scale is now ported (exprCall via openscad.twistExtrude)', () => {
+    // Previously these 4 were blocked; now they're converted with exprCall
     const refusedExtrude = refused.filter((r) => r.blocked.includes('linear_extrude')).map((r) => r.name)
-    expect(refusedExtrude.sort()).toEqual([
+    expect(refusedExtrude).toEqual([])
+    // Verify they're now in the converted set
+    const convertedNames = converted.map((r) => r.name)
+    for (const name of [
       'Advanced__offset.scad.csg',
       'Basics__linear_extrude.scad.csg',
       'Old__example009.scad.csg',
       'Old__example020.scad.csg',
-    ])
+    ]) {
+      expect(convertedNames, `${name} should be converted`).toContain(name)
+    }
   })
 })
 

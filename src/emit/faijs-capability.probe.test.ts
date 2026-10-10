@@ -71,12 +71,15 @@ describe('probe: faijs capability (static, three faces)', () => {
 
   it.skipIf(scriptFace === null)('the known gaps are recorded on the script face too', () => {
     const set = scriptFace as Set<string>
-    for (const op of ['polyhedron', 'hull', 'minkowski']) {
+    // polyhedron/hull are now 'direct' via ext library; minkowski stays unsupported
+    for (const op of ['minkowski']) {
       expect(set.has(op)).toBe(false)
     }
     expect(set.has('offset')).toBe(true)
     expect(set.has('convexHull')).toBe(true)
-    expect(capabilityClassOf('hull')).toBe('unsupported')
+    expect(capabilityClassOf('hull')).toBe('direct')
+    expect(capabilityClassOf('polyhedron')).toBe('direct')
+    expect(capabilityClassOf('minkowski')).toBe('unsupported')
   })
 
   it('GAP_OPS are pinned as the ops whose presence is NOT equivalence', () => {

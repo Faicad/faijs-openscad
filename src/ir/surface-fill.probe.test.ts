@@ -80,10 +80,10 @@ import { describe, expect, it } from 'vitest'
 import { capabilityOf } from './capability'
 
 describe('probe: surface/fill (T605)', () => {
-  it('surface is classified as unsupported', () => {
+  it('surface is classified as direct (ported via ext library openscad.surface)', () => {
     const entry = capabilityOf('surface')
-    expect(entry.capability).toBe('unsupported')
-    expect(entry.phase).toBe('P2')
+    expect(entry.capability).toBe('direct')
+    expect(entry.phase).toBe('P1')
   })
 
   it('fill is classified as unsupported', () => {

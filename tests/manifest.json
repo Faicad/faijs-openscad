@@ -1,26 +1,23 @@
 {
   "generatedBy": "@faicad/faijs-openscad corpus",
-  "generatedAt": "2026-10-10T02:49:41.718Z",
+  "generatedAt": "2026-10-10T03:48:32.522Z",
   "converter": {
     "name": "@faicad/faijs-openscad",
     "version": "0.29.5"
   },
   "counts": {
-    "ported": 22,
-    "blocked": 28,
+    "ported": 50,
+    "blocked": 0,
     "skipped": 0
   },
   "entries": [
     {
       "id": "Advanced__GEB.scad.csg",
       "source": "Advanced/GEB.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "offset",
-        "projection"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 4,
-      "emittedStatements": 0,
+      "emittedStatements": 82,
       "nodeHistogram": {
         "color": 4,
         "group": 16,
@@ -33,23 +30,16 @@
         "square": 3,
         "projection": 3
       },
-      "blockedNodes": [
-        "offset",
-        "projection"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Advanced__animation.scad.csg",
       "source": "Advanced/animation.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "hull"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 2,
-      "emittedStatements": 0,
+      "emittedStatements": 18,
       "nodeHistogram": {
         "group": 6,
         "multmatrix": 8,
@@ -63,12 +53,8 @@
         "cylinder": 2,
         "hull": 2
       },
-      "blockedNodes": [
-        "hull"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Advanced__assert.scad.csg",
@@ -89,12 +75,10 @@
     {
       "id": "Advanced__children.scad.csg",
       "source": "Advanced/children.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "text"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 3,
-      "emittedStatements": 0,
+      "emittedStatements": 130,
       "nodeHistogram": {
         "color": 3,
         "group": 32,
@@ -106,22 +90,16 @@
         "linear_extrude": 4,
         "text": 4
       },
-      "blockedNodes": [
-        "text"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Advanced__children_indexed.scad.csg",
       "source": "Advanced/children_indexed.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "text"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 4,
-      "emittedStatements": 0,
+      "emittedStatements": 69,
       "nodeHistogram": {
         "color": 4,
         "multmatrix": 32,
@@ -132,12 +110,8 @@
         "sphere": 5,
         "cylinder": 3
       },
-      "blockedNodes": [
-        "text"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Advanced__module_recursion.scad.csg",
@@ -159,13 +133,10 @@
     {
       "id": "Advanced__offset.scad.csg",
       "source": "Advanced/offset.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "linear_extrude",
-        "offset"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 4,
-      "emittedStatements": 0,
+      "emittedStatements": 11,
       "nodeHistogram": {
         "linear_extrude": 2,
         "offset": 3,
@@ -177,23 +148,16 @@
         "cylinder": 1,
         "sphere": 1
       },
-      "blockedNodes": [
-        "linear_extrude",
-        "offset"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Advanced__surface_image.scad.csg",
       "source": "Advanced/surface_image.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "projection"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 16,
       "nodeHistogram": {
         "group": 1,
         "color": 3,
@@ -202,12 +166,8 @@
         "projection": 3,
         "surface": 3
       },
-      "blockedNodes": [
-        "projection"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Basics__CSG-modules.scad.csg",
@@ -251,12 +211,10 @@
     {
       "id": "Basics__LetterBlock.scad.csg",
       "source": "Basics/LetterBlock.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "text"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 6,
       "nodeHistogram": {
         "group": 1,
         "difference": 1,
@@ -265,22 +223,16 @@
         "linear_extrude": 1,
         "text": 1
       },
-      "blockedNodes": [
-        "text"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Basics__hull.scad.csg",
       "source": "Basics/hull.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "hull"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 2,
-      "emittedStatements": 0,
+      "emittedStatements": 15,
       "nodeHistogram": {
         "hull": 1,
         "multmatrix": 6,
@@ -288,34 +240,24 @@
         "cube": 5,
         "cylinder": 1
       },
-      "blockedNodes": [
-        "hull"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Basics__linear_extrude.scad.csg",
       "source": "Basics/linear_extrude.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "linear_extrude"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 4,
-      "emittedStatements": 0,
+      "emittedStatements": 13,
       "nodeHistogram": {
         "color": 4,
         "multmatrix": 4,
         "linear_extrude": 4,
         "square": 4
       },
-      "blockedNodes": [
-        "linear_extrude"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Basics__logo.scad.csg",
@@ -337,12 +279,10 @@
     {
       "id": "Basics__logo_and_text.scad.csg",
       "source": "Basics/logo_and_text.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "text"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 27,
       "nodeHistogram": {
         "multmatrix": 13,
         "group": 13,
@@ -353,22 +293,16 @@
         "linear_extrude": 4,
         "text": 4
       },
-      "blockedNodes": [
-        "text"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Basics__projection.scad.csg",
       "source": "Basics/projection.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "projection"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 5,
-      "emittedStatements": 0,
+      "emittedStatements": 33,
       "nodeHistogram": {
         "import": 5,
         "color": 4,
@@ -378,12 +312,8 @@
         "square": 4,
         "projection": 4
       },
-      "blockedNodes": [
-        "projection"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Basics__roof.scad.csg",
@@ -401,12 +331,10 @@
     {
       "id": "Basics__rotate_extrude.scad.csg",
       "source": "Basics/rotate_extrude.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "text"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 4,
-      "emittedStatements": 0,
+      "emittedStatements": 23,
       "nodeHistogram": {
         "color": 4,
         "rotate_extrude": 6,
@@ -415,22 +343,16 @@
         "text": 1,
         "polygon": 1
       },
-      "blockedNodes": [
-        "text"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Basics__text_on_cube.scad.csg",
       "source": "Basics/text_on_cube.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "text"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 25,
       "nodeHistogram": {
         "difference": 1,
         "union": 1,
@@ -441,12 +363,8 @@
         "linear_extrude": 6,
         "text": 6
       },
-      "blockedNodes": [
-        "text"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Functions__echo.scad.csg",
@@ -494,12 +412,10 @@
     {
       "id": "Functions__polygon_areas.scad.csg",
       "source": "Functions/polygon_areas.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "text"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 6,
-      "emittedStatements": 0,
+      "emittedStatements": 28,
       "nodeHistogram": {
         "multmatrix": 11,
         "color": 6,
@@ -507,32 +423,22 @@
         "group": 5,
         "polygon": 5
       },
-      "blockedNodes": [
-        "text"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Functions__recursion.scad.csg",
       "source": "Functions/recursion.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "text"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 1,
       "nodeHistogram": {
         "color": 1,
         "text": 1
       },
-      "blockedNodes": [
-        "text"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Old__example001.scad.csg",
@@ -622,12 +528,10 @@
     {
       "id": "Old__example006.scad.csg",
       "source": "Old/example006.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "hull"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 85,
       "nodeHistogram": {
         "group": 9,
         "difference": 1,
@@ -636,22 +540,16 @@
         "sphere": 29,
         "union": 1
       },
-      "blockedNodes": [
-        "hull"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Old__example007.scad.csg",
       "source": "Old/example007.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "import"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 27,
       "nodeHistogram": {
         "multmatrix": 13,
         "group": 4,
@@ -661,22 +559,16 @@
         "intersection": 2,
         "linear_extrude": 4
       },
-      "blockedNodes": [
-        "import"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Old__example008.scad.csg",
       "source": "Old/example008.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "import"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 21,
       "nodeHistogram": {
         "difference": 1,
         "intersection": 2,
@@ -684,23 +576,16 @@
         "linear_extrude": 5,
         "import": 5
       },
-      "blockedNodes": [
-        "import"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Old__example009.scad.csg",
       "source": "Old/example009.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "import",
-        "linear_extrude"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 3,
-      "emittedStatements": 0,
+      "emittedStatements": 5,
       "nodeHistogram": {
         "linear_extrude": 4,
         "import": 5,
@@ -709,97 +594,68 @@
         "intersection": 1,
         "rotate_extrude": 1
       },
-      "blockedNodes": [
-        "import",
-        "linear_extrude"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Old__example010.scad.csg",
       "source": "Old/example010.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "surface"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 4,
       "nodeHistogram": {
         "intersection": 1,
         "surface": 2,
         "multmatrix": 1
       },
-      "blockedNodes": [
-        "surface"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Old__example011.scad.csg",
       "source": "Old/example011.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "polyhedron"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 1,
       "nodeHistogram": {
         "polyhedron": 1
       },
-      "blockedNodes": [
-        "polyhedron"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Old__example012.scad.csg",
       "source": "Old/example012.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "import"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 5,
       "nodeHistogram": {
         "difference": 1,
         "sphere": 1,
         "multmatrix": 2,
         "import": 1
       },
-      "blockedNodes": [
-        "import"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Old__example013.scad.csg",
       "source": "Old/example013.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "import"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 12,
       "nodeHistogram": {
         "intersection": 1,
         "linear_extrude": 3,
         "import": 3,
         "multmatrix": 2
       },
-      "blockedNodes": [
-        "import"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Old__example014.scad.csg",
@@ -819,12 +675,10 @@
     {
       "id": "Old__example015.scad.csg",
       "source": "Old/example015.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "import"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 17,
       "nodeHistogram": {
         "group": 1,
         "difference": 2,
@@ -835,22 +689,16 @@
         "circle": 1,
         "import": 1
       },
-      "blockedNodes": [
-        "import"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Old__example016.scad.csg",
       "source": "Old/example016.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "import"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 0,
+      "emittedStatements": 35,
       "nodeHistogram": {
         "difference": 9,
         "group": 10,
@@ -859,12 +707,8 @@
         "render": 4,
         "import": 4
       },
-      "blockedNodes": [
-        "import"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Old__example017.scad.csg",
@@ -925,12 +769,10 @@
     {
       "id": "Old__example020.scad.csg",
       "source": "Old/example020.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "linear_extrude"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 3,
-      "emittedStatements": 0,
+      "emittedStatements": 60,
       "nodeHistogram": {
         "multmatrix": 17,
         "group": 53,
@@ -940,22 +782,16 @@
         "polygon": 30,
         "cylinder": 1
       },
-      "blockedNodes": [
-        "linear_extrude"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Old__example021.scad.csg",
       "source": "Old/example021.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "projection"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 2,
-      "emittedStatements": 0,
+      "emittedStatements": 140,
       "nodeHistogram": {
         "multmatrix": 62,
         "group": 15,
@@ -965,12 +801,8 @@
         "sphere": 12,
         "cylinder": 36
       },
-      "blockedNodes": [
-        "projection"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     },
     {
       "id": "Old__example022.scad.csg",
@@ -1044,12 +876,10 @@
     {
       "id": "Parametric__sign.scad.csg",
       "source": "Parametric/sign.scad",
-      "status": "blocked",
-      "blockedBy": [
-        "text"
-      ],
+      "status": "ported",
+      "blockedBy": [],
       "parsedNodes": 2,
-      "emittedStatements": 0,
+      "emittedStatements": 12,
       "nodeHistogram": {
         "multmatrix": 4,
         "difference": 1,
@@ -1057,12 +887,8 @@
         "linear_extrude": 1,
         "text": 2
       },
-      "blockedNodes": [
-        "text"
-      ],
-      "errorCodes": [
-        "OSC3002"
-      ]
+      "blockedNodes": [],
+      "errorCodes": []
     }
   ]
 }

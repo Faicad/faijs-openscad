@@ -251,27 +251,26 @@ describe('lower: modifier-policy（pass 5）', () => {
 })
 
 describe('lower: capability-classify（pass 7）', () => {
-  it('范围外节点 → blocked + OSC3002（绝不静默跳过）', () => {
+  it('hull → exprCall (ported via ext library)', () => {
     const result = lower('hull() { cube(size=[1,1,1]); sphere(r=1); }')
-    expect(result.model.root.kind).toBe('blocked')
-    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3002)
+    expect(result.model.root.kind).toBe('exprCall')
   })
 
   it('blocked 节点在树里留痕，不会被 union 的空子过滤吞掉', () => {
     const node = root('group() { %cube(size=[1,1,1]); cube(size=[1,1,1]); }')
     expect(node.kind).toBe('box')
-    const withBlocked = lower('group() { import(file = "x.stl"); cube(size=[1,1,1]); }')
-    expect(withBlocked.model.root.kind).toBe('union')
-    expect(withBlocked.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3002)
+    // import is now 'direct' (cad.load), so this produces a union, not blocked
+    const withImport = lower('group() { import(file = "x.stl"); cube(size=[1,1,1]); }')
+    expect(withImport.model.root.kind).toBe('union')
   })
 
-  it('linear_extrude 带 twist / 非等比 scale 是 P2 → blocked', () => {
+  it('linear_extrude 带 twist / 非等比 scale → exprCall (ported via ext library)', () => {
     expect(
       lower('linear_extrude(height = 10, twist = 90) { square(size = [1,1]); }').model.root.kind,
-    ).toBe('blocked')
+    ).toBe('exprCall')
     expect(
       lower('linear_extrude(height = 10, scale = [2,2]) { square(size = [1,1]); }').model.root.kind,
-    ).toBe('blocked')
+    ).toBe('exprCall')
   })
 
   it('linear_extrude 的 scale = [1,1] 属于默认值，不阻塞', () => {
@@ -282,29 +281,26 @@ describe('lower: capability-classify（pass 7）', () => {
 })
 
 describe('lower: P1 blocked 节点（T502-T506）', () => {
-  it('polyhedron(points, faces) → blocked + OSC3002，不报 OSC1004', () => {
+  it('polyhedron(points, faces) → exprCall (ported via ext library)，不报 OSC1004', () => {
     const result = lower(
       'polyhedron(points = [[0,0,0],[1,0,0],[0,1,0],[0,0,1]], faces = [[0,1,2],[0,1,3],[0,2,3],[1,2,3]]);',
     )
-    expect(result.model.root.kind).toBe('blocked')
-    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3002)
+    expect(result.model.root.kind).toBe('exprCall')
     // 参数名已登记，不应产生 OSC1004
     expect(result.diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.OSC1004)
   })
 
-  it('text(text, size, font) → blocked + OSC3002，不报 OSC1004', () => {
+  it('text(text, size, font) → exprCall (ported via cad.text)，不报 OSC1004', () => {
     const result = lower(
       'text(text = "Hello", size = 10, font = "Liberation Sans", halign = "center", valign = "center");',
     )
-    expect(result.model.root.kind).toBe('blocked')
-    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3002)
+    expect(result.model.root.kind).toBe('exprCall')
     expect(result.diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.OSC1004)
   })
 
-  it('hull() → blocked + OSC3002', () => {
+  it('hull() → exprCall (ported via ext library)', () => {
     const result = lower('hull() { cube(size=[1,1,1]); sphere(r=1); }')
-    expect(result.model.root.kind).toBe('blocked')
-    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3002)
+    expect(result.model.root.kind).toBe('exprCall')
   })
 
   it('resize(newsize, auto) → blocked + OSC3002，不报 OSC1004', () => {
@@ -316,10 +312,9 @@ describe('lower: P1 blocked 节点（T502-T506）', () => {
     expect(result.diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.OSC1004)
   })
 
-  it('import(file) → blocked + OSC3002，不报 OSC1004', () => {
+  it('import(file) → exprCall (ported via cad.load)，不报 OSC1004', () => {
     const result = lower('import(file = "part.stl");')
-    expect(result.model.root.kind).toBe('blocked')
-    expect(result.diagnostics.map((d) => d.code)).toContain(DiagnosticCode.OSC3002)
+    expect(result.model.root.kind).toBe('exprCall')
     expect(result.diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.OSC1004)
   })
 })

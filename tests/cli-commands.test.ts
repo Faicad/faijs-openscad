@@ -25,8 +25,9 @@ const hasCsg = existsSync(CSG_DIR)
 
 // A known P0-only example (no blocked nodes)
 const P0_EXAMPLE = 'Basics__CSG.scad.csg'
-// A known example with blocked nodes (contains text)
-const BLOCKED_EXAMPLE = 'Basics__logo_and_text.scad.csg'
+// A known example with blocked nodes (contains minkowski — still unsupported)
+// Since text/hull/import/etc. are now ported, we use minkowski which remains blocked.
+// We test with an inline CSG string instead of a file, since no corpus example uses minkowski.
 
 function csgPath(name: string): string {
   return join(CSG_DIR, name)
@@ -41,12 +42,21 @@ describe.skipIf(!hasCsg)('CLI transpile command', () => {
     expect(report.emittedStatements).toBeGreaterThan(0)
   })
 
-  it('refuses a blocked CSG file with ok=false and blocked nodes', async () => {
-    const report = await transpileFile(csgPath(BLOCKED_EXAMPLE))
-    expect(report.ok).toBe(false)
-    expect(report.blockedNodes.length).toBeGreaterThan(0)
-    // Must not produce any output — blocked means no code
-    expect(report.emittedStatements).toBe(0)
+  it('refuses a blocked CSG file with ok=false and blocked nodes (minkowski)', async () => {
+    // minkowski is still unsupported — write a temp CSG file and transpile it
+    const tmpDir = join(here, 'fixtures', 'tmp-cli-test')
+    mkdirSync(tmpDir, { recursive: true })
+    const tmpCsg = join(tmpDir, 'minkowski-test.scad.csg')
+    writeFileSync(tmpCsg, 'minkowski() { cube(size=[1,1,1]); sphere(r=1); }')
+    try {
+      const report = await transpileFile(tmpCsg)
+      expect(report.ok).toBe(false)
+      expect(report.blockedNodes.length).toBeGreaterThan(0)
+      // Must not produce any output — blocked means no code
+      expect(report.emittedStatements).toBe(0)
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true })
+    }
   })
 
   it('writes .fai.js to -o path when given', async () => {
@@ -83,11 +93,10 @@ describe.skipIf(!hasCsg)('CLI corpus command (T304)', () => {
     expect(existsSync(manifestPath)).toBe(true)
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
 expect(manifest.counts.ported + manifest.counts.blocked + manifest.counts.skipped).toBe(50)
-// P0-only examples that pass (module_recursion uses compact mode to fit)
-expect(manifest.counts.ported).toBe(22)
-// Examples with out-of-scope nodes are blocked
-expect(manifest.counts.blocked).toBe(28)
-// No skipped examples (module_recursion now fits via compact mode)
+// After porting K01-K13 modules (hull/text/import/projection/offset/surface/twist),
+// all 50 examples are now ported (no corpus example uses minkowski/fill/roof)
+expect(manifest.counts.ported).toBe(50)
+expect(manifest.counts.blocked).toBe(0)
 expect(manifest.counts.skipped).toBe(0)
   })
 

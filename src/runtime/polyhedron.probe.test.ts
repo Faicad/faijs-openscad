@@ -29,9 +29,9 @@ describe('probe: polyhedron (static)', () => {
     expect((tsFace as Set<string>).has('polyhedron')).toBe(false)
   })
 
-  it('the OpenSCAD polyhedron node is classified unsupported / P1', () => {
+  it('the OpenSCAD polyhedron node is classified direct / P1 (ported via ext library)', () => {
     const entry = capabilityOf('polyhedron')
-    expect(entry.capability).toBe('unsupported')
+    expect(entry.capability).toBe('direct')
     expect(entry.phase).toBe('P1')
     // "unsupported" must mean BLOCKED with a code, never a silent skip.
     expect([DiagnosticCode.OSC3002, DiagnosticCode.OSC2002]).toContain(DiagnosticCode.OSC3002)

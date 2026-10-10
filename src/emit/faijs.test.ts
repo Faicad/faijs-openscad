@@ -207,13 +207,22 @@ describe('emit: 外观', () => {
 })
 
 describe('emit: 拒绝策略与确定性', () => {
-  it('范围外节点 → ok:false 且 code 为空串（不产出「看起来能跑」的近似代码）', () => {
+  it('hull is now ported → ok:true and code is non-empty (exprCall via ext library)', () => {
     const { document } = parseCsg('hull() { cube(size=[1,1,1]); sphere(r=1); }')
+    const { model } = lowerCsg(document)
+    const result = emitFaijs(model)
+    expect(result.ok).toBe(true)
+    expect(result.code).not.toBe('')
+    expect(result.blocked).toEqual([])
+  })
+
+  it('minkowski (still unsupported) → ok:false 且 code 为空串', () => {
+    const { document } = parseCsg('minkowski() { cube(size=[1,1,1]); sphere(r=1); }')
     const { model } = lowerCsg(document)
     const result = emitFaijs(model)
     expect(result.ok).toBe(false)
     expect(result.code).toBe('')
-    expect(result.blocked).toEqual(['hull'])
+    expect(result.blocked).toEqual(['minkowski'])
   })
 
   it('空模型（全部是 `%` 背景）→ ok:true 且不带 result 行', async () => {
