@@ -107,9 +107,9 @@ describe('emit: 2D profile', () => {
 })
 
 describe('emit: 组合与变换', () => {
-  it('union → cad.union(a, b, ...)（≥2 个输入）', async () => {
+  it('union → __union([a, b, ...])（≥2 个输入, fuzzyValue）', async () => {
     const code = body(await transpile('union() { cube(size=[1,1,1]); sphere(r=1); }'))
-    expect(code).toContain('await cad.union(part0, part1)')
+    expect(code).toContain('await __union([part0, part1])')
   })
 
   it('difference → cad.subtract(base, ...tools)（子顺序即主体在前）', async () => {

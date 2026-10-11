@@ -71,7 +71,7 @@ class Emitter {
   /** 强制容器化（`export default async (cad) => { ... }`），未指定则按语句数自动判定。 */
   private readonly forceContainer: boolean
   /** Helpers needed (collected during emit, injected before body). */
-  private readonly neededHelpers = new Set<'rect' | 'circle' | '__rect' | '__circle' | 'rands' | 'matMul' | '__len' | '__concat' | '__str' | '__cross' | '__unionChildren' | '__each' | '__polygon' | '__ord' | '__search'>()
+  private readonly neededHelpers = new Set<'rect' | 'circle' | '__rect' | '__circle' | 'rands' | 'matMul' | '__len' | '__concat' | '__str' | '__cross' | '__unionChildren' | '__union' | '__each' | '__polygon' | '__ord' | '__search'>()
 
   constructor(options: EmitOptions) {
     this.prefix = options.variablePrefix ?? 'part'
@@ -219,7 +219,15 @@ class Emitter {
         'async function __unionChildren(children){' +
           'if(children.length===0)return undefined;' +
           'if(children.length===1)return children[0];' +
-          'return cad.union(...children)}',
+          'return await cad.boolean([children[0]],children.slice(1),\'fuse\',{fuzzyValue:1e-6})}',
+      )
+    }
+    if (this.neededHelpers.has('__union')) {
+      defs.push(
+        'async function __union(shapes){' +
+          'if(shapes.length===0)return undefined;' +
+          'if(shapes.length===1)return shapes[0];' +
+          'return await cad.boolean([shapes[0]],shapes.slice(1),\'fuse\',{fuzzyValue:1e-6})}',
       )
     }
     if (this.neededHelpers.has('__each')) {
@@ -287,8 +295,14 @@ class Emitter {
         // M9 A4: faijs `cad.union` rejects 2D face inputs ("wire/face/shell
         // geometry cannot fuse"). `cad.fuse` is the BREP-level boolean that
         // accepts both solid and face inputs, so use it for 2D unions.
-        const op = node.dimension === '2d' ? 'cad.fuse' : 'cad.union'
-        return this.assign(`await ${op}(${names.join(', ')})`, node.id)
+        // P2-A: 3D union uses cad.boolean with fuzzyValue to handle
+        // degenerate geometry (coplanar/coedge overlaps) that causes
+        // OCCT BRepAlgoAPI_Fuse to silently drop inputs without fuzzy tolerance.
+        if (node.dimension === '2d') {
+          return this.assign(`await cad.fuse(${names.join(', ')})`, node.id)
+        }
+        this.neededHelpers.add('__union')
+        return this.assign(`await __union([${names.join(', ')}])`, node.id)
       }
       case 'difference': {
         const names = this.emitAll(node.children)
@@ -460,8 +474,11 @@ class Emitter {
       }
     })
 
-    const combiner = node.intersection === true ? 'cad.intersect' : 'cad.union'
-    return this.assign(`${combiner}(...${partsVar})`, node.id)
+    if (node.intersection === true) {
+      return this.assign(`cad.intersect(...${partsVar})`, node.id)
+    }
+    this.neededHelpers.add('__union')
+    return this.assign(`await __union(${partsVar})`, node.id)
   }
 
   private emitForIterators(iterators: readonly IrIterator[], idx: number, emitBody: () => void): void {
@@ -502,7 +519,8 @@ class Emitter {
     }
     this.lines.push('}')
 
-    return this.assign(`cad.union(...${partsVar})`, node.id)
+    this.neededHelpers.add('__union')
+    return this.assign(`await __union(${partsVar})`, node.id)
   }
 
   private emitLet(node: IrLet): string | undefined {
@@ -512,7 +530,8 @@ class Emitter {
     const names = this.emitAll(node.body)
     if (names.length === 0) return undefined
     if (names.length === 1) return names[0]
-    return this.assign(`await cad.union(${names.join(', ')})`, node.id)
+    this.neededHelpers.add('__union')
+    return this.assign(`await __union([${names.join(', ')}])`, node.id)
   }
 
   private emitModuleCall(node: IrModuleCall): string | undefined {
@@ -581,7 +600,8 @@ class Emitter {
     } else if (names.length === 1) {
       lines.push(`  return ${names[0]}`)
     } else {
-      lines.push(`  return await cad.union(${names.join(', ')})`)
+      this.neededHelpers.add('__union')
+      lines.push(`  return await __union([${names.join(', ')}])`)
     }
     this.lines = savedLines
     this.counter = savedCounter
