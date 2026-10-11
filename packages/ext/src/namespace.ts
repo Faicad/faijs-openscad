@@ -34,7 +34,7 @@ export interface OpenSCADNamespace {
   /** K11: surface from interpolated point grid. */
   surfaceInterp(points: Vec3[], rows: number, cols: number): Promise<ShapeHandle>
   /** K11 wrapper: surface from heightmap file (OpenSCAD surface() module). */
-  surface(file: string): Promise<ShapeHandle>
+  surface(file: string, center?: boolean): Promise<ShapeHandle>
   /** K13: hardened 2D offset with recursive fallback on failure. */
   offset2d(profile: ShapeHandle, delta: number, chamfer: boolean): Promise<ShapeHandle>
 }

@@ -75,5 +75,8 @@
     "corpus:gen": "tsx tests/gen-manifest.ts",
     "baseline:check": "tsx tests/check-baseline.ts",
     "coverage": "tsx tests/coverage.ts"
+  },
+  "dependencies": {
+    "pngjs": "^7.0.0"
   }
 }

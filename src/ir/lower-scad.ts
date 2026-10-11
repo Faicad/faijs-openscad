@@ -573,17 +573,19 @@ class ScadLowerer {
       }))
     }
 
-    // K11: surface → openscad.surface(file)
+    // K11: surface → openscad.surface(file, center)
     if (stmt.name === 'surface') {
       const fileExpr = getPos(0) ?? getArg('file')
       if (fileExpr === undefined) return []
       const file = this.lowerExpr(fileExpr)
+      const centerExpr = getArg('center')
+      const center: IrExpr = centerExpr !== undefined ? this.lowerExpr(centerExpr) : { kind: 'bool', value: false }
       return [{
         kind: 'exprCall',
         id: this.nextId++,
         origin: this.origin(stmt.span, 'surface'),
         dimension: '3d',
-        chain: [{ method: 'openscad.surface', args: [file] }],
+        chain: [{ method: 'openscad.surface', args: [file, center] }],
       }]
     }
 
