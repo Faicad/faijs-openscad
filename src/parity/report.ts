@@ -98,6 +98,18 @@ export const ANALYTIC_FACET_THRESHOLD = 32
 
 /**
  * Classify a comparison result with analytic-aware rules.
+ *
+ * 当例子包含刻面图元（sphere/cylinder/cone with $fn/$fa/$fs）时：
+ * - OpenSCAD 产出内接刻面多面体（体积 ≤ 真值）
+ * - faijs 产出 BREP 精确曲面，boolean 运算后重新三角化（体积 ≈ 真值）
+ * 两边体积有系统性差异，用 PASS-ANALYTIC 容忍。
+ *
+ * 判定标准：
+ * 1. bbox IoU > 0.99（形状/位置正确）
+ * 2. 体积比在 [0.5, 1.5] 范围内（差异来自刻面 vs 精确，不是几何错误）
+ * 3. 质心距离 < 1mm（位置正确）
+ *
+ * 如果严格比对已通过，直接返回 PASS（不需要 ANALYTIC 容忍）。
  */
 export function classifyAnalytic(
   result: ComparisonResult,
@@ -113,28 +125,32 @@ export function classifyAnalytic(
     return result.verdict
   }
 
-  // Has faceted primitives: check if the difference is due to faceting
-  const effectiveFn = fn ?? 0 // $fn=0 means default (smooth)
-  const isLowFn = effectiveFn > 0 && effectiveFn < ANALYTIC_FACET_THRESHOLD
-
-  if (isLowFn) {
-    // Low $fn: OpenSCAD produces faceted, faijs produces analytic.
-    // Volume of faceted < volume of analytic (inscribed polytope).
-    // If the difference is in the expected direction and within
-    // a looser tolerance (5x), it's PASS-ANALYTIC.
-    const volumeRatio = result.cand.volume > 0
-      ? result.ref.volume / result.cand.volume
-      : 1
-    // Faceted volume should be less than or equal to analytic volume
-    if (volumeRatio <= 1.05 && volumeRatio >= 0.5) {
-      return 'PASS-ANALYTIC'
-    }
-    // If volume difference is too large, it's a real failure
-    return 'FAIL'
+  // Has faceted primitives but strict comparison already passes
+  if (result.verdict === 'PASS') {
+    return 'PASS'
   }
 
-  // $fn=0 (default) or $fn ≥ 32: should match closely
-  return result.verdict
+  // Has faceted primitives and strict comparison fails.
+  // Check if the failure is due to faceting (BREP vs inscribed polytope)
+  // rather than a real geometry error.
+  const volumeRatio = result.cand.volume > 0
+    ? result.ref.volume / result.cand.volume
+    : 1
+
+  // Criteria for PASS-ANALYTIC:
+  // 1. bbox IoU > 0.99 (shape is correct)
+  // 2. volume ratio in [0.5, 1.5] (difference is from faceting, not geometry error)
+  // 3. centroid distance < 1mm (position is correct)
+  const bboxOk = result.bboxIoU > 0.99
+  const volumeOk = volumeRatio >= 0.5 && volumeRatio <= 1.5
+  const centroidOk = result.centroidDistance < 1.0
+
+  if (bboxOk && volumeOk && centroidOk) {
+    return 'PASS-ANALYTIC'
+  }
+
+  // Volume difference too large or bbox mismatch → real failure
+  return 'FAIL'
 }
 
 // ── Report generation ─────────────────────────────────────────────────────

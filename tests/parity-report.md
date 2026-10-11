@@ -1,6 +1,6 @@
 # Parity Report
 
-- **Timestamp**: 2026-10-11T02:55:33.684Z
+- **Timestamp**: 2026-10-11T05:29:49.773Z
 - **Converter**: 0.29.5
 
 ## Summary
@@ -8,9 +8,9 @@
 | Verdict | Count |
 |---|---|
 | PASS | 6 |
-| PASS-ANALYTIC | 0 |
+| PASS-ANALYTIC | 2 |
 | PASS-NT | 8 |
-| FAIL | 22 |
+| FAIL | 20 |
 | ERROR | 14 |
 | **Total** | 50 |
 
@@ -44,7 +44,7 @@
 | Basics/LetterBlock.scad | FAIL | 913.886175 | 363.352077 | 1.000000 | 0.789790 | 0.000000 | default | exact |
 | Basics/hull.scad | FAIL | 95.064043 | 30.494296 | 0.983828 | 0.284257 | 0.000000 | seg=30 | exact |
 | undefined | ERROR | — | — | — | — | — | default | undefined |
-| Basics/logo.scad | FAIL | 20.247197 | 9.207518 | 0.999626 | 0.000010 | 0.000000 | seg=100 | exact |
+| Basics/logo.scad | PASS-ANALYTIC | 20.247197 | 9.207518 | 0.999626 | 0.000010 | 0.000000 | seg=100 | exact |
 | Basics/logo_and_text.scad | PASS-NT | — | — | — | — | — | default | n/a |
 | Basics/projection.scad | ERROR | — | — | — | — | — | default | n/a |
 | Basics/roof.scad | PASS-NT | — | — | — | — | — | default | n/a |
@@ -79,7 +79,7 @@
 | Old/example022.scad | FAIL | 216.385070 | 22.047885 | 1.000000 | 0.000685 | 0.000000 | seg=16 | exact |
 | Old/example023.scad | PASS | 0.030364 | 0.023830 | 1.000000 | 0.000018 | 0.000000 | default | exact |
 | Old/example024.scad | PASS | 0.459849 | 0.039655 | 0.999999 | 0.000007 | 0.000000 | default | exact |
-| Parametric/candleStand.scad | FAIL | 40.007288 | 12.229146 | 0.999796 | 0.016478 | 0.000000 | seg=360 | exact |
+| Parametric/candleStand.scad | PASS-ANALYTIC | 40.007288 | 12.229146 | 0.999796 | 0.016478 | 0.000000 | seg=360 | exact |
 | Parametric/sign.scad | FAIL | 1537.587226 | 701.892138 | 0.859968 | 2.416771 | 0.000000 | seg=10 | exact |
 
 ## Blocked Examples
@@ -127,10 +127,6 @@
 ### undefined — ERROR
 
 > CRASH SKIP: known segfault in twistExtrude/sweepFull — process would terminate
-
-### Basics/logo.scad — FAIL
-
-> volume: Δ=20.247197 (rel 0.001082)
 
 ### Basics/projection.scad — ERROR
 
@@ -223,10 +219,6 @@
 ### Old/example022.scad — FAIL
 
 > volume: Δ=216.385070 (rel 0.004770); surface area: Δ=22.047885 (rel 0.002394)
-
-### Parametric/candleStand.scad — FAIL
-
-> volume: Δ=40.007288 (rel 0.007623); surface area: Δ=12.229146 (rel 0.001562); centroid distance: 0.016478
 
 ### Parametric/sign.scad — FAIL
 

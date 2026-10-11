@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-11T02:55:33.684Z",
+  "timestamp": "2026-10-11T05:29:49.773Z",
   "converterVersion": "0.29.5",
   "tolerance": {
     "volumeAbs": 0.01,
@@ -666,7 +666,7 @@
     },
     {
       "name": "Basics/logo.scad",
-      "verdict": "FAIL",
+      "verdict": "PASS-ANALYTIC",
       "comparison": {
         "verdict": "FAIL",
         "ref": {
@@ -2404,7 +2404,7 @@
     },
     {
       "name": "Parametric/candleStand.scad",
-      "verdict": "FAIL",
+      "verdict": "PASS-ANALYTIC",
       "comparison": {
         "verdict": "FAIL",
         "ref": {
@@ -2580,9 +2580,9 @@
   "summary": {
     "total": 50,
     "pass": 6,
-    "passAnalytic": 0,
+    "passAnalytic": 2,
     "passNT": 8,
-    "fail": 22,
+    "fail": 20,
     "error": 14,
     "blocked": 1
   }

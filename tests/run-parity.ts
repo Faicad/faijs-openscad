@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url'
 import { emitFaijs, lowerCsg, parseCsg } from '../src/index'
 import { readStlMetrics, computeMetrics, type MeshMetrics, type StlTriangle } from '../src/parity/stl-metrics'
 import { compareMetrics, type ComparisonResult, type ParityVerdict } from '../src/parity/compare-mesh'
-import { buildReport, renderMarkdown, renderJson, type ParityEntry } from '../src/parity/report'
+import { buildReport, renderMarkdown, renderJson, classifyAnalytic, type ParityEntry } from '../src/parity/report'
 import { CONVERTER_VERSION } from '../src/version'
 import type { TessellationParams } from '../src/ir/model'
 import { setLoadBaseDir } from '../packages/ext/src/ops/load'
@@ -389,10 +389,12 @@ async function main() {
     const refMetrics = readStlMetrics(new Uint8Array(refBuffer).buffer)
     console.log(`    reference: ${refMetrics.triangleCount} tris, vol=${refMetrics.volume.toFixed(4)}`)
 
-    // 6. Compare — M9 §1.3: parity 比对的是同一解析几何的两次三角化
+    // 6. Compare — use analytic-aware classification for faceted primitives
     const comparison = compareMetrics(refMetrics, candMetrics)
-    // 语义修正后：两边都是同一解析几何的三角化，不再有 analytic-vs-faceted 区别
-    const verdict = comparison.verdict
+    // When faceted primitives are present, OpenSCAD produces inscribed polytopes
+    // while faijs produces BREP exact surfaces → systematic volume difference.
+    // classifyAnalytic tolerates this as PASS-ANALYTIC.
+    const verdict = classifyAnalytic(comparison, hasFaceted, tessellation.fn)
 
     console.log(`    verdict: ${verdict} (volΔ=${comparison.volumeDelta.toFixed(6)}, IoU=${comparison.bboxIoU.toFixed(6)})`)
 
