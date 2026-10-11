@@ -1,6 +1,6 @@
 # Parity Report
 
-- **Timestamp**: 2026-10-11T00:50:40.024Z
+- **Timestamp**: 2026-10-11T02:55:33.684Z
 - **Converter**: 0.29.5
 
 ## Summary
@@ -10,8 +10,8 @@
 | PASS | 6 |
 | PASS-ANALYTIC | 0 |
 | PASS-NT | 8 |
-| FAIL | 23 |
-| ERROR | 13 |
+| FAIL | 22 |
+| ERROR | 14 |
 | **Total** | 50 |
 
 ## Tolerance
@@ -48,7 +48,7 @@
 | Basics/logo_and_text.scad | PASS-NT | — | — | — | — | — | default | n/a |
 | Basics/projection.scad | ERROR | — | — | — | — | — | default | n/a |
 | Basics/roof.scad | PASS-NT | — | — | — | — | — | default | n/a |
-| Basics/rotate_extrude.scad | FAIL | 7881.562553 | 5069.424446 | 0.000000 | 6.733484 | 0.000000 | seg=80 | exact |
+| Basics/rotate_extrude.scad | FAIL | 911.433416 | 1386.344680 | 0.912925 | 5.816523 | 0.000000 | seg=80 | exact |
 | Basics/text_on_cube.scad | FAIL | 2197.381207 | 953.813707 | 0.894063 | 2.341896 | 0.000000 | default | exact |
 | Functions/echo.scad | PASS-NT | — | — | — | — | — | default | n/a |
 | Functions/functions.scad | FAIL | 72.029523 | 119.032665 | 0.998745 | 1.164802 | 0.000000 | seg=5 | exact |
@@ -61,7 +61,7 @@
 | Old/example004.scad | FAIL | 102.464453 | 122.244319 | 1.000000 | 0.000378 | 0.000000 | seg=30 | exact |
 | Old/example005.scad | FAIL | 15726.617601 | 1210.961514 | 0.994423 | 0.020421 | 0.000000 | seg=30 | exact |
 | Old/example006.scad | FAIL | 305021.595829 | 14178.234865 | 0.640252 | 1.178158 | 0.000000 | seg=30 | exact |
-| Old/example007.scad | FAIL | 6649.269610 | 40973.803236 | 0.088716 | 4.838533 | 0.000000 | default | exact |
+| Old/example007.scad | ERROR | — | — | — | — | — | default | n/a |
 | Old/example008.scad | FAIL | 6000.000000 | 2800.000000 | 1.000000 | 2.229808 | 0.000000 | default | exact |
 | Old/example009.scad | ERROR | — | — | — | — | — | default | n/a |
 | Old/example010.scad | ERROR | — | — | — | — | — | default | n/a |
@@ -138,7 +138,7 @@
 
 ### Basics/rotate_extrude.scad — FAIL
 
-> volume: Δ=7881.562553 (rel 1.000000); surface area: Δ=5069.424446 (rel 0.707894); bbox IoU: 0.000000 (need > 0.999000); centroid distance: 6.733484
+> volume: Δ=911.433416 (rel 0.115641); surface area: Δ=1386.344680 (rel 0.193589); bbox IoU: 0.912925 (need > 0.999000); centroid distance: 5.816523
 
 ### Basics/text_on_cube.scad — FAIL
 
@@ -168,9 +168,9 @@
 
 > volume: Δ=305021.595829 (rel 0.327812); surface area: Δ=14178.234865 (rel 0.231807); bbox IoU: 0.640252 (need > 0.999000); centroid distance: 1.178158
 
-### Old/example007.scad — FAIL
+### Old/example007.scad — ERROR
 
-> volume: Δ=6649.269610 (rel 0.659046); surface area: Δ=40973.803236 (rel 0.934622); bbox IoU: 0.088716 (need > 0.999000); centroid distance: 4.838533
+> [faijs/op] <anon>: CONSTRUCTION_FAILED: revolve: construction failed
 
 ### Old/example008.scad — FAIL
 

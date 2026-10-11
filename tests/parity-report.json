@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-11T00:50:40.024Z",
+  "timestamp": "2026-10-11T02:55:33.684Z",
   "converterVersion": "0.29.5",
   "tolerance": {
     "volumeAbs": 0.01,
@@ -810,49 +810,49 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 4527,
-          "vertexCount": 2144,
+          "triangleCount": 5466,
+          "vertexCount": 2734,
           "bbox": {
             "min": [
-              -15.809992790222168,
-              -15.808963775634766,
-              0
+              -15,
+              -15,
+              -2.001953125
             ],
             "max": [
               57.5,
-              51.18033981323242,
-              0
+              57.5,
+              20
             ],
             "extent": [
-              73.30999279022217,
-              66.98930358886719,
-              0
+              72.5,
+              72.5,
+              22.001953125
             ]
           },
-          "volume": 0,
-          "surfaceArea": 2091.8515750114866,
+          "volume": 6970.129136477683,
+          "surfaceArea": 5774.931340571256,
           "centroid": [
-            23.088654218269582,
-            12.268590881996193,
-            0
+            18.562416694157438,
+            20.645556710328854,
+            4.896453331285768
           ],
-          "connectedComponents": 3,
+          "connectedComponents": 4,
           "isManifold": 0,
-          "boundaryEdges": 3,
-          "nonManifoldEdges": 359
+          "boundaryEdges": 2,
+          "nonManifoldEdges": 2
         },
-        "volumeDelta": 7881.5625526958465,
-        "volumeRelDelta": 1,
-        "surfaceAreaDelta": 5069.424445932923,
-        "surfaceAreaRelDelta": 0.70789401652813,
-        "bboxOverlap": 0,
-        "bboxIoU": 0,
-        "centroidDistance": 6.733484307927167,
-        "triangleCountDelta": 9953,
+        "volumeDelta": 911.433416218164,
+        "volumeRelDelta": 0.11564120821529393,
+        "surfaceAreaDelta": 1386.344680373153,
+        "surfaceAreaRelDelta": 0.19358905819557082,
+        "bboxOverlap": 105577.6991655225,
+        "bboxIoU": 0.9129246738938758,
+        "centroidDistance": 5.816523427028952,
+        "triangleCountDelta": 9014,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
         "hausdorffDistance": 0,
-        "message": "volume: Δ=7881.562553 (rel 1.000000); surface area: Δ=5069.424446 (rel 0.707894); bbox IoU: 0.000000 (need > 0.999000); centroid distance: 6.733484"
+        "message": "volume: Δ=911.433416 (rel 0.115641); surface area: Δ=1386.344680 (rel 0.193589); bbox IoU: 0.912925 (need > 0.999000); centroid distance: 5.816523"
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
@@ -1574,88 +1574,10 @@
     },
     {
       "name": "Old/example007.scad",
-      "verdict": "FAIL",
-      "comparison": {
-        "verdict": "FAIL",
-        "ref": {
-          "triangleCount": 524,
-          "vertexCount": 264,
-          "bbox": {
-            "min": [
-              -11,
-              -10.9397,
-              -10
-            ],
-            "max": [
-              11,
-              10.9397,
-              14.6748
-            ],
-            "extent": [
-              22,
-              21.8794,
-              24.674799999999998
-            ]
-          },
-          "volume": 3439.961461791112,
-          "surfaceArea": 2866.178734273455,
-          "centroid": [
-            -7.932990107152853e-17,
-            1.9460616356609342e-16,
-            -2.151035884876899
-          ],
-          "connectedComponents": 1,
-          "isManifold": 1,
-          "boundaryEdges": 0,
-          "nonManifoldEdges": 0
-        },
-        "cand": {
-          "triangleCount": 6392,
-          "vertexCount": 1593,
-          "bbox": {
-            "min": [
-              -32.858280181884766,
-              -32.858280181884766,
-              -10
-            ],
-            "max": [
-              32.858280181884766,
-              32.858280181884766,
-              21
-            ],
-            "extent": [
-              65.71656036376953,
-              65.71656036376953,
-              31
-            ]
-          },
-          "volume": 10089.23107149598,
-          "surfaceArea": 43839.98197011682,
-          "centroid": [
-            5.5182993218858715e-8,
-            0.32226179499382246,
-            -6.978825246618125
-          ],
-          "connectedComponents": 1,
-          "isManifold": 0,
-          "boundaryEdges": 0,
-          "nonManifoldEdges": 2951
-        },
-        "volumeDelta": 6649.269609704868,
-        "volumeRelDelta": 0.6590462209246386,
-        "surfaceAreaDelta": 40973.80323584337,
-        "surfaceAreaRelDelta": 0.9346218085530427,
-        "bboxOverlap": 11877.13602064,
-        "bboxIoU": 0.08871568046004435,
-        "centroidDistance": 4.83853312336026,
-        "triangleCountDelta": 5868,
-        "maxSurfaceDistance": 0,
-        "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "volume: Δ=6649.269610 (rel 0.659046); surface area: Δ=40973.803236 (rel 0.934622); bbox IoU: 0.088716 (need > 0.999000); centroid distance: 4.838533"
-      },
+      "verdict": "ERROR",
       "hasFacetedPrimitives": false,
-      "stepExport": "exact"
+      "stepExport": "n/a",
+      "error": "[faijs/op] <anon>: CONSTRUCTION_FAILED: revolve: construction failed"
     },
     {
       "name": "Old/example008.scad",
@@ -2660,8 +2582,8 @@
     "pass": 6,
     "passAnalytic": 0,
     "passNT": 8,
-    "fail": 23,
-    "error": 13,
+    "fail": 22,
+    "error": 14,
     "blocked": 1
   }
 }

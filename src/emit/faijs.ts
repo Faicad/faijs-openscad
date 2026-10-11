@@ -342,16 +342,29 @@ class Emitter {
         // RADIAN = 180/PI = 57.2958，乘上去会把 2π 变成 360（度），然后 revolve
         // 内部再 (360*180)/PI = 20626 度，几何完全错误。
         // 裸弧度数字在脚本面不做 dimension 检查（revolve 无 paramDims 声明）。
+        //
+        // P2-B: OpenSCAD rotate_extrude maps 2D (x,y) → 3D (x,0,y) before
+        // revolving around Z. faijs 2D profiles are in the XY plane, so
+        // cad.revolve with axis [0,0,1] produces a flat shape (volume=0).
+        // Fix: revolve around Y axis instead (keeps XY profile as planar face),
+        // then rotate result 90° around X to map Y→Z (height along Z).
         const TWO_PI = 2 * Math.PI
+        let revolved: string
         if (Math.abs(node.angle - TWO_PI) < 1e-12) {
           // 完整旋转：省略 angle，使用 revolve 默认 2π
-          return this.assign(
-            `await cad.revolve(${child}, { axis: [0, 0, 1], at: [0, 0, 0] })`,
+          revolved = this.assign(
+            `await cad.revolve(${child}, { axis: [0, 1, 0], at: [0, 0, 0] })`,
+            node.id,
+          )
+        } else {
+          revolved = this.assign(
+            `await cad.revolve(${child}, { axis: [0, 1, 0], at: [0, 0, 0], angle: ${exactNumber(node.angle)} })`,
             node.id,
           )
         }
+        // Rotate 90° around X: (x,y,z) → (x,-z,y), maps Y→Z (height along Z)
         return this.assign(
-          `await cad.revolve(${child}, { axis: [0, 0, 1], at: [0, 0, 0], angle: ${exactNumber(node.angle)} })`,
+          `await cad.applyMatrix(${revolved}, [[1,0,0,0],[0,0,-1,0],[0,1,0,0],[0,0,0,1]])`,
           node.id,
         )
       }

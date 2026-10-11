@@ -165,14 +165,17 @@ describe('emit: linear_extrude', () => {
 describe('emit: rotate_extrude（T501）', () => {
   it('默认 360° → cad.revolve(profile, { axis, at }) without angle', async () => {
     const code = body(await transpile('rotate_extrude() { circle(r = 5); }'))
-    expect(code).toContain('await cad.revolve(part0, { axis: [0, 0, 1], at: [0, 0, 0] })')
+    // P2-B: revolve around Y axis, then rotate result to map Y→Z
+    expect(code).toContain('await cad.revolve(part0, { axis: [0, 1, 0], at: [0, 0, 0] })')
+    expect(code).toContain('cad.applyMatrix(part1, [[1,0,0,0],[0,0,-1,0],[0,1,0,0],[0,0,0,1]]')
     // full turn must NOT include an angle field (revolve defaults to 2π)
     expect(code).not.toContain('angle:')
   })
 
   it('angle=180 → cad.revolve with bare radian angle (not * RADIAN)', async () => {
     const code = body(await transpile('rotate_extrude(angle = 180) { circle(r = 5); }'))
-    expect(code).toContain('await cad.revolve(part0, { axis: [0, 0, 1], at: [0, 0, 0], angle:')
+    // P2-B: revolve around Y axis with angle, then rotate result
+    expect(code).toContain('await cad.revolve(part0, { axis: [0, 1, 0], at: [0, 0, 0], angle:')
     // angle must be bare number (π = 3.141592653589793), NOT * RADIAN
     expect(code).toContain('angle: 3.141592653589793')
     expect(code).not.toContain('RADIAN')
