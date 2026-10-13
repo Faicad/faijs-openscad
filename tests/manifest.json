@@ -1,6 +1,6 @@
 {
   "generatedBy": "@faicad/faijs-openscad corpus",
-  "generatedAt": "2026-10-10T03:48:32.522Z",
+  "generatedAt": "2026-10-11T08:12:51.021Z",
   "converter": {
     "name": "@faicad/faijs-openscad",
     "version": "0.29.5"
@@ -334,7 +334,7 @@
       "status": "ported",
       "blockedBy": [],
       "parsedNodes": 4,
-      "emittedStatements": 23,
+      "emittedStatements": 29,
       "nodeHistogram": {
         "color": 4,
         "rotate_extrude": 6,
@@ -549,7 +549,7 @@
       "status": "ported",
       "blockedBy": [],
       "parsedNodes": 1,
-      "emittedStatements": 27,
+      "emittedStatements": 28,
       "nodeHistogram": {
         "multmatrix": 13,
         "group": 4,
@@ -585,7 +585,7 @@
       "status": "ported",
       "blockedBy": [],
       "parsedNodes": 3,
-      "emittedStatements": 5,
+      "emittedStatements": 6,
       "nodeHistogram": {
         "linear_extrude": 4,
         "import": 5,

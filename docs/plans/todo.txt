@@ -1,0 +1,208 @@
+找到/root/faijs-openscad项目，然后读最新的文档，比如docs\plans\2026-10-10-progress-summary-and-roadmap.md
+然后查看最近的几个提交，了解目前的进度，然后继续推进后续的任务开发。
+
+每完成一个阶段性的成果，都要提交和推送代码，保证成果保存到gitcode。
+
+每完成一步，都要在文档中记录下来。碰到长时间解决不了的问题，也在文档中记录当前的进度和尝试了哪些方法。长时间解决不了的，可以换一个任务看看其他任务更容易些的。
+
+
+
+下面是上个agent进行到中途的任务输出：
+
+example004 和 example022 不涉及 text/DXF，先看它们：
+
++
+SHELL
+Check example004 source
++
+Thought
+example004 是 cube(30) - sphere(20) — 这是三角化密度问题（P2-D），不是 extrude 高度问题。看 example022：
+
++
+SHELL
+Check example022 source
++
+Thought
+example022 也是三角化密度问题（cylinder/sphere 刻面）。看 example008（volΔ=6000, 12.2%）：
+
++
+SHELL
+Check example008 source
++
+Thought
+example008 使用 linear_extrude(height=50) + DXF import。让我检查 LetterBlock（volΔ=913, 7%）：
+
++
+SHELL
+Check LetterBlock source
++
+Thought
+大部分 IoU=1.0 例子实际上是三角化密度问题（P2-D），不是 extrude 高度问题。让我聚焦 example008（DXF + extrude，volΔ=12.2%），检查 extrude 高度是否正确：
+
++
+SHELL
+Generate faijs code for example008
++
+Thought
+extrude 高度看起来正确（50 * MM）。让我检查 MM 的值是否为 1：
+
++
+SHELL
+Check MM constant value
++
+Thought
++
+SHELL
+Test extrude with MM constant
++
+Thought
+MM=1，extrude 高度正确。P2-C 的假设（extrude 高度不匹配）不成立——大部分 IoU=1.0 例子实际上是三角化密度问题。让我记录这个发现并转向 P2-D：
+
++
+WRITE
+/root/faijs-openscad/docs/plans/2026-10-10-phase2-tessellation-fuzzyvalue.md
++
+PLAN_UPDATE
+4 steps
+现在开始 P2-D。先理解当前 tessellation 参数如何计算：
+
++
+READ
+run-parity.ts (lines 64-113)
++
+SHELL
+Find tessellation parameter computation
++
+SHELL
+Find tessellation computation in model
++
+READ
+model.ts (lines 380-429)
++
+SHELL
+Find tessellation computation logic
++
+READ
+lower.ts (lines 1145-1184)
++
+Thought
+让我理解 segments 在 emitter 中如何使用：
+
++
+SHELL
+Find segments usage in emitter
++
+Thought
++
+SHELL
+Find segments assignment in lower
++
+READ
+lower.ts (lines 270-309)
++
+Thought
++
+SHELL
+Find fragments functions
++
+SHELL
+Find fragments function definitions
++
+READ
+faceted-geometry.ts (lines 25-74)
++
+Thought
+让我深入看 functions.scad（41 个 sphere(r=1)，volΔ=72, 14.4%）：
+
++
+SHELL
+Check functions.scad details
++
+Context Compacted
++
+Thought
+关键发现：ref tris=1558 vs cand tris=85198！segments=5 被正确计算但 OCCT 三角化远比 OpenSCAD 精细。让我看生成的 faijs 代码确认 segments 是否传给了 cad.sphere：
+
++
+SHELL
+Check generated faijs for functions
++
+Thought
+cad.sphere(1, { segments: 5 }) 被正确生成。让我测试单个 sphere 的三角化：
+
++
+SHELL
+Test single sphere with segments=5
++
+SHELL
+Test sphere with different segments
++
+Thought
+关键发现！cad.sphere(1, { segments: 5 }) 产出 56 三角形（正确），但 41 个 sphere union 后变成 85198 三角形。问题是 boolean 运算后 BREP 重新三角化使用全局 deflection，丢失了 per-primitive segments。
+
+让我检查 parity 容差设置：
+
++
+SHELL
+Find parity tolerance settings
++
+READ
+five-dim.ts (lines 29-48)
++
+Thought
+容差非常严格（volumeRel=1e-4 = 0.01%）。让我看 parity runner 如何判定 PASS/FAIL：
+
++
+SHELL
+Find verdict logic in parity runner
++
+SHELL
+Find verdict computation
++
+SHELL
+Find verdict in report.ts
++
+READ
+report.ts (lines 80-119)
++
+Thought
++
+SHELL
+Find verdict in compare-mesh
++
+READ
+compare-mesh.ts (lines 85-134)
++
+READ
+compare-mesh.ts (lines 134-163)
++
+Thought
+让我验证核心假设——cad.sphere 的 segments 是否只影响初始网格而不影响 BREP 本身：
+
++
+SHELL
+Test sphere volume with/without segments
++
+Thought
+根因确认：cad.sphere(1, { segments: 5 }) 单独使用时 vol=3.12（正确刻面体），但 union 后 vol=4.16（BREP 精确球面重新三角化）。boolean 运算将刻面体提升为 BREP 精确曲面，丢失了 segments 刻面。
+
+这是表示差异（BREP vs 刻面多面体），不是三角化参数问题。让我检查 classifyAnalytic 是否被使用：
+
++
+SHELL
+Check if classifyAnalytic is used
++
+READ
+run-parity.ts (lines 355-384)
++
+READ
+run-parity.ts (lines 384-408)
++
+Thought
+找到了！第 395 行直接用 comparison.verdict，跳过了 classifyAnalytic。注释说"两边都是同一解析几何的三角化"——但这个假设是错误的！OpenSCAD 产出刻面多面体，faijs 产出 BREP 精确曲面。
+
+让我看 classifyAnalytic 的容差逻辑：
+
++
+READ
+report.ts (lines 119-158)

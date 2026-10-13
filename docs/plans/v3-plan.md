@@ -48,7 +48,7 @@ Two distinct namespaces in generated code:
 ### Host Setup
 
 ```typescript
-import { createEditorCadNamespace } from '@faicad/faijs-extra'
+import { createEditorCadNamespace } from '@faicad/faijs/extra'
 import { createOpenSCADNamespace } from '@faicad/faijs-openscad-ext'
 
 rt.registerLib('cad', createEditorCadNamespace(), { default: true })

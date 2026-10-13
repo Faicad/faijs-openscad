@@ -1,5 +1,5 @@
 /**
- * @faicad/faijs-openscad-ext â€” OpenSCAD extension library for faijs.
+ * @faicad/faijs-openscad-ext â€?OpenSCAD extension library for faijs.
  *
  * Provides OpenSCAD-specific geometric operations (hull, polyhedron, twist
  * extrude, projection, surface interpolation, hardened offset) as a standalone
@@ -7,7 +7,7 @@
  *
  * Usage (host setup):
  * ```typescript
- * import { createEditorCadNamespace } from '@faicad/faijs-extra'
+ * import { createEditorCadNamespace } from '@faicad/faijs/extra'
  * import { createOpenSCADNamespace } from '@faicad/faijs-openscad-ext'
  *
  * rt.registerLib('cad', createEditorCadNamespace(), { default: true })
