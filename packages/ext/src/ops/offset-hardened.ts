@@ -24,10 +24,21 @@ export async function offset2d(
 ): Promise<ShapeHandle> {
   const k = await getExtKernel()
 
+  // offsetWire2D requires a TopoDS_Wire. OpenSCAD children can arrive as an
+  // edge (circle) or a face (polygon/text) — normalise before offsetting.
+  let wire = profile
+  try {
+    if (!k.isWire(profile)) {
+      wire = k.isFace(profile) ? k.outerWire(profile) : k.makeWire([profile])
+    }
+  } catch {
+    // keep `profile` as-is; the offset attempt below produces the real error
+  }
+
   const joinType = chamfer ? JoinType.Tangent : JoinType.Arc
 
   try {
-    return k.offsetWire2D(profile, delta, joinType)
+    return k.offsetWire2D(wire, delta, joinType)
   } catch {
     // If delta is too small to halve, rethrow.
     if (Math.abs(delta) < 1e-6) throw new Error('offset2d failed even with near-zero delta')

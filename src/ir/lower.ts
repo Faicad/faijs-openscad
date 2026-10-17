@@ -804,17 +804,21 @@ class Lowerer {
     }
   }
 
-  /** K11: surface → openscad.surface(file) */
+  /** K11: surface → openscad.surface(file, center) */
   private lowerSurface(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
     this.reportUnknownArgs(node)
     const fileArg = argumentOf(node, 'file')
     const fileStr = fileArg && fileArg.value.kind === 'string' ? fileArg.value.value : ''
+    const centerArg = argumentOf(node, 'center')
+    const center = centerArg?.value.kind === 'boolean' ? centerArg.value.value : false
     return {
       kind: 'exprCall',
       id,
       origin,
       dimension: '3d',
-      chain: [{ method: 'openscad.surface', args: [{ kind: 'str', value: fileStr }] }],
+      chain: [
+        { method: 'openscad.surface', args: [{ kind: 'str', value: fileStr }, { kind: 'bool', value: center }] },
+      ],
     }
   }
 
