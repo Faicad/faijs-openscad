@@ -45,7 +45,7 @@
     "node": ">=22"
   },
   "peerDependencies": {
-    "@faicad/faijs": "^0.35.8",
+    "@faicad/faijs": "file:../faijs/faicad-faijs-0.35.8.tgz",
     "@faicad/faijs/extra": "^0.35.8"
   },
   "peerDependenciesMeta": {
@@ -55,7 +55,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@faicad/faijs": "^0.35.8",
+    "@faicad/faijs": "file:../faijs/faicad-faijs-0.35.8.tgz",
     "@types/node": "^26.2.0",
     "@types/pngjs": "^6.0.5",
     "eslint": "^10.8.1",

@@ -63,7 +63,26 @@ sign/rotate_extrude/LetterBlock —— 字形渲染与刻面精度问题，属�
 其余受影响例：surface_image FAIL（空 section）、projection ERROR（原样）、
 GEB/offset ERROR（offset2d 上游缺陷）。
 
-## 5. 剩余 ERROR（12 例）根因表
+## 6. DXF 移植（2026-10-17 下午，参考 brepjs）
+
+**faijs core 新增 DXF 导入**（提交 `4072479b` + `5640c860` + `f99ae1b9`）：
+- `core/src/brep/dxf/dxf-import.ts`：brepjs 式解析器——严格两行一组配对遍历
+  （修掉旧逐行扫描的游标错位根因）+ 实体→内核 edge→`makeWire` 拓扑组线
+  （不再做 JS 端点容差拼线）；支持 LINE/CIRCLE/ARC/LWPOLYLINE/POLYLINE、图层过滤
+- **第二层根因**：example013.dxf 的几何全在 **BLOCKS 段**（ENTITIES 只留 INSERT
+  引用），新旧解析器都只扫 ENTITIES 所以拿到 0 实体。现同时扫 BLOCKS+ENTITIES
+- 子路径导出 `@faicad/faijs/brep/dxf/dxf-import`；回归测试 8/8
+- **SVG 对齐核实**：faijs brep 链已与 brepjs 语义一致（A 命令三点圆弧算法注释
+  明确引用 brepjs createStandardArc；C/S/Q/T→makeBezierEdge），无需改码
+
+**faijs-openscad ext 接线**：`loadDXF` 优先走 faijs `importDxf`（createRequire
+动态加载，旧 faijs 无该模块时降级到 ext 旧解析器），公共尾段抽为 `facesFromWires`。
+
+**验证**：诊断脚本 example013.dxf → lines=10、wires=1（此前 0 实体）；
+example013 ERROR→**FAIL**（能执行出 wire，三个 DXF 拉伸体求交后仍 0 三角形——
+面化/求交层还有缺口，待查）。
+
+## 7. 剩余 ERROR（12 例）根因表
 
 | 根因 | 数量 | 归属 |
 |---|---|---|

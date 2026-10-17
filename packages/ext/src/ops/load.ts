@@ -12,7 +12,11 @@
 import { getExtKernel } from '../kernel'
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { resolve, join, dirname } from 'node:path'
+import { createRequire } from 'node:module'
 import type { ShapeHandle } from 'occt-wasm'
+
+/** CJS require for optional faijs submodules (this package is ESM). */
+const nodeRequire = createRequire(import.meta.url)
 
 /** Base directory for resolving relative import paths. */
 let loadBaseDir = process.cwd()
@@ -97,6 +101,26 @@ function loadSTEP(k: Awaited<ReturnType<typeof getExtKernel>>, filePath: string)
 /** Load DXF file → 2D ShapeHandle via DXF parser → wires → makeFace. */
 function loadDXF(k: Awaited<ReturnType<typeof getExtKernel>>, filePath: string): ShapeHandle {
   const data = readFileSync(filePath, 'utf8')
+
+  // Preferred: faijs core's brepjs-style DXF import (strict group-code pairing +
+  // kernel.makeWire topology assembly). Fallback: the legacy ext parser below.
+  try {
+    // older @faicad/faijs without the module must fall through to the legacy
+    // parser, not hard-crash.
+    const mod = nodeRequire('@faicad/faijs/brep/dxf/dxf-import') as
+      | { importDxf: (k: unknown, text: string) => { ok: boolean; value?: ShapeHandle[]; error?: unknown } }
+      | undefined
+    if (mod && typeof mod.importDxf === 'function') {
+      const result = mod.importDxf(k, data)
+      if (result.ok && result.value && result.value.length > 0) {
+        return facesFromWires(k, filePath, result.value)
+      }
+      // faijs parser produced nothing — fall through to legacy parser
+    }
+  } catch {
+    // module unavailable (old faijs) — fall through
+  }
+
   const entities = parseDXF(data)
 
   const V3 = (x: number, y: number) => ({ x, y, z: 0 })
@@ -145,6 +169,18 @@ function loadDXF(k: Awaited<ReturnType<typeof getExtKernel>>, filePath: string):
     throw new Error(`openscad.load({ file: "${filePath}" }) — DXF parsing produced no wires`)
   }
 
+  return facesFromWires(k, filePath, wires)
+}
+
+/**
+ * Convert wires to 2D faces and fuse them into one shape (the common tail of
+ * both DXF paths — faijs importDxf and the legacy ext parser).
+ */
+function facesFromWires(
+  k: Awaited<ReturnType<typeof getExtKernel>>,
+  filePath: string,
+  wires: ShapeHandle[],
+): ShapeHandle {
   // Convert wires to faces
   const faces: ShapeHandle[] = []
   for (const wire of wires) {
