@@ -103,17 +103,53 @@ function loadDXF(k: Awaited<ReturnType<typeof getExtKernel>>, filePath: string):
   const data = readFileSync(filePath, 'utf8')
 
   // Preferred: faijs core's brepjs-style DXF import (strict group-code pairing +
-  // kernel.makeWire topology assembly). Fallback: the legacy ext parser below.
+  // kernel.makeWire topology assembly) with evenodd hole classification
+  // (importDxfProfiles → makeFace(outer) + addHolesInFace(holes)).
+  // Fallback: the legacy ext parser below.
   try {
     // older @faicad/faijs without the module must fall through to the legacy
     // parser, not hard-crash.
     const mod = nodeRequire('@faicad/faijs/brep/dxf/dxf-import') as
-      | { importDxf: (k: unknown, text: string) => { ok: boolean; value?: ShapeHandle[]; error?: unknown } }
+      | {
+          importDxf?: (k: unknown, text: string) => { ok: boolean; value?: ShapeHandle[]; error?: unknown }
+          importDxfProfiles?: (k: unknown, text: string) => {
+            ok: boolean
+            value?: Array<{ outer: ShapeHandle; holes: ShapeHandle[] }>
+            error?: unknown
+          }
+        }
       | undefined
-    if (mod && typeof mod.importDxf === 'function') {
-      const result = mod.importDxf(k, data)
+    if (mod && typeof mod.importDxfProfiles === 'function') {
+      const result = mod.importDxfProfiles(k, data)
       if (result.ok && result.value && result.value.length > 0) {
-        return facesFromWires(k, filePath, result.value)
+        // 每组：makeFace(outer) → addHolesInFace(holes) → 重组
+        const faces: ShapeHandle[] = []
+        for (const profile of result.value) {
+          try {
+            let face = k.makeFace(profile.outer)
+            if (profile.holes.length > 0) {
+              const holed = (k as unknown as { addHolesInFace: (f: ShapeHandle, hs: ShapeHandle[]) => ShapeHandle }).addHolesInFace(face, profile.holes)
+              k.release(face)
+              face = holed
+            }
+            faces.push(face)
+          } catch {
+            try { k.release(profile.outer) } catch { /* ignore */ }
+          }
+        }
+        if (faces.length === 0) {
+          throw new Error(`openscad.load({ file: "${filePath}" }) — all DXF profiles failed makeFace`)
+        }
+        if (faces.length === 1) return faces[0]
+        try {
+          return k.fuseAll(faces)
+        } catch {
+          let result2 = faces[0]
+          for (let i = 1; i < faces.length; i++) {
+            try { result2 = k.fuse(result2, faces[i]) } catch { /* skip */ }
+          }
+          return result2
+        }
       }
       // faijs parser produced nothing — fall through to legacy parser
     }

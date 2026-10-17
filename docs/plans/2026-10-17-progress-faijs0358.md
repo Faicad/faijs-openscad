@@ -81,8 +81,22 @@ GEB/offset ERROR（offset2d 上游缺陷）。
   迁到 geometry2d 上（brepjs 的 Curve2D/Blueprint 即目标形态），DXF 的 bulge
   三点圆弧也可经同一入口解决。
 
-**faijs-openscad ext 接线**：`loadDXF` 优先走 faijs `importDxf`（createRequire
-动态加载，旧 faijs 无该模块时降级到 ext 旧解析器），公共尾段抽为 `facesFromWires`。
+## 6.2 classifyNested 下沉 + DXF 挖孔（2026-10-17 晚）
+
+- **嵌套分组下沉 geometry2d**：`classifyNested` 及其 4 个纯 2D 辅助
+  （computeSignedArea/pointInPolygon/polygonCentroid/bboxContains）从
+  `primitives/svg/svg-path.ts` 移到 `geometry2d/nesting.ts`（通用 2D 几何层，
+  DXF 可复用）；svg-path.ts 保留同名 re-export 兼容旧入口。
+- **faijs DXF 新增 `importDxfProfiles`**：wire 采样（getSubShapes+curveParameters+
+  curvePointAtParam，每边 32 点）→ evenodd 嵌套分组 → `{outer, holes}[]`。
+- **顺带修掉 DXF 解析第二层 bug**：`polylineVertices` 是共享变量，分组循环把
+  最后一条 polyline 的顶点 push 给了每条实体（实证：「回」字形两条 polyline
+  产出两个相同内圈 wire，外圈丢失）。现在顶点在实体边界处与实体配对收集。
+- **ext 接线**：`loadDXF` 优先走 `importDxfProfiles` → `makeFace(outer)` +
+  `addHolesInFace(holes)`，多组 fuse。
+- **端到端验证**：「回」字形 DXF（外圈 10×10 + 内孔 4×4，挤出 2mm）体积
+  = **168**（100−16)×2，孔被正确挖除；SVG 46/46 + DXF 11/11 全绿；
+  example013 无回归（仍 FAIL-with-wire，其面化缺口与挖孔无关）。
 
 ## 6.1 svg-to-solid 迁移评估（2026-10-17，第一步行已落地）
 
