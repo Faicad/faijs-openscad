@@ -85,10 +85,48 @@ export async function load(
   }
 }
 
-/** Load STL file → 3D ShapeHandle via OCCT kernel.importStl(). */
+/**
+ * Load STL file → **solid** ShapeHandle.
+ *
+ * ⚠️ GOTCHA（2026-10-17，example012/016 根因）：裸 `kernel.importStl()` 返回的
+ * 是 **compound of faces**（64 个面、无 shell/solid、边不共享），`isValid` 为
+ * true 但**不是实体**。拿它当布尔工具去 cut 会直接失败：
+ *   `[api/boolean] subtract: kernel cut failed — cutWithHistory: operation failed`
+ * （实证：example012 的 sphere − import(STL)，切成 ERROR）。
+ *
+ * 正确做法：走 faijs 的规范化 mesh→BREP 管线（`meshReconstruct`），而不是自己
+ * 手搓——这与 svg-to-solid 绕过 `geometry2d` 是同一类实现偏差。faijs 的
+ * `extra/ops/load.ts` 对 STL 也是这么做的（weld/unify 或 reconstructSolidFromMesh）。
+ * 管线内部：ASCII STL → importStl → fixShape → healSolid → 多容差 sewAndSolidify
+ * （1e-5…1e-2）→ isValid 校验，产出真 solid。
+ */
 function loadSTL(k: Awaited<ReturnType<typeof getExtKernel>>, filePath: string): ShapeHandle {
   const data = readFileSync(filePath)
   const ab = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
+
+  try {
+    const stlLoader = nodeRequire('@faicad/faijs/mesh/stl-loader') as
+      | { parseStl?: (buffer: ArrayBuffer) => { positions: Float32Array; indices: Uint32Array } }
+      | undefined
+    const meshReconstruct = nodeRequire('@faicad/faijs/occt-kernel/meshReconstruct') as
+      | {
+          reconstructSolidFromMesh?: (
+            kernel: unknown,
+            positions: Float32Array,
+            indices: Uint32Array,
+          ) => ShapeHandle
+        }
+      | undefined
+
+    if (typeof stlLoader?.parseStl === 'function' &&
+        typeof meshReconstruct?.reconstructSolidFromMesh === 'function') {
+      const parsed = stlLoader.parseStl(ab)
+      return meshReconstruct.reconstructSolidFromMesh(k, parsed.positions, parsed.indices)
+    }
+  } catch {
+    // faijs 子模块不可用（旧版本）→ 回退到裸 importStl
+  }
+
   return k.importStl(ab)
 }
 
