@@ -79,6 +79,10 @@ const jsonOut = process.argv.includes('--json')
 const mdOut = process.argv.includes('--md')
   ? process.argv[process.argv.indexOf('--md') + 1]
   : undefined
+// `--only <substr>`: run only examples whose id contains the substring (e.g. GEB, Old/).
+const only = process.argv.includes('--only')
+  ? process.argv[process.argv.indexOf('--only') + 1]
+  : undefined
 
 // ── Manifest ────────────────────────────────────────────────────────────────
 
@@ -190,7 +194,9 @@ function shapeToTriangles(shape: FaijsShape): StlTriangle[] {
 
 async function main() {
   const manifest = loadManifest()
-  const ported = manifest.entries.filter((e) => e.status === 'ported')
+  const ported = manifest.entries
+    .filter((e) => e.status === 'ported')
+    .filter((e) => !only || e.id.includes(only))
 
   console.log('Parity runner (T803, M9 tessellation)')
   console.log(`  Ported examples: ${ported.length}`)

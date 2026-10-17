@@ -83,9 +83,11 @@ export async function text(
   }
 
   // Step 4: Call textBlueprints to get wire array
+  // 0.35.x: textBlueprints takes the BrepEngineApi contract face; the raw
+  // occt kernel satisfies it at runtime, the brands just differ in types.
   const { textBlueprints } = await import('@faicad/faijs/brep/text/text-to-solid')
   const fontSize = opts?.size ?? 10
-  const wires = textBlueprints(k, textStr, {
+  const wires = textBlueprints(k as unknown as Parameters<typeof textBlueprints>[0], textStr, {
     startX: 0,
     startY: 0,
     fontSize,
@@ -100,11 +102,11 @@ export async function text(
   const faces: ShapeHandle[] = []
   for (const wire of wires) {
     try {
-      const face = k.makeFace(wire)
+      const face = k.makeFace(wire as unknown as ShapeHandle)
       faces.push(face)
     } catch {
       // Some wires may fail makeFace (e.g. degenerate or open wires)
-      try { k.release(wire) } catch { /* ignore */ }
+      try { k.release(wire as unknown as ShapeHandle) } catch { /* ignore */ }
     }
   }
 
