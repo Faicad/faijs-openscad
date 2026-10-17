@@ -84,6 +84,29 @@ GEB/offset ERROR（offset2d 上游缺陷）。
 **faijs-openscad ext 接线**：`loadDXF` 优先走 faijs `importDxf`（createRequire
 动态加载，旧 faijs 无该模块时降级到 ext 旧解析器），公共尾段抽为 `facesFromWires`。
 
+## 6.1 svg-to-solid 迁移评估（2026-10-17，第一步行已落地）
+
+**已落地：DXF bulge 弧段改走 geometry2d**（faijs `27e87f88`）：
+polyline 段构建 `Curve2dObj`（bulge≠0 → `makeArc2dThreePoints`，拱点 = 弦中点
+沿行进方向左侧法向抬 sagitta=bulge·chord/2），经 `assembleWire(kernel,'XY',…)`
+落成 wire——DXF 导入从此与 sketch/profile 同一管线。回归测试 9/9（含拱点坐标
+钉死用例）；example013 无回归。这也顺带证明了 geometry2d 桥（`liftCurve2dToPlane`
+的 `trimmed` 圆 → `makeArcEdge` 三点弧）可直接承载 DXF 弧语义。
+
+**svg-to-solid 迁移路径评估**（634 行，`brep/svg/svg-to-solid.ts`）：
+- 可直接删除的手搓段：`parseSVGPathToWires` 内各 case 的「曲线→edge」逻辑
+  （`makeBezierEdge`×4、三点弧、直线段）——与 `liftCurve2dToPlane` 完全重复；
+  迁移后每个 case 只产出 `Curve2dObj`，wire 组装统一走 `assembleWire`。
+- 可保留并下沉的段：`tokenizeSvgPath`/transform 解析（语法层，faijs 已与 mesh
+  链共享 `primitives/svg/svg-path.ts`）、`classifyHoles`（孔洞检测，纯 2D 判定，
+  建议下沉 geometry2d）。
+- 风险点：`flipY`（SVG Y 向下）目前散布在各 case；迁移时改为在生成 Curve2dObj
+  时一次性翻 Y，避免桥层感知 SVG 约定。`makeArcEdge` 语义（三点弧）两侧一致，
+  已由 DXF bulge 用例实证。
+- 建议切分：①先迁 Bezier/直线（低风险，曲线语义一一对应）；②再迁 A 命令
+  （对照 brepjs createStandardArc，已有现成算法注释）；③最后处理孔洞分组与
+  transform 管线。每步用既有 svg 测试回归。
+
 **验证**：诊断脚本 example013.dxf → lines=10、wires=1（此前 0 实体）；
 example013 ERROR→**FAIL**（能执行出 wire，三个 DXF 拉伸体求交后仍 0 三角形——
 面化/求交层还有缺口，待查）。
