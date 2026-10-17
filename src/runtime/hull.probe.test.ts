@@ -12,6 +12,9 @@
  *     is literally named `hullFromPoints`. Feeding it a Shape throws
  *     `HULL_FAILED: convexHull failed: points.map is not a function` (measured).
  *   - `hull` / `minkowski` do not exist on either the ① or ② face.
+ *   - 0.35.x re-measure (2026-10-17): `convexHull` also LEFT the ① TS compat
+ *     face (moved to `@faicad/faijs/api/generated/script-face`); it remains on
+ *     the ② script face.
  *
  * So the mapping stays BLOCKED: implementing OpenSCAD hull() over shapes needs
  * either a vertex-extraction layer feeding `convexHull(points)` or a new
@@ -31,11 +34,11 @@ describe('probe: hull (static)', () => {
     expect(set.has('convexHull')).toBe(true)
   })
 
-  it.skipIf(tsFace === null)('① face: hull/minkowski absent, convexHull present', () => {
+  it.skipIf(tsFace === null)('① face: hull/minkowski/convexHull absent (convexHull moved to script-face submodule in 0.35.x)', () => {
     const set = tsFace as Set<string>
     expect(set.has('hull')).toBe(false)
     expect(set.has('minkowski')).toBe(false)
-    expect(set.has('convexHull')).toBe(true)
+    expect(set.has('convexHull')).toBe(false)
   })
 
   it('OpenSCAD hull is classified direct (ported via ext library)', () => {

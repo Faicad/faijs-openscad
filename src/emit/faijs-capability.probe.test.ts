@@ -21,24 +21,38 @@
  *  ① face: 56 of 57 probed ops present; only `polyhedron` absent.
  *  ② face: `polyhedron` / `hull` / `minkowski` absent; `offset` / `convexHull` present.
  *  internal `mod.cad`: 38 keys, `*Brep`-suffixed — never a target for generated code.
+ *
+ * Re-measured 2026-10-17 (faijs 0.35.8): the ① TS compat face SHRANK —
+ * `torus` / `ellipsoid` / `mirror` / `offset` / `convexHull` / `volume` / `area`
+ * are no longer re-exported from the package root (they still exist on the
+ * `@faicad/faijs/api/generated/script-face` submodule and on the ② script face).
  */
 import { describe, expect, it } from 'vitest'
 import { faijsInstalled, loadFaijs, P0_REQUIRED_OPS, GAP_OPS } from '../__probe__/env'
-import { scriptFaceSymbols, tsCompatFaceSymbols } from '../__probe__/faijs-static'
+import { scriptFaceSymbols, tsCompatFaceSymbols, generatedScriptFaceSymbols } from '../__probe__/faijs-static'
 import { capabilityClassOf } from '../ir/capability'
 
 const scriptFace = scriptFaceSymbols()
 const tsFace = tsCompatFaceSymbols()
+const genFace = generatedScriptFaceSymbols()
 
-/** The ① face ops this project maps OpenSCAD nodes onto (measured 2026-10-06). */
+/** The ① face ops this project maps OpenSCAD nodes onto (measured 2026-10-17). */
 const TS_FACE_REQUIRED = [
-  'box', 'sphere', 'cylinder', 'cone', 'torus', 'wedge', 'ellipsoid',
+  'box', 'sphere', 'cylinder', 'cone', 'wedge',
   'union', 'subtract', 'intersect',
-  'translate', 'rotate_euler', 'scale', 'scale3d', 'mirror', 'applyMatrix',
+  'translate', 'rotate_euler', 'scale', 'scale3d', 'applyMatrix',
   'profile', 'extrude', 'revolve', 'loft', 'sweep', 'polygon',
-  'offset', 'convexHull', 'compound',
-  'volume', 'measureVolume', 'area', 'measureArea', 'bounds3D',
+  'compound',
+  'measureVolume', 'measureArea', 'bounds3D',
   'ok', 'err', 'isOk', 'isErr',
+] as const
+
+/**
+ * Ops that left the ① face in faijs 0.35.x. They live on the generated
+ * script-face submodule — presence there is what generated code may rely on.
+ */
+const MOVED_OFF_TS_FACE = [
+  'torus', 'ellipsoid', 'mirror', 'offset', 'convexHull', 'volume', 'area',
 ] as const
 
 describe('probe: faijs capability (static, three faces)', () => {
@@ -55,12 +69,19 @@ describe('probe: faijs capability (static, three faces)', () => {
     expect(missing).toEqual([])
   })
 
+  it.skipIf(genFace === null)('ops that left the ① face in 0.35.x live on the generated script-face submodule', () => {
+    const set = genFace as Set<string>
+    const missing = MOVED_OFF_TS_FACE.filter((op) => !set.has(op))
+    expect(missing).toEqual([])
+  })
+
   it.skipIf(tsFace === null)('the ① face gap is exactly `polyhedron` (of the probed set)', () => {
     const set = tsFace as Set<string>
     expect(set.has('polyhedron')).toBe(false)
-    // `convexHull` exists but is a POINT-SET hull (kernel method `hullFromPoints`),
-    // NOT an OpenSCAD `hull()` over shapes — presence is not equivalence.
-    expect(set.has('convexHull')).toBe(true)
+    // 0.35.x: `convexHull` also left the ① face (see MOVED_OFF_TS_FACE) — it is
+    // on the generated script-face submodule, and it is a POINT-SET hull
+    // (kernel method `hullFromPoints`), NOT an OpenSCAD `hull()` over shapes.
+    expect(set.has('convexHull')).toBe(false)
   })
 
   it.skipIf(scriptFace === null)('every P0 op we emit exists on the cad script face', () => {
@@ -102,7 +123,7 @@ describe('probe: faijs capability (runtime, opt-in)', () => {
     // Pinned so that if faijs renames or re-scopes this internal object, the
     // capability table and every probe built on it must be re-reviewed.
     expect(loaded.cad.box).toBeTypeOf('function')
-    expect(loaded.cad.mirror).toBeUndefined() // ① face has it; `mod.cad` does not
+    expect(loaded.cad.mirror).toBeUndefined() // generated script face has it; `mod.cad` does not
     expect(keys.some((k) => k.endsWith('Brep'))).toBe(true)
   })
 })

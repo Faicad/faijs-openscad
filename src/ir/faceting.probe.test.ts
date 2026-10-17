@@ -88,7 +88,7 @@ describe.skipIf(!runtimeEnabled)('probe: faijs sphere is analytically exact (BRE
     sphere = face.sphere
     await initOcctWasm()
     await registerOcctBrepEngine()
-    const engine = await getBrepEngine()
+    const engine = await getBrepEngine('occt')
     configureBackends({
       contractVersion: CONTRACT_VERSION,
       config: {

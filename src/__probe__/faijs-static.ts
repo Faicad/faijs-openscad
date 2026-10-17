@@ -105,6 +105,21 @@ export function tsCompatFaceSymbols(): Set<string> | null {
   return out.size > 0 ? out : null
 }
 
+/**
+ * 生成器 script-face 子入口（`@faicad/faijs/api/generated/script-face`）的导出名集合。
+ *
+ * faijs 0.35.x 起，`torus` / `ellipsoid` / `mirror` / `offset` / `convexHull` /
+ * `volume` / `area` 等不再从包根 ① 面 re-export，只在这个子入口和 ② 脚本面上保留。
+ * `package.json` 的 `"./api/*"` 通配导出使其对第三方 TS 作者仍可达。
+ */
+export function generatedScriptFaceSymbols(): Set<string> | null {
+  const dist = faijsDistDir()
+  if (!dist) return null
+  const out = new Set<string>()
+  collectExports(join(dist, 'api', 'generated', 'script-face.d.ts'), out, new Set(), 0)
+  return out.size > 0 ? out : null
+}
+
 /** Unit constants exported by faijs (MM, CM, INCH, DEGREE, RADIAN, ...). */
 export function unitConstants(): Map<string, string> | null {
   const dist = faijsDistDir()

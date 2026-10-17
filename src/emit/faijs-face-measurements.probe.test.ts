@@ -43,7 +43,10 @@ function isShapeLike(v: unknown): v is { positions: number[]; indices: number[] 
 
 beforeAll(async () => {
   if (!enabled) return
-  F = (await import('@faicad/faijs')) as unknown as Face
+  // 0.35.x: `volume` / `convexHull` moved off the package root into the
+  // generated script-face submodule — merge it in so the probe's F stays flat.
+  const sf = await import('@faicad/faijs/api/generated/script-face')
+  F = { ...(await import('@faicad/faijs')), volume: sf.volume, convexHull: sf.convexHull } as unknown as Face
   const { initOcctWasm } = await import('@faicad/faijs/occt-kernel/occtKernel')
   const { registerOcctBrepEngine } = await import('@faicad/faijs/brep/engine/adapters/occt')
   const { getBrepEngine, getActiveBrepEngineId } = await import('@faicad/faijs/brep/engine/registry')
@@ -51,7 +54,7 @@ beforeAll(async () => {
 
   await initOcctWasm()
   await registerOcctBrepEngine()
-  const engine = await getBrepEngine()
+  const engine = await getBrepEngine('occt')
   engineId = getActiveBrepEngineId() ?? ''
 
   configureBackends({
