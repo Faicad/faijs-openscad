@@ -1,6 +1,36 @@
-# 2026-10-17 进度：faijs 0.35.8 升级 + 字体跨平台修复 + offset2d 调查
+# 2026-10-17 进度：faijs 0.35.8 升级 + 字体跨平台修复 + DXF 链路打通
 
-> 状态：ERROR 21 → 12（text 类全解锁），offset2d 确认为上游缺陷暂缓
+> 状态：PASS 6 → **9**（+example011 polyhedron、+example013、+example008），
+> ERROR 21 → 10，FAIL 22 → 20，PASS-NT 8，PASS-ANALYTIC 2
+>
+> ## ⚡ 接手者快速导读（先读这里）
+>
+> **总目标**：50 个 OpenSCAD examples 全部转成 faijs 并在五维容差内对账
+> （口径见 `2026-10-10-progress-summary-and-roadmap.md` §0）。
+>
+> **当前战绩**：PASS 9 + PASS-ANALYTIC 2 + PASS-NT 8（4 例缺参考 STL 可补）
+> + FAIL 20 + ERROR 10。代码生成 50/50 已达成，卡在执行/对账。
+>
+> **验证入口**（都要先 `npm run build` 重建 ext，改了 faijs core 还要重装 tgz：
+> `cd faijs && npm run build -w @faicad/faijs && cd packages/core && npm pack
+> --pack-destination ../..` 然后 faijs-openscad 侧 `npm i ../faijs/faicad-faijs-0.35.8.tgz`）：
+> - 全量对账：`npx tsx tests/run-parity.ts --json out.json --md out.md`
+>   （`--only <子串>` 单例复跑；单例超 5 分钟改用 `bash_start` 后台跑）
+> - 单测：`npx vitest run`（faijs core 侧在 `packages/core/test/`）
+>
+> **下一步方向（按性价比排序，详细根因见下文 §6.3/§7）**：
+> 1. **boolean cut 内核失败**（example012/016，2 例）——`subtract: kernel cut
+>    failed`，fuzzyValue 已加仍失败；DXF 面已能产出，此步打通即 +2 PASS 候选
+> 2. **补参考 STL**（example015 等 PASS-NT 4 例）——本机有 OpenSCAD 的话
+>    `openscad -o out.stl xxx.scad` 导出放进 `tests/fixtures/openscad-examples/stl/`
+> 3. **刻面密度类 FAIL**（IoU>0.99 约 14 例，最大的一块）——BREP 精确 vs
+>    OpenSCAD 刻面的表示差，靠导出时 per-primitive 刻面或 PASS-ANALYTIC 口径
+> 4. **上游内核缺陷**（offset2d×2、twistExtrude×2、revolve×1、applyMatrix×1、
+>    projectOutline×1）——等 occt-wasm/faijs 上游，或在 ext 层换实现绕开
+>
+> **本仓已钉死的坑**（改动前先看）：§3 offset2d 上游缺陷勿重查；
+> §6.2/6.3 DXF 的 BLOCK/INSERT/链式组环三连根因（faijs 侧测试已钉死）；
+> projection 容错加固会卡死内核（勿再加 healWire）。
 
 ## 1. faijs 0.35.8 升级后基线（`parity-2026-10-17-faijs0358.json`）
 
@@ -158,16 +188,18 @@ example013 ERROR→**FAIL**（能执行出 wire，三个 DXF 拉伸体求交后�
 **回归**：DXF 测试 13/13（新增 GOTCHA(insert) 与 GOTCHA(chain) 用例钉死
 两个根因）、SVG 46/46。
 
-## 7. 剩余 ERROR（12 例）根因表
+## 7. 剩余 ERROR（10 例）根因表（2026-10-17 深夜更新）
+
+> 已从本表移除：polyhedron wire 构造（✅ 已修，example011 PASS）、
+> DXF 解析 0 wire（✅ 已修，example013/008 PASS）、surface 数据文件缺失
+> （✅ 误报，文件本就存在）。
 
 | 根因 | 数量 | 归属 |
 |---|---|---|
-| offset2d（上游缺陷） | 2 | occt-wasm |
+| offset2d（上游缺陷，勿重查） | 2 | occt-wasm |
 | twistExtrude sweepFull | 2 | occt-wasm sweep |
-| boolean subtract cut 失败 | 2 | 内核容差 |
-| polyhedron wire 构造 | 1 | ext 可修 |
-| DXF 解析 0 wire | 1 | ext 可修 |
+| boolean subtract cut 失败 | 2 | 内核容差（下一步首选） |
+| revolve 构造（example007，Y 轴 revolve 类型限制） | 1 | 待查 |
 | projectOutline makeFace | 1 | 待查 |
-| revolve 构造（example007） | 1 | 待查 |
 | applyMatrix | 1 | faijs |
-| surface 数据文件缺失 | 2 | fixture，本仓可修 |
+| surface 0 tris（section 对 sewn 实体返回空） | 1 | 内核层 |
