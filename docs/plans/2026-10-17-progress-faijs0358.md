@@ -125,6 +125,39 @@ polyline 段构建 `Curve2dObj`（bulge≠0 → `makeArc2dThreePoints`，拱点 
 example013 ERROR→**FAIL**（能执行出 wire，三个 DXF 拉伸体求交后仍 0 三角形——
 面化/求交层还有缺口，待查）。
 
+## 6.3 DXF 面化缺口攻坚（2026-10-17 深夜）——example013/008 转 PASS
+
+**二分定位过程**（runtime 内逐环）：
+1. 内核层链路全部正常（extrude 20000 → rotate → 两参 intersect 1777.78）
+2. runtime 内二分：extrude/translate/rotate 均 20 tris，唯 `cad.intersect` 三参数 → 0
+3. 但链式两两求交**也清零** → 求交语义无错，是**输入几何本身不对**
+4. 体积对账锁定根因：挤出体积 20000（截面积 200）vs 参考 61333——
+   **截面缺了 3/4**
+
+**真根因（两层，均已在 faijs `dxf-import.ts` 修复）**：
+- **INSERT 未展开**：example013.dxf 的几何在 BLOCKS 段块定义 `sub1`/`sub2`，
+  ENTITIES 段只有 4 个 INSERT（插入点 ±10、旋转 0/90/180/270）。此前只取了
+  一份未变换的块定义。现按「块基点缩放→旋转→平移到插入点」展开（支持
+  行列阵列 70/71×44/45），且 BLOCK/ENDBLK 头必须保留进 collected——
+  否则块收集循环拿不到块定义（实证：过滤块头让 blockDefs 恒空、展开全落空）。
+- **散边未组环**：展开后的 16 条 LINE 一次性丢给 makeWire，拓扑不连续产出
+  错误形状（86500 vs 61333）。改为**贪心端点链式组环**（OpenSCAD DXF 导入
+  同语义）：按端点匹配（1e-6 容差）延伸成环、支持反向边（弧反向用三点弧
+  makeArcEdge，避免角度对调取到补弧）；圆单边成环不进散边池。
+
+**结果**：
+| 例子 | 之前 | 现在 |
+|---|---|---|
+| example013 | FAIL（0 tris） | **PASS**（180 tris, volΔ=0, IoU=1.0） |
+| example008 | FAIL（volΔ 84%） | **PASS**（volΔ=0, IoU=1.0） |
+
+其余 DXF 例的剩余错误与 DXF 无关：007 revolve 构造失败（Y 轴 revolve 类型
+限制）、009 twistExtrude sweepFull（OCCT sweep 缺陷）、012/016 boolean cut
+内核失败（fuzzyValue 已加仍失败，需查 cut 路径）、015 无参考 STL。
+
+**回归**：DXF 测试 13/13（新增 GOTCHA(insert) 与 GOTCHA(chain) 用例钉死
+两个根因）、SVG 46/46。
+
 ## 7. 剩余 ERROR（12 例）根因表
 
 | 根因 | 数量 | 归属 |
