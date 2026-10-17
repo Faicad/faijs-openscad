@@ -72,8 +72,14 @@ GEB/offset ERROR（offset2d 上游缺陷）。
 - **第二层根因**：example013.dxf 的几何全在 **BLOCKS 段**（ENTITIES 只留 INSERT
   引用），新旧解析器都只扫 ENTITIES 所以拿到 0 实体。现同时扫 BLOCKS+ENTITIES
 - 子路径导出 `@faicad/faijs/brep/dxf/dxf-import`；回归测试 8/8
-- **SVG 对齐核实**：faijs brep 链已与 brepjs 语义一致（A 命令三点圆弧算法注释
-  明确引用 brepjs createStandardArc；C/S/Q/T→makeBezierEdge），无需改码
+- **SVG 对齐核实**：命令覆盖与精度已对齐（A 命令三点圆弧算法注释明确引用
+  brepjs createStandardArc；C/S/Q/T→makeBezierEdge）。
+  ⚠️ **实现偏差留档（2026-10-17，用户指正）**：svg-to-solid 绕过了 faijs 自己的
+  `geometry2d/` 层（curve2d.ts 的 Line2d/Circle2d/Bezier2d/… + Blueprint +
+  BlueprintSketcher——与 brepjs 同源的抽象）直接用 3D edge/makeWire 手搓平行
+  管线。有现成 2D 曲线层却不用，是实现偏差而非设计选择；后续应把 svg-to-solid
+  迁到 geometry2d 上（brepjs 的 Curve2D/Blueprint 即目标形态），DXF 的 bulge
+  三点圆弧也可经同一入口解决。
 
 **faijs-openscad ext 接线**：`loadDXF` 优先走 faijs `importDxf`（createRequire
 动态加载，旧 faijs 无该模块时降级到 ext 旧解析器），公共尾段抽为 `facesFromWires`。
