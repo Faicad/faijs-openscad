@@ -91,6 +91,28 @@ const os = existsSync(OPENSCAD_BIN) ? OPENSCAD_BIN : undefined
 const scadFiles = collectScad(EXAMPLES_ROOT)
 const entries: RefStlEntry[] = []
 const failures: Array<{ name: string; error: string }> = []
+/** Check-mode only: examples whose on-disk hash differs from the baseline. */
+const mismatches: Array<{ name: string; error: string }> = []
+const hashFile = join(here, 'ref-stl-hashes.json')
+
+/** Recorded hash baseline (check mode): example name → sha256. */
+function loadHashBaseline(): { hashes: Map<string, string>; knownFailures: Set<string> } | null {
+  try {
+    const parsed = JSON.parse(readFileSync(hashFile, 'utf8')) as {
+      entries?: Array<{ name: string; hash: string }>
+      failedExamples?: Array<{ name: string }>
+    }
+    if (!Array.isArray(parsed.entries)) return null
+    return {
+      hashes: new Map(parsed.entries.map((e) => [e.name, e.hash])),
+      knownFailures: new Set((parsed.failedExamples ?? []).map((e) => e.name)),
+    }
+  } catch {
+    return null
+  }
+}
+
+const baseline = CHECK ? loadHashBaseline() : null
 
 if (!os) {
   console.error(`OpenSCAD not found at ${OPENSCAD_BIN}`)
@@ -112,14 +134,34 @@ for (const scadPath of scadFiles) {
   const stlPath = join(STL_OUT, stlName)
 
   if (CHECK) {
+    if (!baseline) {
+      console.error(`No readable hash baseline at ${hashFile} — generate it first.`)
+      process.exit(3)
+    }
     if (!existsSync(stlPath)) {
-      failures.push({ name: rel, error: 'stl file missing' })
-      console.log(`  MISSING: ${rel}`)
+      // Missing is only expected for examples the baseline already records as
+      // render failures (2D/empty output). Anything else is real drift.
+      if (baseline.knownFailures.has(rel)) {
+        console.log(`  SKIP: ${rel} (known render failure)`)
+      } else {
+        failures.push({ name: rel, error: 'stl file missing' })
+        console.log(`  MISSING: ${rel}`)
+      }
       continue
     }
     const hash = fileHash(stlPath)
     const bytes = statSync(stlPath).size
-    entries.push({ name: rel, stlPath, hash, bytes })
+    const recorded = baseline.hashes.get(rel)
+    if (recorded === undefined) {
+      mismatches.push({ name: rel, error: 'not present in baseline' })
+      console.log(`  UNKNOWN: ${rel} (${bytes} bytes)`)
+      continue
+    }
+    if (recorded !== hash) {
+      mismatches.push({ name: rel, error: 'hash differs from baseline' })
+      console.log(`  STALE: ${rel} (${bytes} bytes)`)
+      continue
+    }
     console.log(`  OK: ${rel} (${bytes} bytes)`)
     continue
   }
@@ -144,11 +186,26 @@ for (const scadPath of scadFiles) {
 }
 
 console.log('')
+if (CHECK) {
+  // `--check` verifies the on-disk STLs against the recorded baseline and
+  // NEVER writes it (the old implementation re-recorded on every run, which
+  // both made the check a no-op and clobbered the failure diagnostics).
+  const bad = failures.length + mismatches.length
+  console.log(`Checked ${scadFiles.length} examples against baseline: ${bad} differing`)
+  if (bad > 0) {
+    for (const f of [...failures, ...mismatches]) {
+      console.error(`  DIFFERS: ${f.name} — ${f.error}`)
+    }
+    console.error(`WARNING: ${bad} example(s) differ from the baseline`)
+    process.exit(1)
+  }
+  process.exit(0)
+}
+
 console.log(`Generated ${entries.length} ref.stl files, ${failures.length} failures`)
 
 // Write hash baseline (deterministic: no timestamp — otherwise every
 // regeneration changes the file and hash comparison becomes useless)
-const hashFile = join(here, 'ref-stl-hashes.json')
 const hashes = {
   openscadBin: os,
   count: entries.length,
