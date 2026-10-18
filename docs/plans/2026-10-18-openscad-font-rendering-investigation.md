@@ -1,9 +1,11 @@
 # 2026-10-18 调查：OpenSCAD 文字渲染度量缩放根因 + Windows 重渲染差异 + faijs 对齐方案
 
-> 状态：**调查完结，根因已定位并经四字体交叉验证**；faijs 侧对齐方案已设计（§8），待实施。
+> 状态：**调查完结，根因已定位并经双端交叉验证**；字体绑定已实施（§8：bundled
+> Liberation Sans 2.00.1 + font-loader 内置优先，6/6 测试 + dist + sign 端到端全过）。
+> 决策：faijs 上游**不复现** OpenSCAD 的缩放 bug，只在本项目 `packages/ext` 绑定同源字体。
 > 关联文档：`2026-10-17-progress-faijs0358.md` §2（字体跨平台修复 `ab13ae9`）。
 > 触发背景：用户在本机（Windows）全局安装了 OpenSCAD 2021.01，要求
-> ① 重跑全部参考 STL 找出平台差异；② **让 faijs 的文字渲染使用与 OpenSCAD 相同的字体，
+> ① 重跑全部参考 STL 找出平台差异；② **让文字渲染使用与 OpenSCAD 相同的字体，
 > 使最终 STL 可比**。
 
 ---
@@ -24,8 +26,11 @@
      代码注释原文："Not sure if overall scale factor of 1000/1024 is mistake"）
    - 即 OpenSCAD 渲染出的文字整体比正确度量**大约 39%**（水平字距还额外窄 2.4%）。
    Linux 时代的入库基线同样含此行为（两平台文字例子几何零差异，见 §2）。
-4. **对齐方案**（§8）：faijs 侧捆绑 OpenSCAD 同款 Liberation Sans 2.00.1（OFL 开源字体），
-   并在 text 管线上复现上述两个缩放因子，即可与 OpenSCAD 的 STL 逐字节口径对齐。
+4. **对齐方案（用户决策，已实施）**：faijs 上游**不复现**该缩放（通用库不背上游 bug）；
+   只在本项目 `packages/ext`（`@faicad/faijs-openscad-ext`）捆绑 OpenSCAD 同源的
+   开源字体 Liberation Sans 2.00.1（SIL OFL 1.1），font-loader 改为内置优先。
+   两侧实测互为倒数（我们 149.473mm vs OpenSCAD 203.004mm，比值 = 1/1.3581），
+   既消除字体身份差异，又把缩放差钉死为**可文档化的已知上游差异**（§7.3/§8.3）。
 
 ---
 
@@ -247,74 +252,105 @@ fontconfig 扫描路径；Windows 系统字体被发现的具体通道未深究�
 ### 7.1 我们的文字管线
 
 ```
-packages/ext/src/ops/text.ts
-  → font-loader.ts（"Liberation Sans" → Arial(win) / DejaVu(linux)，度量正确）
-  → @faicad/faijs textBlueprints（opentype.js 描轮廓 → OCCT 线 → 面）
+packages/ext/src/ops/text.ts                     （@faicad/faijs-openscad-ext，本仓库）
+  → font-loader.ts（字体文件解析）
+  → @faicad/faijs textBlueprints（opentype.js 描轮廓 → OCCT 线 → 面）  ← faijs 上游，不动
 ```
 
-### 7.2 与 OpenSCAD 的三处差距
+### 7.2 差距盘点
 
-| 维度 | OpenSCAD 2021.01 | faijs 现状 | 差距 |
+| 维度 | OpenSCAD 2021.01 | faijs（绑定前） | 处置 |
 |---|---|---|---|
-| 字体文件 | 自带 Liberation Sans 2.00.1（Regular/Bold） | Arial / DejaVu（映射） | **字体身份不同**（度量差 ~0.1%，且 Windows/Linux 不一致） |
-| 轮廓缩放 | ×100/72 | ×1（正确度量） | **所有文字大 38.9%** |
-| advance 缩放 | ×100/72/1.024 | ×1 | **字距宽 2.4%** |
+| 字体文件 | 自带 Liberation Sans 2.00.1 | Arial(win) / DejaVu(linux) 映射替代 | **已消除**：捆绑同源字体，见 §8 |
+| 轮廓缩放 | ×100/72 | ×1（正确度量） | **保留**：OpenSCAD 上游 bug，通用库不复现，见 §8.3 |
+| advance 缩放 | ×100/72/1.024 | ×1（正确度量） | **保留**：同上 |
 
-前两项是文字例子全 FAIL 的主因（第三项量小但同样导致顶点级不一致）。
-注意：**差距不在"谁对谁错"**——OpenSCAD 的 100 DPI 口径按常标准确是 bug；
-但 parity 的目标是复现 OpenSCAD 行为，所以 faijs 必须**主动复现这个缩放**。
+### 7.3 我们侧实测（2026-10-18，捆绑后）
+
+`text("Hamburgefonstiv", {size:20})` 经 `getBoundingBox` 实测：
+
+| 量 | 我们（Liberation Sans 2.00.1 捆绑） | OpenSCAD 参考 | 比值 |
+|---|---|---|---|
+| 总宽 | **149.473 mm** | 203.004 mm | 0.7363 = **1/1.3581** |
+| ink 高 | **18.643 mm** | 25.891 mm | 0.7200 = **1/1.3888** |
+
+两侧比值与 §5 推导的缩放因子（1.3581 / 1.3888）**互为倒数、精确吻合**——从"我们这一侧"
+独立印证了根因，也确认 faijs `textBlueprints` 用的是**正确字体度量**（不复现 OpenSCAD 的
+100 DPI 口径）。
+
+### 7.4 端到端影响实例：`Parametric/sign`
+
+绑定后首跑（`npx tsx tests/run-parity.ts --only Parametric__sign`）：
+
+```
+candidate: 10998 tris, vol=27369.1812
+reference:  3640 tris, vol= 27653.3076
+verdict: FAIL (volΔ=284.13, IoU=0.9587)
+```
+
+- 体积差仅 **1.03%**——不是因为文字一致，而是 sign 的文字体积只占牌子总体积约 1%
+  （文字 2D extrude 高度小，牌子是主体）；按 §7.2 的 39% 文字放大反推文字体积约 305mm³，量级吻合。
+- IoU 缺口 4% 来自两处：① 文字区尺寸差（OpenSCAD 上游缩放，见 §8.3）；
+  ② **tessellation 密度差**（候选 10998 tris vs 参考 3640 tris，密 3 倍）——这是独立于
+  字体的老问题（刻面密度类 FAIL，见 `2026-10-17-progress-faijs0358.md` §6.3）。
+- **绑定前此例是 ERROR**（字体 ENOENT / Arial 度量）；绑定后错误消除，残余差异全部可解释。
 
 ---
 
-## 8. faijs 对齐实施方案（待实施）
+## 8. 字体绑定方案（仅本项目 `packages/ext`，faijs 上游不动）
 
-### 8.1 捆绑开源字体
+> **决策（2026-10-18，用户明确）**：faijs 是通用 CAD 库，**不为 parity 复现 OpenSCAD 的
+> 100/72 缩放 bug**；只在本仓库的 OpenSCAD 扩展子库（`@faicad/faijs-openscad-ext`，
+> 即 `packages/ext`）里**绑定 OpenSCAD 同源的开源字体**，消除“字体身份”这一层差异。
+> 缩放差异作为已知的 OpenSCAD 上游行为记录在案（§8.3），不进库层。
 
-- 源：`C:/Program Files/OpenSCAD/fonts/Liberation-2.00.1/ttf/`（OpenSCAD 自带，与基准同源）
-- 目标：`packages/ext/fonts/LiberationSans-Regular.ttf` + `LiberationSans-Bold.ttf`
-- 许可：SIL OFL 1.1（开源可再分发），随附 `LICENSE` 与来源说明（`README` 或文件头注释注明
-  "Liberation Sans 2.00.1, digitized by Steve Mattison / Red Hat, OFL-1.1"）。
-- 覆盖 CSG 语料全部 font 规格：`""`（默认）、`"Liberation Sans"`、
-  `"Liberation Sans:style=bold"`/`":style=Bold"`（`logo_and_text.scad` 的默认 style）。
+### 8.1 捆绑字体（已完成）
 
-### 8.2 改造 `packages/ext/src/ops/font-loader.ts`
+- 源：`C:/Program Files/OpenSCAD/fonts/Liberation-2.00.1/ttf/`（OpenSCAD 2021.01 安装
+  目录自带，与参考 STL 渲染同源；**SIL OFL 1.1 开源字体**，允许捆绑再分发）
+- 落地：`packages/ext/fonts/`
+  - `LiberationSans-{Regular,Bold,Italic,BoldItalic}.ttf`（原封未动）
+  - `LICENSE`（OFL 1.1 全文，随附）
+  - `README.md`（来源、许可、解析优先级说明）
+- `packages/ext/package.json` 的 `files` 增加 `fonts`（随包分发）。
 
-解析优先级改为：
+### 8.2 `font-loader.ts` 解析优先级（已完成）
 
-1. 环境变量 override（保留现有测试逃生门）；
-2. **内置 Liberation Sans**（"Liberation Sans" 精确命中内置文件，不再映射 Arial/DejaVu；
-   `:style=bold`/`:style=Bold` → Bold 文件；`default`/`""` → Regular）；
-3. 系统字体 fallback（仅当内置缺失时，如用户自带自定义字体名的极端情况）。
-
-### 8.3 在 text 管线上复现 OpenSCAD 缩放
-
-在 `packages/ext/src/ops/text.ts`（或 faijs `textBlueprints` 的 opts）引入两个常量：
-
-```ts
-const OPENSCAD_OUTLINE_SCALE = 100 / 72        // ≈ 1.388889  轮廓坐标
-const OPENSCAD_ADVANCE_SCALE = 100 / 72 / 1.024 // ≈ 1.356534  pen advance
+```
+1. FAIJS_FONT_PATH / OPENSCAD_FONT_PATH env override（调试逃生门）
+2. 内置 Liberation Sans（packages/ext/fonts/）——"Liberation Sans" 及全部
+   :style=bold/italic/bold italic 变体；默认字体（OpenSCAD DEFAULT_FONT =
+   "Liberation Sans:style=Regular"）同样命中内置 Regular
+3. 系统字体（DejaVu / Arial / Times / Consolas）——仅内置缺失时兜底
 ```
 
-- 轮廓：opentype.js 输出的路径点（已按 size 归一化到 mm）整体乘 `OPENSCAD_OUTLINE_SCALE`；
-- 字距：每个字形的 advance 乘 `OPENSCAD_ADVANCE_SCALE`；
-- 垂直定位：`valign/halign` 的 offset 计算需与 OpenSCAD 同源——OpenSCAD 的
-  ascend/descend 取自**放大后**的 glyph bbox（`bbox.yMax * unscale`，见 §5.1 源码），
-  即垂直 offset 也带 1.3889 系数，实现时保持一致；
-- `spacing` 参数（OpenSCAD `spacing=`）同样乘在 advance 上，与源码
-  `width += glyph->get_x_advance() * params.spacing` 一致。
+实现要点：
 
-### 8.4 生成新基准并验证
+- `BUNDLED_FONT_DIR` 用 `import.meta.url` 相对定位（`../../fonts/`），
+  **src（vitest/tsx）与 dist（编译产物）双场景均验证通过**；
+- `parseFamilyStyle()` 解析 `family:style=xxx`（大小写不敏感），style 命中
+  bold/italic 组合映射到内置四款式；
+- 未捆绑的 family（`Liberation Mono/Serif`、`DejaVu *`）仍走原系统候选链，行为不变。
 
-1. 还原 §2.2 所述的被污染工作区；
-2. 无并发负载下用本机 OpenSCAD **全量重渲 50 例**（补 3 个超时例），
-   以几何度量为主判据核对（预期与入库基线几何一致）；
-3. `npm run build` 重建 ext，跑全量 parity，重点观察文字例子收敛情况：
-   `Advanced/children`、`Advanced/children_indexed`、`Advanced/GEB`、
-   `Basics/LetterBlock`、`Basics/logo_and_text`、`Basics/text_on_cube`、
-   `Basics/rotate_extrude`、`Functions/polygon_areas`、`Functions/recursion`、
-   `Parametric/sign`。
-4. 收敛后把这些例子的 STL 差异压到顶点级（预期残余差异只剩 OCCT 与 CGAL/FreeType
-   的轮廓离散化参数差——OpenSCAD 用 `$fn/$fa/$fs` 体系，我们侧是 ext 的 segments 参数）。
+### 8.3 为什么**不**复现 OpenSCAD 的 100/72 缩放
+
+1. **库的职责**：faijs 是通用 CAD 内核库，文字度量应遵循字体真实度量；为对账去复现
+   一个被上游注释标为“疑似笔误”（§5.1）的 DPI 口径，会把 bug 固化进通用库的所有用户。
+2. **对账口径**：parity 的目标不是“与 OpenSCAD 的每一点逐字节相同”，而是在五维容差内
+   等价。文字例子的尺寸差（我们 149.5 vs OpenSCAD 203.0，§7.3）是**可命名、可量化、
+   可文档化的已知上游差异**，应在 parity 报告中标注为 known-difference 类
+   （类似历史上对 offset2d/twistExtrude 上游缺陷的处理方式），而不是让库迁就。
+3. 若未来要追求逐字节级文字 parity，正解是在**对账层**加一个“OpenSCAD 度量兼容开关”
+   （渲染时按 §5.2 的两个因子缩放候选或参考），而非污染 text 管线——**当前不做，记录备选**。
+
+### 8.4 验证结果（已完成）
+
+| 验证 | 结果 |
+|---|---|
+| `tests/parity/font-loader.test.ts`（重写：内置优先 + 四款式 + 兜底语义） | **6/6 通过** |
+| dist 场景（`node` 直接 import `dist/ops/font-loader.js`） | 全部解析到内置文件 ✓ |
+| `Parametric/sign` 端到端 parity | ERROR → FAIL（volΔ 1.03%，差异全部可解释，§7.4） |
+| `npm run build`（ext 包 `tsc -p tsconfig.build.json`） | 干净通过 |
 
 ---
 
@@ -322,14 +358,13 @@ const OPENSCAD_ADVANCE_SCALE = 100 / 72 / 1.024 // ≈ 1.356534  pen advance
 
 | # | 事项 | 状态 |
 |---|---|---|
-| 1 | 还原被 generate 模式覆盖的工作区（25 个 STL + `ref-stl-hashes.json`） | 待办 |
-| 2 | 无并发负载重渲 3 个超时例（`example006`/`example024`/`candleStand`） | 待办 |
-| 3 | 提交 `tests/gen-ref-stl.ts` 的 `--check` 语义修复（loadHashBaseline，只读比对）——**该改动目前仍在工作区未提交** | 待办 |
-| 4 | §8.1 捆绑 Liberation Sans 2.00.1（OFL）到 `packages/ext/fonts/` | 待办 |
-| 5 | §8.2 font-loader 改为内置优先 | 待办 |
-| 6 | §8.3 text.ts 复现双缩放 | 待办 |
-| 7 | 全量 parity 重跑 + 文字例子收敛验证 | 待办 |
-| 8 | 清理临时探针：`tests/tmp-*.ts`、`tests/tmp-fc/`、`tests/tmp-*.scad/stl`、`tests/tmp-win-diff-report.txt`、`WINDOWSTEMPDIR_FONTCONFIG/`、`.gitignore` 的 stl-win 行、每用户字体目录里已移走的备份（`tests/tmp-fc/font-backup/`） | 待办 |
+| 1 | 捆绑 Liberation Sans 2.00.1（OFL）到 `packages/ext/fonts/` + font-loader 内置优先 | **✅ 已完成**（§8.1/8.2，6/6 测试 + dist 验证 + sign 端到端） |
+| 2 | 提交 `tests/gen-ref-stl.ts` 的 `--check` 语义修复（loadHashBaseline，只读比对）——该改动目前仍在工作区未提交 | 待办 |
+| 3 | 还原被 generate 模式覆盖的工作区（25 个入库 STL + `ref-stl-hashes.json` 39 entries） | 待办 |
+| 4 | 无并发负载重渲 3 个超时例（`example006`/`example024`/`candleStand`） | 待办 |
+| 5 | 全量 parity 重跑：确认文字例子 ERROR 归零、残余 FAIL 按 §7.4/§8.3 归类（已知缩放差 + 刻面密度） | 待办 |
+| 6 | parity 报告层面对文字例子增加 known-difference 标注口径（可选，§8.3 备选项的轻量版） | 待议 |
+| 7 | 清理临时探针：`tests/tmp-*.ts`、`tests/tmp-*.mjs`、`tests/tmp-fc/`、`tests/tmp-*.scad/stl`、`tests/tmp-win-diff-report.txt`、`WINDOWSTEMPDIR_FONTCONFIG/`、`.gitignore` 的 stl-win 行、每用户字体目录移出备份（`tests/tmp-fc/font-backup/`） | 待办 |
 
 ---
 

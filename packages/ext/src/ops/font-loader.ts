@@ -4,18 +4,28 @@
  * faijs's fontRegistry uses a FontLoader interface (dependency injection) to
  * abstract away how font binaries are obtained. In Node, we read from disk.
  *
- * Font name mapping: OpenSCAD defaults to "Liberation Sans". We resolve each
- * family against a per-platform candidate list and return the FIRST file that
- * actually exists on this machine (the old implementation hardcoded Linux
- * `/usr/share/fonts/dejavu/...` paths, which on Windows resolve to a bogus
- * `D:\usr\...` and make every text op fail with ENOENT).
+ * Font resolution order:
+ *   1. FAIJS_FONT_PATH / OPENSCAD_FONT_PATH env override (debugging escape hatch)
+ *   2. BUNDLED Liberation Sans 2.00.1 (../fonts/, SIL OFL 1.1) — the same font
+ *      files the OpenSCAD 2021.01 reference renders were produced with.
+ *      OpenSCAD's DEFAULT_FONT is "Liberation Sans:style=Regular" and every
+ *      font= spec in the CSG corpus is Liberation Sans (regular/bold), so the
+ *      bundle covers the whole corpus. Bundling removes the old per-platform
+ *      guessing (Arial on Windows, DejaVu on Linux) that made text geometry
+ *      machine-dependent, and eliminates the old hardcoded-Linux-path bug
+ *      (`/usr/share/fonts/dejavu/...` → bogus `D:\usr\...` on Windows).
+ *   3. System fonts (DejaVu on Linux, Arial/Times/Consolas on Windows) — only
+ *      reached when the bundle is missing.
  *
- * Priority: FAIJS_FONT_PATH / OPENSCAD_FONT_PATH env override → exact file →
- * per-platform system fonts (Windows: Arial/Times/Consola are the
- * metric-closest equivalents; Linux: DejaVu).
+ * Note on OpenSCAD's text metrics: OpenSCAD 2021.01 scales glyph outlines by
+ * 100/72 and advances by 100/72/1.024 (an upstream quirk, documented in
+ * docs/plans/2026-10-18-openscad-font-rendering-investigation.md). That is
+ * OpenSCAD's behavior, not a font problem — faijs deliberately renders with
+ * correct font metrics and does NOT reproduce that scaling.
  */
 import { readFileSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { FontLoader } from '@faicad/faijs/brep/text/fontRegistry'
 
 function windowsFont(name: string): string {
@@ -23,9 +33,18 @@ function windowsFont(name: string): string {
   return join(win, 'Fonts', name)
 }
 
-/** Candidate file paths per font family, in preference order. */
+/**
+ * Bundled font directory (package-root `fonts/`).
+ *
+ * Resolved relative to this module so it works both from `src/ops/` (vitest via
+ * tsx) and from `dist/ops/` (compiled build) — both sit two levels below the
+ * package root.
+ */
+const BUNDLED_FONT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'fonts')
+
+/** Candidate file paths per font family, in preference order (system fallbacks). */
 const FONT_CANDIDATES: Record<string, string[]> = {
-  // Liberation → closest metric-compatible system equivalent
+  // Liberation → metric-compatible system equivalents (fallback only)
   'liberation sans': [
     '/usr/share/fonts/dejavu/DejaVuSans.ttf',
     '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
@@ -65,18 +84,54 @@ function envFontOverride(): string | undefined {
 }
 
 /**
+ * Split an OpenSCAD font string into family + style.
+ *
+ * OpenSCAD font strings look like "Liberation Sans", "Liberation Sans:style=Regular"
+ * or "Liberation Sans:style=Bold". We take the part before ":" as the family and
+ * normalise the remainder (dropping an optional "style=" prefix), lowercased.
+ */
+function parseFamilyStyle(nameOrPath: string): { family: string; style: string } {
+  const idx = nameOrPath.indexOf(':')
+  if (idx < 0) return { family: nameOrPath.trim().toLowerCase(), style: '' }
+  return {
+    family: nameOrPath.slice(0, idx).trim().toLowerCase(),
+    style: nameOrPath.slice(idx + 1).replace(/^style\s*=\s*/i, '').trim().toLowerCase(),
+  }
+}
+
+/** Bundled file name for a (family, style) pair, or null when not bundled. */
+function bundledFontFile(family: string, style: string): string | null {
+  if (family !== 'liberation sans') return null
+  const bold = style.includes('bold')
+  const italic = style.includes('italic')
+  if (bold && italic) return 'LiberationSans-BoldItalic.ttf'
+  if (bold) return 'LiberationSans-Bold.ttf'
+  if (italic) return 'LiberationSans-Italic.ttf'
+  return 'LiberationSans-Regular.ttf'
+}
+
+/** Bundled font path when it exists on disk, else null. */
+function bundledFontPath(family: string, style: string): string | null {
+  const file = bundledFontFile(family, style)
+  if (!file) return null
+  const path = join(BUNDLED_FONT_DIR, file)
+  return existsSync(path) ? path : null
+}
+
+/**
  * Resolve an OpenSCAD font name to an EXISTING file path.
  *
- * OpenSCAD font strings can be "Liberation Sans", "Liberation Sans:style=Regular",
- * or just a font family name. We normalise by taking the part before ":" and
- * lowercasing. Returns null when nothing exists — caller falls back to default.
+ * Order: exact file path → bundled Liberation Sans → system candidates.
+ * Returns null when nothing exists — caller falls back to default.
  */
 function resolveFontPath(nameOrPath: string): string | null {
   // If it's already a file path that exists, use it directly
   if (existsSync(nameOrPath)) return nameOrPath
 
-  // Normalise: take part before ":", strip whitespace, lowercase
-  const family = nameOrPath.split(':')[0].trim().toLowerCase()
+  const { family, style } = parseFamilyStyle(nameOrPath)
+
+  const bundled = bundledFontPath(family, style)
+  if (bundled) return bundled
 
   for (const candidate of FONT_CANDIDATES[family] ?? []) {
     if (existsSync(candidate)) return candidate
@@ -88,6 +143,9 @@ function resolveFontPath(nameOrPath: string): string | null {
 function defaultFontPath(): string | null {
   const override = envFontOverride()
   if (override && existsSync(override)) return override
+  // OpenSCAD's DEFAULT_FONT is "Liberation Sans:style=Regular" — bundled first.
+  const bundled = bundledFontPath('liberation sans', '')
+  if (bundled) return bundled
   for (const candidates of Object.values(FONT_CANDIDATES)) {
     for (const candidate of candidates) {
       if (existsSync(candidate)) return candidate
@@ -100,7 +158,7 @@ function toArrayBuffer(buf: Buffer): ArrayBuffer {
   return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
 }
 
-/** Create a FontLoader for Node environment using system fonts. */
+/** Create a FontLoader for Node environment using bundled + system fonts. */
 export function createNodeFontLoader(): FontLoader {
   return {
     loadDefaultFont(): Promise<ArrayBuffer> {
