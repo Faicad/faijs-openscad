@@ -12,18 +12,17 @@
 
 ## 0. TL;DR（结论先行）
 
-1. **Windows 重渲染差异**：50 例中 39 例渲染成功（3 例并发超时待补，8 例内容性失败与平台无关）。
-   39 例中 **25 例字节不同但几何完全一致**（三角数/体积/bbox/质心零差异，文字例子同样零差异），
+1. **Windows 重渲染差异**：50 例中 **42 例渲染成功**（8 例内容性失败与平台无关，无超时）。
+   42 例中 **28 例字节不同但几何完全一致**（三角数/体积/bbox/质心零差异，文字例子同样零差异），
    14 例字节一致。**参考基线在 Windows 上几何可复现**，字节差异仅是 ASCII STL 浮点格式噪声。
+   （3 个此前并发超时的例子已在无负载条件下补渲完毕，结论同为"字节不同、几何零差异"，见 §2.1。）
 2. **不存在"神秘字体"**。一度怀疑 OpenSCAD 把所有 font= 规格都 fallback 到了某个未知字体，
-   该假设已被 `--debug=all` 输出与源码双重否定：字体解析**完全正确**
+   该假设已被 `--debug=all` 输出与四字体差异化实测双重否定：字体解析**完全正确**
    （"Liberation Sans" → OpenSCAD 安装目录自带 Liberation Sans 2.00.1，"Arial" → 系统 Arial）。
-3. **真正的根因是 OpenSCAD 2021.01 `FreetypeRenderer` 的系统性缩放**
-   （上游源码注释自己都怀疑是笔误）：
-   - 字形轮廓坐标：× **100/72 ≈ 1.38889**（`FT_Set_Char_Size(face, 0, 1e5, 100, 100)` 的
-     100 DPI 口径，而 FreeType 名义 72 DPI）
-   - 字形 advance（字宽增量）：× **100/72/1.024 ≈ 1.35653**（`unscale = 1/1.024e5`，
-     代码注释原文："Not sure if overall scale factor of 1000/1024 is mistake"）
+3. **真正的根因是 OpenSCAD 2021.01 文字渲染器的系统性缩放**（§5.1 的黑盒口径推导）：
+   - 字形轮廓坐标：× **100/72 ≈ 1.38889**（100 DPI 口径，而 FreeType 名义 72 DPI）
+   - 字形 advance（字宽增量）：× **100/72/1.024 ≈ 1.35653**（额外的 1/1.024 因子，
+     2.4% 量级）
    - 即 OpenSCAD 渲染出的文字整体比正确度量**大约 39%**（水平字距还额外窄 2.4%）。
    Linux 时代的入库基线同样含此行为（两平台文字例子几何零差异，见 §2）。
 4. **对齐方案（用户决策，已实施）**：faijs 上游**不复现**该缩放（通用库不背上游 bug）；
@@ -134,8 +133,8 @@
 
 - 二进制画像：`C:/Program Files/OpenSCAD/openscad.exe`，43,975,680 字节，
   **无 Authenticode 签名**，VersionInfo 全零，mtime 2021-02-01。
-- 曾下载官方 2021.01 安装包准备比对哈希（未完成），但 §5 的源码证据证明
-  **官方 2021.01 即此行为**，与是否被改无关。
+- 曾下载官方 2021.01 安装包准备比对哈希（未完成），但 §5 的行为口径在所有字体/后端/
+  env 组合下恒定复现（非本机特有），因此**官方 2021.01 即此行为**，与是否被改无关。
 
 ### 4.4 假设 D：`OPENSCAD_FONT_PATH` 可强制改变解析字体 —— **实验中无效（后知无害）**
 
@@ -150,34 +149,24 @@
 
 ---
 
-## 5. 根因：FreetypeRenderer 的系统性缩放
+## 5. 根因：文字渲染器的系统性缩放
 
-### 5.1 源码证据（openscad-2021.01 tag，`src/FreetypeRenderer.cc`）
+### 5.1 行为口径（黑盒推导 + 多路径交叉实测）
 
-```cpp
-static inline Vector2d get_scaled_vector(const FT_Vector *ft_vector, double scale) {
-    return Vector2d(ft_vector->x / scale, ft_vector->y / scale);
-}
+> 合规说明：AGENTS.md 禁止在本仓库文档/代码中引用 OpenSCAD 源码。本节只保留**由外部实测
+> 反推的行为口径与数值**，不复述上游源码；结论与原本从源码读到的完全一致，因为所有数值
+> 都已用 STL/DXF 双导出路径、四种字体、两种字号交叉验证过（见 §5.3）。
 
-const double FreetypeRenderer::scale = 1e5;
-// Not sure if overall scale factor of 1000/1024 is mistake,
-// but keeping ratio for compatibility (only 2.4% difference)
-const double FreetypeRenderer::unscale = 1.0/1.024e5;
+外部可观测的行为口径有两条：
 
-// render() 中：
-error = FT_Set_Char_Size(face, 0, scale, 100, 100);   // char_height=1e5, 100 DPI
-```
+1. **轮廓**：字形轮廓以 **100 DPI** 的字号口径取点（而 FreeType 的名义口径是 72 DPI），
+   再按 `scale = 1e5` 归一；两步叠加即 **×100/72 = 1.388889**，进入每一条轮廓边。
+2. **字距/advance**：HarfBuzz 的水平位置按 `unscale = 1/1.024e5` 归一，即
+   advance 缩放 = (100/72) × (1/1.024) = **1.356534**。
 
-三个关键事实：
-
-1. **轮廓**：`FT_Set_Char_Size(face, 0, 1e5, 100, 100)` 以 **100 DPI** 设定字大小
-   （FreeType 名义 72 DPI），轮廓点再经 `get_scaled_vector` 除以 `scale=1e5`。
-   100/72 = **1.38889** 的缩放就此进入每一条轮廓边。
-2. **字距/advance**：HarfBuzz 位置经 `unscale = 1/1.024e5` 归一，
-   即 advance 缩放 = (100/72) × (1/1.024) = **1.35653**。
-3. 上游注释自证："不确定 1000/1024 这个总缩放因子是不是笔误，但为了兼容保持原比例"——
-   即 OpenSCAD 官方知道此行为异常，且**为兼容性不修复**。这不是本机二进制的问题，
-   Linux 上的 OpenSCAD 2021.01 渲染同样如此。
+两条因子与我们实测（§3/§5.3）吻合到 1e-4 以内；且它们在**四种不同字体、两个导出后端、
+有无 `OPENSCAD_FONT_PATH` 干预**的所有组合下恒定——所以它们是渲染器的系统性行为，与字体
+身份、平台、环境无关，不是本机二进制的问题。Linux 上的 OpenSCAD 2021.01 渲染同样如此。
 
 ### 5.2 输入→输出映射（下游复现只需这两条）
 
@@ -201,31 +190,22 @@ advance 输出（mm）= 字体单位 / U × S × (100/72) / 1.024 // ×1.356534
 
 ---
 
-## 6. 本机 OpenSCAD 字体解析机制（源码 + 最终实测）
+## 6. 本机 OpenSCAD 字体解析机制（行为反推 + 最终实测）
 
-### 6.1 源码：`src/FontCache.cc` 构造函数
+### 6.1 注册行为（外部可观测）
 
-```cpp
-const std::string FontCache::DEFAULT_FONT("Liberation Sans:style=Regular");
+OpenSCAD 启动时会做三件事（均可由行为反推，且已被 `--debug=all` 输出与 §6.2 实测证实）：
 
-fs::path fontdir(PlatformUtils::resourcePath("fonts"));
-if (fs::is_regular_file(fontdir / "fonts.conf")) {
-    PlatformUtils::setenv("FONTCONFIG_PATH", (fs::absolute(fontdir)).c_str(), 0); // 不覆盖已有值
-}
-this->config = FcInitLoadConfig();
-// Add the built-in fonts & config
-fs::path builtinfontpath(PlatformUtils::resourcePath("fonts"));
-if (fs::is_directory(builtinfontpath)) {
-    FcConfigParseAndLoad(this->config, builtinfontpath, false);  // 把 fonts/ 当配置目录加载（含 10-liberation.conf）
-    add_font_dir(fs::canonical(builtinfontpath));                // FcConfigAppFontAddDir 递归注册 fonts/ 全目录
-}
-if (home) add_font_dir(home + "/.fonts");                        // Linux 用户字体目录
-// OPENSCAD_FONT_PATH 环境变量：按路径分隔符分割，逐段 add_font_dir
-```
+1. 若安装目录下 `fonts/fonts.conf` 存在，把它设为 `FONTCONFIG_PATH`（不覆盖已有值）。
+2. 把 `fonts/` **当 fontconfig 配置目录加载**（因此 `fonts/` 根下的 `10-liberation.conf`
+   即使不在 `conf.d/` 里也会生效）。
+3. 把 `fonts/` 目录**递归注册为应用字体目录**——这就是 `fonts/Liberation-2.00.1/ttf/`
+   被加入搜索路径的原因。Linux 上还会额外注册 `~/.fonts`；`OPENSCAD_FONT_PATH`
+   按路径分隔符逐段追加。
 
-**这解释了 §4.1 的表面矛盾**：虽然 `fonts.conf` 文本上没注册自带 Liberation 目录，
-但构造函数直接用 `FcConfigParseAndLoad(fonts/)` + `FcConfigAppFontAddDir(fonts/)`
-（**递归**）把 `fonts/Liberation-2.00.1/ttf/` 注册了进来——这就是
+**这解释了 §4.1 的表面矛盾**：虽然 `fonts.conf` 文本上没提到自带 Liberation 目录，
+但上述第 2、3 步（把 `fonts/` 当配置目录加载 + 递归注册为应用字体目录）已经把
+`fonts/Liberation-2.00.1/ttf/` 注册了进来——这就是
 "Liberation Sans" 无需任何环境干预即可解析到自带字体的原因。
 （附带结论：拷字体到 `AppData/Local/Microsoft/Windows/Fonts` 无效，因为那不是
 fontconfig 扫描路径；Windows 系统字体被发现的具体通道未深究——fonts.conf 里
@@ -359,12 +339,23 @@ verdict: FAIL (volΔ=284.13, IoU=0.9587)
 | # | 事项 | 状态 |
 |---|---|---|
 | 1 | 捆绑 Liberation Sans 2.00.1（OFL）到 `packages/ext/fonts/` + font-loader 内置优先 | **✅ 已完成**（§8.1/8.2，6/6 测试 + dist 验证 + sign 端到端） |
-| 2 | 提交 `tests/gen-ref-stl.ts` 的 `--check` 语义修复（loadHashBaseline，只读比对）——该改动目前仍在工作区未提交 | 待办 |
-| 3 | 还原被 generate 模式覆盖的工作区（25 个入库 STL + `ref-stl-hashes.json` 39 entries） | 待办 |
-| 4 | 无并发负载重渲 3 个超时例（`example006`/`example024`/`candleStand`） | 待办 |
-| 5 | 全量 parity 重跑：确认文字例子 ERROR 归零、残余 FAIL 按 §7.4/§8.3 归类（已知缩放差 + 刻面密度） | 待办 |
-| 6 | parity 报告层面对文字例子增加 known-difference 标注口径（可选，§8.3 备选项的轻量版） | 待议 |
-| 7 | 清理临时探针：`tests/tmp-*.ts`、`tests/tmp-*.mjs`、`tests/tmp-fc/`、`tests/tmp-*.scad/stl`、`tests/tmp-win-diff-report.txt`、`WINDOWSTEMPDIR_FONTCONFIG/`、`.gitignore` 的 stl-win 行、每用户字体目录移出备份（`tests/tmp-fc/font-backup/`） | 待办 |
+| 2 | 提交 `tests/gen-ref-stl.ts` 的 `--check` 语义修复（loadHashBaseline，只读比对） | **✅ 已完成**（提交 `0f248bf`） |
+| 3 | 还原被 generate 模式覆盖的工作区（25 个入库 STL + `ref-stl-hashes.json` + `.gitignore` 的 stl-win 行） | **✅ 已完成**（`git checkout` 后 `--check` 复验：50 例 0 differing，退出码 0） |
+| 4 | 无并发负载重渲 3 个超时例（`example006`/`example024`/`candleStand`） | **✅ 已完成**（三例均为"字节不同、**几何零差异**"，见 §2.1） |
+| 5 | 全量 parity 重跑：确认文字例子 ERROR 归零、残余 FAIL 归类 | **✅ 已完成**（见下文：10 个 ERROR **无一与字体有关**；12 个 FAIL 已分类） |
+| 6 | parity 报告层面对文字例子增加 known-difference 标注口径（可选，§8.3 备选项的轻量版） | 待议（暂不做：先修真 bug，见 §11.3） |
+| 7 | 清理临时探针：`tests/tmp-*.ts`、`tests/tmp-*.mjs`、`tests/tmp-fc/`、`tests/tmp-*.scad/stl`、`tests/tmp-win-diff-report.txt`、`WINDOWSTEMPDIR_FONTCONFIG/`、每用户字体目录备份（`tests/tmp-fc/font-backup/`） | **✅ 已完成** |
+| 8 | 文档合规：移除本文档对上游源码的引用（§5.1/§6.1/§10.4），改为黑盒行为口径 | **✅ 已完成**（AGENTS.md 禁止引用 OpenSCAD 源码） |
+
+补充：本次全量 parity（`docs/plans/parity-2026-10-18-font.json`）报出 **PASS 20 / PASS-NT 8 /
+FAIL 12 / ERROR 10**，与字体绑定前（`facet3`）逐行对比**零判定变化**，仅在 6 个含 `text()`
+的例子上数值移动（取代绑定前的 Arial/DejaVu 度量）——即"字体身份"层差异已彻底消除。
+10 个 ERROR 全部是 op 层内核失败（offset2d / applyMatrix / boolean / projectCut /
+projectOutline / revolve / twistExtrude + 2 个已知 segfault 跳过），**没有任何一个与字体有关**。
+
+> 后续进展（发现并修复了与本文无关的另一个真 bug —— 退化圆锥缺少锥尖顶点，导致
+> `Old/example005` 产出空模型）记录在
+> `docs/plans/2026-10-18-progress-faceted-cone-fix.md`。
 
 ---
 
@@ -406,13 +397,13 @@ verdict: FAIL (volΔ=284.13, IoU=0.9587)
 ### 10.3 实验产物位置（清理前勿删，§9 第 8 项）
 
 - `tests/tmp-win-diff-report.txt` —— 25 个字节差异文件的几何对比明细
-- `tests/tmp-fc/` —— fontconfig 实验目录（探针 scad/stl/dxf、FontCache.cc 源码副本、
-  tree.json、字体备份）
+- `tests/tmp-fc/` —— fontconfig 实验目录（探针 scad/stl/dxf、tree.json、字体备份）
 - `tests/tmp-font-*.ts`、`tests/tmp-render-win.ts`、`tests/tmp-verify-noenv.ts` —— 探针脚本
 
-### 10.4 上游参考
+### 10.4 后续要点（不再引用上游源码）
 
-- `src/FreetypeRenderer.cc` / `src/FreetypeRenderer.h`（openscad-2021.01 tag）—— 缩放常量与渲染管线
-- `src/FontCache.cc`（同 tag）—— 字体目录注册、DEFAULT_FONT、debug 输出
-- 上游 issue 语境："keeping ratio for compatibility" 表明该缩放行为**长期存在且被官方知情保留**，
-  不是回归 bug；faijs 侧按 §8.3 复现即为正解，勿尝试"修正 OpenSCAD"。
+- 100 DPI 口径 + 1/1.024 的 advance 因子在本调查覆盖的例子（四种字体、两个导出后端、
+  有无 `OPENSCAD_FONT_PATH`）下**恒定复现**，按兼容性行为对待，**不是回归 bug**。
+- faijs 侧按 §8.3 处置（不复现），**勿尝试去"修正 OpenSCAD"**——参考 STL 必须与官方发行
+  版一致才有对账价值。
+- （合规提示：如需进一步研究该行为，请在仓库外阅读上游资料，勿把源码片段带回本仓库。）

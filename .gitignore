@@ -15,5 +15,7 @@ tests/fixtures/openscad-examples/**/*.fai.js
 .scratch/
 .workbuddy/
 .atomcode/
-.workbuddy
 .arts
+# parity 验证的一次性运行产物（日志与对账明细），总结性 md 文档仍入库
+docs/plans/*.log
+docs/plans/parity-*.json

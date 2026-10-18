@@ -27,7 +27,8 @@ type Vec3Arr = [number, number, number]
  * 的极值为 r·cos(π/n)（如 n=30 → 10·cos(6°)=9.9452），而非 r。参考 STL 实测
  * maxZ=9.9452 已证实此拓扑（见 docs/plans/2026-10-17-progress 进度文档 §10.4）。
  */
-function oscSphereGeometry(radius: number, segments: number): { vertices: Vec3Arr[]; faces: number[][] } {
+// 导出仅为回归测试（manifold / signed volume），不属于公开 API。
+export function oscSphereGeometry(radius: number, segments: number): { vertices: Vec3Arr[]; faces: number[][] } {
   const n = Math.max(3, Math.floor(segments))
   const rings = Math.max(1, Math.floor(n / 2))
   const cosHalf = Math.cos(Math.PI / n) // = cos(π/n)，顶/底封盖中心高度
@@ -61,8 +62,21 @@ function oscSphereGeometry(radius: number, segments: number): { vertices: Vec3Ar
   return { vertices, faces }
 }
 
-/** OpenSCAD 精确拓扑的刻面圆柱/圆锥/棱台（n 段 + 扇形封盖）。 */
-function oscCylinderGeometry(
+/**
+ * OpenSCAD 精确拓扑的刻面圆柱/圆锥/棱台（n 段 + 扇形封盖）。
+ *
+ * 2026-10-18 修复：
+ *  1. r=0 的退化分支（锥）原先直接把 `topStart` / `bottomStart` 当锥尖索引用，
+ *     但那条路径从未 push 过锥尖顶点 → 侧面面索引全部越界 → `polyhedron` 静默
+ *     丢弃非法面 → `openscad.cone(r,0,h)` 实际只剩底盖；非法壳喂给 `boolean fuse`
+ *     会让整个 union 静默产出空模型（`Old/example005` 候选 0 三角即由此而来）。
+ *  2. 常规分支的两个封盖缠绕也是反的（法向朝内）。此前没出事是因为非居中体的底心
+ *     恰位于原点（底盖对 signed volume 贡献恒为 0）且 OCCT ShapeFix 会纠正朝向，
+ *     但这是潜伏 bug。现在三个分支都是闭合、外法向一致的流形。
+ *
+ * 导出仅为回归测试（manifold / signed volume），不属于公开 API。
+ */
+export function oscCylinderGeometry(
   radiusBottom: number,
   radiusTop: number,
   height: number,
@@ -77,16 +91,15 @@ function oscCylinderGeometry(
   const hasBottom = radiusBottom > 0
   const hasTop = radiusTop > 0
 
-  let bottomStart = 0
+  const bottomStart = 0
   if (hasBottom) {
     vertices.push([0, 0, z0]) // 底心
-    bottomStart = 0
     for (let i = 0; i < n; i++) {
       const a = (i * 2 * Math.PI) / n
       vertices.push([radiusBottom * Math.cos(a), radiusBottom * Math.sin(a), z0])
     }
   }
-  let topStart = vertices.length
+  const topStart = hasBottom ? vertices.length : 0
   if (hasTop) {
     vertices.push([0, 0, z1]) // 顶心
     for (let i = 0; i < n; i++) {
@@ -95,43 +108,43 @@ function oscCylinderGeometry(
     }
   }
 
+  if (hasBottom) {
+    // 底盖（外法向朝 −Z）：与相邻侧壁的有向边反向配对，保证闭合流形
+    for (let i = 0; i < n; i++) {
+      const ni = (i + 1) % n
+      faces.push([bottomStart, bottomStart + 1 + ni, bottomStart + 1 + i])
+    }
+  }
+  if (hasTop) {
+    // 顶盖（外法向朝 +Z）
+    for (let i = 0; i < n; i++) {
+      const ni = (i + 1) % n
+      faces.push([topStart, topStart + 1 + i, topStart + 1 + ni])
+    }
+  }
+
+  // 侧壁：全部为外向法向。缺失的一端用锥尖顶点闭合（r=0 退化）。
   if (hasBottom && hasTop) {
-    // 侧壁（外法向：从底环外侧看逆时针）
     for (let i = 0; i < n; i++) {
       const ni = (i + 1) % n
       faces.push([bottomStart + 1 + i, topStart + 1 + ni, topStart + 1 + i])
       faces.push([bottomStart + 1 + i, bottomStart + 1 + ni, topStart + 1 + ni])
     }
-    // 底盖（外法向朝下）
-    for (let i = 0; i < n; i++) {
-      const ni = (i + 1) % n
-      faces.push([bottomStart, bottomStart + 1 + i, bottomStart + 1 + ni])
-    }
-    // 顶盖（外法向朝上）
-    for (let i = 0; i < n; i++) {
-      const ni = (i + 1) % n
-      faces.push([topStart, topStart + 1 + ni, topStart + 1 + i])
-    }
   } else if (hasBottom && !hasTop) {
-    // 锥尖在顶部
-    const apex = topStart
+    // 锥尖在顶部：先把锥尖顶点真正 push 进来（修复前此处是越界索引 → 侧壁被丢弃）
+    const apex = vertices.length
+    vertices.push([0, 0, z1])
     for (let i = 0; i < n; i++) {
       const ni = (i + 1) % n
       faces.push([bottomStart + 1 + i, bottomStart + 1 + ni, apex])
     }
-    for (let i = 0; i < n; i++) {
-      const ni = (i + 1) % n
-      faces.push([bottomStart, bottomStart + 1 + ni, bottomStart + 1 + i])
-    }
   } else if (!hasBottom && hasTop) {
-    const apex = bottomStart
+    // 锥尖在底部：同样显式 push 锥尖顶点（顶点排布：顶心, 顶环…, apex）
+    const apex = vertices.length
+    vertices.push([0, 0, z0])
     for (let i = 0; i < n; i++) {
       const ni = (i + 1) % n
       faces.push([apex, topStart + 1 + ni, topStart + 1 + i])
-    }
-    for (let i = 0; i < n; i++) {
-      const ni = (i + 1) % n
-      faces.push([topStart, topStart + 1 + i, topStart + 1 + ni])
     }
   }
   return { vertices, faces }
