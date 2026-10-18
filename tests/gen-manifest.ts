@@ -38,7 +38,6 @@ export interface ManifestEntry {
 
 export interface CorpusManifest {
   readonly generatedBy: string
-  readonly generatedAt: string
   readonly baseline: {
     readonly openscadCommit: string
     readonly faijsVersion: string
@@ -118,7 +117,6 @@ export function buildManifest(corpusRoot: string): CorpusManifest {
 
   return {
     generatedBy: 'faijs-openscad/tests/gen-manifest.ts',
-    generatedAt: new Date().toISOString(),
     baseline: {
       verificationCorpus: BASELINE.verificationCorpus.fixturesPath,
       faijsVersion: BASELINE.faijsVersion,

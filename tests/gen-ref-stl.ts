@@ -146,10 +146,10 @@ for (const scadPath of scadFiles) {
 console.log('')
 console.log(`Generated ${entries.length} ref.stl files, ${failures.length} failures`)
 
-// Write hash baseline
+// Write hash baseline (deterministic: no timestamp — otherwise every
+// regeneration changes the file and hash comparison becomes useless)
 const hashFile = join(here, 'ref-stl-hashes.json')
 const hashes = {
-  generatedAt: new Date().toISOString(),
   openscadBin: os,
   count: entries.length,
   failures: failures.length,

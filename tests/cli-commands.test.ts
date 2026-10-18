@@ -123,6 +123,31 @@ expect(manifest.counts.skipped).toBe(0)
     // compact mode note should be present
     expect(mr.notes).toContain('compact mode')
   })
+
+  it('manifest is deterministic — regeneration matches byte-for-byte', async () => {
+    // No timestamps in the manifest: two regenerations on any machine are
+    // identical, which keeps the committed file merge/rebase-proof.
+    await runCorpus({})
+    expect(await runCorpus({ check: true })).toBe(0)
+  })
+
+  it('manifest carries no generation timestamp', () => {
+    const manifestPath = join(here, 'manifest.json')
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+    expect(manifest).not.toHaveProperty('generatedAt')
+  })
+
+  it('--check reports a stale manifest with exit code 3', async () => {
+    await runCorpus({})
+    const manifestPath = join(here, 'manifest.json')
+    const original = readFileSync(manifestPath, 'utf8')
+    try {
+      writeFileSync(manifestPath, original.replace('"ported": 50,', '"ported": 49,'), 'utf8')
+      expect(await runCorpus({ check: true })).toBe(3)
+    } finally {
+      writeFileSync(manifestPath, original, 'utf8')
+    }
+  })
 })
 
 describe.skipIf(!hasCsg)('CLI run-cand command (T303)', () => {

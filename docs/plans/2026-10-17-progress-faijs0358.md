@@ -411,3 +411,41 @@ OpenSCAD 用位于 z=±r·cos(π/n) 的**平顶 n 边形**封盖，不是尖顶�
 
 **当前战绩：PASS 20 / PASS-NT 8 / FAIL 12 / ERROR 10**（基线 10/20/10）。
 测试 483 passed / 0 failed，typecheck 干净。
+
+---
+
+## 12. manifest.json 确定化：去掉 generatedAt 时间戳（2026-10-18 下午）
+
+### 12.1 动机
+
+rebase 到上游重写历史时，`tests/manifest.json` 撞冲突——两边都重新生成过
+corpus，唯一差异是 `generatedAt` 时间戳。每次 `corpus` 运行都改这一行，
+任何两个分支各跑一次必冲突。`tests/ref-stl-hashes.json` 同理（且更糟：
+hash 基线每次重生成都变，比对功能直接失效）。
+
+### 12.2 决策：去时间戳，而非文件不入库
+
+评估过「从 git 删除 + .gitignore」：不可取。manifest 是 plan §9.4 的三态
+治理记录，入库价值就在 PR diff 可审计；且 `tests/run-parity.ts` 直接读
+入库文件，删库会让新 clone ENOENT。其内容（状态/计数/直方图）本就是
+语料 + 转换器版本的纯函数，时间戳是唯一非确定性源——去掉即根除冲突类。
+（对照：`.fai.js` 不入库的先例适用于「一改整体重生成」的文件，manifest
+内容稳定，不属此类。）
+
+### 12.3 改动
+
+- `src/cli/commands/corpus.ts`：`CorpusManifest` 去掉 `generatedAt`；
+  实现此前声明未做的 `--check`（内存重建 → 与入库文件逐字节比对，
+   stale 返 3、一致返 0，不写文件）；不变式校验提前到两种模式之前。
+- `tests/gen-manifest.ts`、`tests/gen-ref-stl.ts`：同步去掉 `generatedAt`。
+- `tests/manifest.json` 重生成（与旧版仅差时间戳一行，内容零漂移）；
+  `tests/ref-stl-hashes.json` 外科式删行（本机无 OpenSCAD 二进制，
+  哈希/字节数原样保留）。
+- `package.json` 新增 `corpus:write` / `corpus:check` 脚本。
+- 新测试 3 例：重生成字节一致（`--check` 返 0）、manifest 无
+  `generatedAt` 属性守卫、篡改后 `--check` 返 3。
+
+### 12.4 验证
+
+两次重生成 `diff` 为空（字节一致）；`corpus:check` 对入库文件返 0、
+对篡改文件返 3；vitest 486 passed / 0 failed；tsc 干净。

@@ -16,7 +16,7 @@
  * Usage:
  *   faijs-openscad corpus [--check] [--json] [--openscad-bin <path>]
  *
- * Exit codes: 0 ok, 3 corpus incomplete.
+ * Exit codes: 0 ok, 3 corpus incomplete / manifest stale (`--check`).
  */
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { join, resolve, dirname } from 'node:path'
@@ -54,7 +54,6 @@ export interface CorpusManifestEntry {
 
 export interface CorpusManifest {
   readonly generatedBy: string
-  readonly generatedAt: string
   readonly converter: { name: string; version: string }
   readonly counts: Record<CorpusStatus, number>
   readonly entries: CorpusManifestEntry[]
@@ -109,21 +108,48 @@ export async function runCorpus(options: CorpusOptions = {}): Promise<number> {
     else skippedCount++
   }
 
+  // Verify manifest invariant: every blocked/skipped must have blockedBy
+  for (const e of entries) {
+    if (e.status !== 'ported' && e.blockedBy.length === 0) {
+      process.stderr.write(`corpus: INVARIANT VIOLATION — ${e.id} is ${e.status} without blockedBy\n`)
+      return 1
+    }
+  }
+
   const manifest: CorpusManifest = {
     generatedBy: `${CONVERTER_NAME} corpus`,
-    generatedAt: new Date().toISOString(),
     converter: { name: CONVERTER_NAME, version: CONVERTER_VERSION },
     counts: { ported: portedCount, blocked: blockedCount, skipped: skippedCount },
     entries,
   }
 
-  // Write manifest file
+  // Deterministic by construction: no timestamps, content is a pure function
+  // of (CSG corpus, converter version). Two regenerations on any machine are
+  // byte-identical, which keeps the committed file merge/rebase-proof.
+  const serialized = `${JSON.stringify(manifest, null, 2)}\n`
   const manifestPath = join(ROOT, 'tests', 'manifest.json')
-  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+
+  if (options.check) {
+    // `--check` (plan §9.4): verify only — the committed manifest must match
+    // regeneration byte-for-byte, otherwise it is stale.
+    const onDisk = existsSync(manifestPath) ? readFileSync(manifestPath, 'utf8') : ''
+    if (onDisk !== serialized) {
+      process.stderr.write(
+        'corpus: tests/manifest.json is stale (differs from regeneration).\n' +
+          'Refresh it with: npm run corpus:write\n',
+      )
+      return 3
+    }
+    if (!options.json) {
+      process.stdout.write(`corpus: tests/manifest.json up to date (${csgFiles.length} examples)\n`)
+    }
+  } else {
+    writeFileSync(manifestPath, serialized, 'utf8')
+  }
 
   if (options.json) {
     process.stdout.write(`${JSON.stringify(manifest, null, 2)}\n`)
-  } else {
+  } else if (!options.check) {
     process.stdout.write(
       `corpus: ${csgFiles.length} examples — ${portedCount} ported, ${blockedCount} blocked, ${skippedCount} skipped\n`,
     )
@@ -131,14 +157,6 @@ export async function runCorpus(options: CorpusOptions = {}): Promise<number> {
       const detail = e.blockedNodes.length > 0 ? ` [${e.blockedNodes.join(',')}]` : ''
       const notes = e.notes ? ` (${e.notes})` : ''
       process.stdout.write(`  ${e.status.toUpperCase().padEnd(7)} ${e.id}${detail}${notes}\n`)
-    }
-  }
-
-  // Verify manifest invariant: every blocked/skipped must have blockedBy
-  for (const e of entries) {
-    if (e.status !== 'ported' && e.blockedBy.length === 0) {
-      process.stderr.write(`corpus: INVARIANT VIOLATION — ${e.id} is ${e.status} without blockedBy\n`)
-      return 1
     }
   }
 

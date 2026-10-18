@@ -74,6 +74,8 @@
     "cli": "node dist/cli/main.js",
     "doctor": "node dist/cli/main.js doctor",
     "corpus:gen": "tsx tests/gen-manifest.ts",
+  "corpus:write": "tsx --eval \"import { runCorpus } from './src/cli/commands/corpus'; void (async () => { const code = await runCorpus({}); if (code !== 0) process.exitCode = code })()\"",
+  "corpus:check": "tsx --eval \"import { runCorpus } from './src/cli/commands/corpus'; void (async () => { const code = await runCorpus({ check: true }); if (code !== 0) process.exitCode = code })()\"",
     "baseline:check": "tsx tests/check-baseline.ts",
     "coverage": "tsx tests/coverage.ts"
   },
