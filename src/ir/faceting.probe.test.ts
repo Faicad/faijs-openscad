@@ -94,7 +94,6 @@ describe.skipIf(!runtimeEnabled)('probe: faijs sphere is analytically exact (BRE
       config: {
         mode: 'brep',
         brepEngineId: getActiveBrepEngineId(),
-        brepCapabilities: engine.capabilities,
       },
       kernel: { brep: engine.primitives, csg: undefined, sdf: undefined },
       fonts: undefined,

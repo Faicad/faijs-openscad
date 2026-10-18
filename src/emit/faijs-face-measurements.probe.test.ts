@@ -54,15 +54,11 @@ beforeAll(async () => {
   const engine = await getBrepEngine()
   engineId = getActiveBrepEngineId() ?? ''
 
-  // NOTE: `brepCapabilities` is the field everyone forgets — runtime.ts:577
-  // installs it as a getter reading the live brepChain, so a hand-written
-  // configureBackends that omits it silently loses every fused/history capability.
   configureBackends({
     contractVersion: CONTRACT_VERSION,
     config: {
       mode: 'brep',
       brepEngineId: engineId,
-      brepCapabilities: engine.capabilities,
     },
     kernel: { brep: engine.primitives, csg: undefined, sdf: undefined },
     fonts: undefined,
