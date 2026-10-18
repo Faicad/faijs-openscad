@@ -15,3 +15,5 @@ tests/fixtures/openscad-examples/**/*.fai.js
 .scratch/
 .workbuddy/
 .atomcode/
+.workbuddy
+.arts
