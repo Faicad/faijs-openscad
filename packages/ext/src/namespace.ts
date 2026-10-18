@@ -14,6 +14,7 @@ import { surfaceInterp, surface } from './ops/surface-interp'
 import { offset2d } from './ops/offset-hardened'
 import { text } from './ops/text'
 import { load } from './ops/load'
+import { sphere as facetedSphere, cylinder as facetedCylinder, cone as facetedCone } from './ops/faceted-primitives'
 import type { ShapeHandle, Vec3 } from 'occt-wasm'
 
 export interface OpenSCADNamespace {
@@ -37,6 +38,12 @@ export interface OpenSCADNamespace {
   surface(file: string, center?: boolean): Promise<ShapeHandle>
   /** K13: hardened 2D offset with recursive fallback on failure. */
   offset2d(profile: ShapeHandle, delta: number, chamfer: boolean): Promise<ShapeHandle>
+  /** K14: OpenSCAD 兼容刻面球（n 经线 × floor(n/2) 奇倍数纬环）。 */
+  sphere(radius: number, opts?: { segments?: number; center?: [number, number, number] }): Promise<ShapeHandle>
+  /** K15: OpenSCAD 兼容刻面圆柱 / 棱台（n 段 + 扇形封盖）。 */
+  cylinder(radius: number, height: number, opts?: { segments?: number; radiusTop?: number; centered?: boolean }): Promise<ShapeHandle>
+  /** K16: OpenSCAD 兼容刻面圆锥（半径可退化为锥尖）。 */
+  cone(radiusBottom: number, radiusTop: number, height: number, opts?: { segments?: number; centered?: boolean }): Promise<ShapeHandle>
 }
 
 export function createOpenSCADNamespace(): OpenSCADNamespace {
@@ -51,5 +58,8 @@ export function createOpenSCADNamespace(): OpenSCADNamespace {
     surfaceInterp,
     surface,
     offset2d,
+    sphere: facetedSphere,
+    cylinder: facetedCylinder,
+    cone: facetedCone,
   }
 }

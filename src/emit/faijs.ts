@@ -72,6 +72,11 @@ class Emitter {
   private readonly forceContainer: boolean
   /** Helpers needed (collected during emit, injected before body). */
   private readonly neededHelpers = new Set<'rect' | 'circle' | '__rect' | '__circle' | 'rands' | 'matMul' | '__len' | '__concat' | '__str' | '__cross' | '__unionChildren' | '__union' | '__each' | '__polygon' | '__ord' | '__search'>()
+  /**
+   * 当模型含 hull/projection 时置位：这些 ext 算子处理 faceted 多面体存在健壮性
+   * 缺陷，故基础体回退到 `cad.*` 光滑图元（与 2026-10-17 基线行为一致）。
+   */
+  private smoothPrimitives = false
 
   constructor(options: EmitOptions) {
     this.prefix = options.variablePrefix ?? 'part'
@@ -81,6 +86,7 @@ class Emitter {
   }
 
   run(model: IrModel): EmitResult {
+    this.smoothPrimitives = model.usesHullOrProjection === true
     const rootVar = this.emitNode(model.root)
 
     if (this.blocked.size > 0) {
@@ -273,15 +279,37 @@ class Emitter {
           node.id,
         )
       case 'sphere':
-        return this.assign(`await cad.sphere(${lengthLiteral(node.radius)}${this.optionsExpr({ segments: node.segments })})`, node.id)
-      case 'cylinder':
+        if (this.smoothPrimitives) {
+          // 含 hull/projection 的模型：回退光滑球，避免 faceted 多面体触发 ext 算子缺陷。
+          return this.assign(`await cad.sphere(${lengthLiteral(node.radius)}${this.optionsExpr({ segments: node.segments })})`, node.id)
+        }
+        // OpenSCAD 兼容刻面球（K14）：直接产出与 OpenSCAD 分段数一致的 faceted BREP，
+        // 避免 faijs cad.sphere 在 brep 模式下用光滑球 + 全局 angularDeflection 重新三角化
+        // 导致的「2× 纬度分辨率」偏差（刻面密度类 FAIL 根因）。
         return this.assign(
-          `await cad.cylinder(${lengthLiteral(node.radius)}, ${lengthLiteral(node.height)}${this.optionsExpr({ centered: node.centered, segments: node.segments })})`,
+          `await openscad.sphere(${lengthLiteral(node.radius)}, { segments: ${node.segments} })`,
+          node.id,
+        )
+      case 'cylinder':
+        if (this.smoothPrimitives) {
+          return this.assign(
+            `await cad.cylinder(${lengthLiteral(node.radius)}, ${lengthLiteral(node.height)}${this.optionsExpr({ centered: node.centered, segments: node.segments })})`,
+            node.id,
+          )
+        }
+        return this.assign(
+          `await openscad.cylinder(${lengthLiteral(node.radius)}, ${lengthLiteral(node.height)}, { centered: ${node.centered}, segments: ${node.segments} })`,
           node.id,
         )
       case 'cone':
+        if (this.smoothPrimitives) {
+          return this.assign(
+            `await cad.cone(${lengthLiteral(node.radiusBottom)}, ${lengthLiteral(node.radiusTop)}, ${lengthLiteral(node.height)}${this.optionsExpr({ centered: node.centered, segments: node.segments })})`,
+            node.id,
+          )
+        }
         return this.assign(
-          `await cad.cone(${lengthLiteral(node.radiusBottom)}, ${lengthLiteral(node.radiusTop)}, ${lengthLiteral(node.height)}${this.optionsExpr({ centered: node.centered, segments: node.segments })})`,
+          `await openscad.cone(${lengthLiteral(node.radiusBottom)}, ${lengthLiteral(node.radiusTop)}, ${lengthLiteral(node.height)}, { centered: ${node.centered}, segments: ${node.segments} })`,
           node.id,
         )
       case 'rect2d':

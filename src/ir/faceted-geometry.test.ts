@@ -78,21 +78,19 @@ describe('regularPolygonPoints', () => {
 })
 
 describe('facetedSphereGeometry', () => {
-  it('N=3 → 2 + 3*2 = 8 vertices, 3*3=9 faces', () => {
+  it('N=3 → 2 + 3*1 = 5 vertices, 2*3*1 = 6 faces (OpenSCAD: floor(n/2)=1 ring)', () => {
     const { vertices, faces } = facetedSphereGeometry(10, 3)
-    // Top pole + 2 rings * 3 + bottom pole = 8
-    expect(vertices).toHaveLength(8)
-    // Top cap (3) + middle strip (3*2=6) + bottom cap (3) = 12... wait
-    // Actually: top cap (n=3) + middle strips ((n-2)=1 * n * 2 = 6) + bottom cap (3)
-    // = 3 + 6 + 3 = 12
-    expect(faces).toHaveLength(12)
+    // Top pole + 1 ring * 3 + bottom pole = 5
+    expect(vertices).toHaveLength(5)
+    // Top cap (3) + middle strips (0) + bottom cap (3) = 6
+    expect(faces).toHaveLength(6)
   })
 
-  it('N=6 → 2 + 6*5 = 32 vertices, 6*6=36 faces', () => {
+  it('N=6 → 2 + 6*3 = 20 vertices, 2*6*3 = 36 faces (3 rings)', () => {
     const { vertices, faces } = facetedSphereGeometry(10, 6)
-    expect(vertices).toHaveLength(2 + 6 * 5)
-    // Top cap (6) + middle strips (4 * 6 * 2 = 48) + bottom cap (6) = 60
-    expect(faces).toHaveLength(6 + 48 + 6)
+    expect(vertices).toHaveLength(2 + 6 * 3)
+    // 2 * n * rings = 2 * 6 * 3 = 36
+    expect(faces).toHaveLength(36)
   })
 
   it('all vertices are on the sphere surface', () => {

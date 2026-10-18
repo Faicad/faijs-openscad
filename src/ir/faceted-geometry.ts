@@ -79,33 +79,33 @@ export function sphereFragments(
 /**
  * Generate vertices and triangular faces for a faceted sphere.
  *
- * OpenSCAD's sphere tessellation:
- * - Top pole vertex
- * - `fn` rings of `fn` vertices each (latitude steps)
- * - Bottom pole vertex
- * - Total vertices: 2 + fn * (fn - 1)
- * - Faces: fn (top cap) + fn * (fn - 2) (middle strips) + fn (bottom cap)
- *   = fn * fn
+ * **OpenSCAD 精确拓扑（2026-10-18 修正）**：
+ * OpenSCAD 的 `sphere($fn=n)` 产出 n 条经线（经度分片）与 `floor(n/2)` 条纬环，
+ * 纬环位于奇倍数极角 φ = (2j+1)·π/n（j = 0..rings-1），即均匀但错开半格分布。
+ * 这样保证每片三角的极角跨度一致，体积/表面积与 OpenSCAD 的刻面球一致。
+ *
+ * - 顶点：2 个极点 + n·rings 个环顶点
+ * - 面：顶盖 n + 中间带 2·n·(rings-1) + 底盖 n = 2·n·rings
+ * - 例：n=30 → rings=15 → 900 三角（旧实现用过满网格 n·(n-1)=870+极点，错误）
  *
  * @param radius - Sphere radius
- * @param segments - Number of segments (from $fn or computed)
+ * @param segments - Number of longitude segments (from $fn or computed)
  * @returns vertices and faces (each face is [v0, v1, v2])
  */
 export function facetedSphereGeometry(
   radius: number,
   segments: number,
 ): { vertices: Array<[number, number, number]>; faces: Array<[number, number, number]> } {
-  const n = segments
+  const n = Math.max(3, Math.floor(segments))
+  const rings = Math.max(1, Math.floor(n / 2))
   const vertices: Array<[number, number, number]> = []
   const faces: Array<[number, number, number]> = []
 
   // Top pole
   vertices.push([0, 0, radius])
-  // Rings: latitude from top to bottom
-  // OpenSCAD uses: for lat = 1..n-1, phi = lat * (pi / n)
-  //   z = r * cos(phi), ringRadius = r * sin(phi)
-  for (let lat = 1; lat < n; lat++) {
-    const phi = (lat * Math.PI) / n
+  // Latitude rings at odd-multiple polar angles: φ = (2j+1)·π/n
+  for (let j = 0; j < rings; j++) {
+    const phi = ((2 * j + 1) * Math.PI) / n
     const z = radius * Math.cos(phi)
     const ringR = radius * Math.sin(phi)
     for (let lon = 0; lon < n; lon++) {
@@ -124,46 +124,28 @@ export function facetedSphereGeometry(
   const topPole = 0
   const bottomPole = vertices.length - 1
 
-  // Top cap triangles (top pole → ring 0)
+  // Top cap triangles (top pole → first ring)
   for (let lon = 0; lon < n; lon++) {
     const nextLon = (lon + 1) % n
-    const ring0Start = 1 // first ring starts at vertex 1
-    faces.push([
-      topPole,
-      ring0Start + lon,
-      ring0Start + nextLon,
-    ])
+    faces.push([topPole, 1 + lon, 1 + nextLon])
   }
 
-  // Middle strips
-  for (let lat = 0; lat < n - 2; lat++) {
-    const ringStart = 1 + lat * n
-    const nextRingStart = 1 + (lat + 1) * n
+  // Middle strips (between consecutive rings)
+  for (let j = 0; j < rings - 1; j++) {
+    const ringStart = 1 + j * n
+    const nextRingStart = 1 + (j + 1) * n
     for (let lon = 0; lon < n; lon++) {
       const nextLon = (lon + 1) % n
-      // Two triangles per quad
-      faces.push([
-        ringStart + lon,
-        nextRingStart + lon,
-        nextRingStart + nextLon,
-      ])
-      faces.push([
-        ringStart + lon,
-        nextRingStart + nextLon,
-        ringStart + nextLon,
-      ])
+      faces.push([ringStart + lon, nextRingStart + lon, nextRingStart + nextLon])
+      faces.push([ringStart + lon, nextRingStart + nextLon, ringStart + nextLon])
     }
   }
 
   // Bottom cap triangles (last ring → bottom pole)
-  const lastRingStart = 1 + (n - 2) * n
+  const lastRingStart = 1 + (rings - 1) * n
   for (let lon = 0; lon < n; lon++) {
     const nextLon = (lon + 1) % n
-    faces.push([
-      bottomPole,
-      lastRingStart + nextLon,
-      lastRingStart + lon,
-    ])
+    faces.push([bottomPole, lastRingStart + nextLon, lastRingStart + lon])
   }
 
   return { vertices, faces }

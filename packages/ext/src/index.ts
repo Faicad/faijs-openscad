@@ -1,5 +1,5 @@
 /**
- * @faicad/faijs-openscad-ext â€?OpenSCAD extension library for faijs.
+ * @faicad/faijs-openscad-ext ï¿½?OpenSCAD extension library for faijs.
  *
  * Provides OpenSCAD-specific geometric operations (hull, polyhedron, twist
  * extrude, projection, surface interpolation, hardened offset) as a standalone
@@ -25,3 +25,4 @@ export { offset2d } from './ops/offset-hardened'
 export { connectEdgesToWires } from './ops/connect-edges'
 export { text } from './ops/text'
 export { load } from './ops/load'
+export { sphere as facetedSphere, cylinder as facetedCylinder, cone as facetedCone } from './ops/faceted-primitives'

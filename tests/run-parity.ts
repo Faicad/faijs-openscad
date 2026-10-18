@@ -268,10 +268,19 @@ async function main() {
   }
   console.log('')
 
-  // Examples that segfault the OCCT wasm process (twistExtrude sweepFull).
-  // These skip with a CRASH verdict to avoid killing the whole run.
+  // Examples that hang or segfault inside a blocking OCCT wasm call — no JS
+  // watchdog can interrupt a synchronous wasm call, so they must be skipped
+  // up front or the whole sweep stalls indefinitely.
+  //
+  // 2026-10-17: `twistExtrude` no longer routes twist == 0 through sweepFull
+  // (plain → extrude, tapered → loft), so non-twisted cases are cheap now.
+  // What remains here genuinely needs the helical sweep and is pathological.
   const CRASH_SKIP = new Set([
-    'Basics__linear_extrude.scad.csg',  // twistExtrude → sweepFull segfault
+    // twist = 90 and twist = -360 with scale = [0, 0] → sweepFull segfault
+    'Basics__linear_extrude.scad.csg',
+    // surface() over example010.dat: surfaceInterp + solid-with-walls stalls
+    // > 10 min (was a fast FAIL before the 0.35.8 rebuild — see plans doc §8).
+    'Old__example010.scad.csg',
   ])
 
   const entries: ParityEntry[] = []

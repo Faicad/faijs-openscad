@@ -137,6 +137,8 @@ class Lowerer {
   private bestFa: number | undefined
   private bestFs: number | undefined
   private maxSegments: number | undefined
+  /** K01/K08/K09：模型含 hull/projection 时置位，emit 据此回退 cad.* 光滑图元。 */
+  private usesHullOrProjection = false
 
   constructor(options: LowerOptions) {
     this.path = options.path
@@ -160,6 +162,7 @@ class Lowerer {
           ...(this.openscadVersion === undefined ? {} : { openscadVersion: this.openscadVersion }),
         },
         tessellation,
+        usesHullOrProjection: this.usesHullOrProjection,
       },
       diagnostics: this.bag.all(),
       tessellation,
@@ -674,6 +677,7 @@ class Lowerer {
 
   /** K01: hull → openscad.hull([children]) */
   private lowerHull(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
+    this.usesHullOrProjection = true
     this.reportUnknownArgs(node)
     const children = this.lowerChildren(node).filter((c) => c.kind !== 'empty')
     if (children.length === 0) return { kind: 'empty', id, origin }
@@ -758,6 +762,7 @@ class Lowerer {
 
   /** K08/K09: projection → openscad.projectCut or openscad.projectOutline */
   private lowerProjection(node: CsgNode, id: number, origin: IrOrigin): IrGeometry {
+    this.usesHullOrProjection = true
     this.reportUnknownArgs(node)
     const cut = this.boolArg(node, 'cut', false, id)
     if (cut === undefined) return { kind: 'empty', id, origin }

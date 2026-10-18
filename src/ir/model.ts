@@ -424,6 +424,13 @@ export interface IrModel {
   readonly functionDefs?: readonly IrFunctionDef[]
   /** 顶层变量赋值 `x = expr;`（结构化路径专用，展开路径为空数组）。 */
   readonly topBindings?: readonly { readonly name: string; readonly value: IrExpr }[]
+  /**
+   * 模型是否包含 `hull()` / `projection()`（K01/K08/K09）。这两个 ext 算子
+   * 在处理 faceted 图元（polyhedron 固化的多面体）时存在健壮性缺陷（如 hull
+   * 结果经 `applyMatrix` 时 occt-wasm transform 报错、projection 的 makeFace
+   * 失败）。故这类模型改用 `cad.*` 光滑图元，避免 faceted 路由引发的回归。
+   */
+  readonly usesHullOrProjection?: boolean
 }
 
 /** 深度优先前序遍历。 */
