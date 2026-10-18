@@ -24,6 +24,52 @@ const facetedSphereTriangles: StlTriangle[] = [
 // classification logic, we just need two meshes where one has
 // "smaller volume" (faceted) and one has "exact volume" (analytic).
 
+// Helper: closed box mesh centered at origin, 10x10x10 (volume 1000)
+function boxTriangles(h = 5): StlTriangle[] {
+  const c: Array<[number, number, number]> = [
+    [-h, -h, -h], [h, -h, -h], [h, h, -h], [-h, h, -h],
+    [-h, -h, h], [h, -h, h], [h, h, h], [-h, h, h],
+  ]
+  const quads: Array<[number, number, number, number]> = [
+    [0, 3, 2, 1], [4, 5, 6, 7], // bottom, top
+    [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], // sides
+  ]
+  const tris: StlTriangle[] = []
+  for (const [a, b, cc, d] of quads) {
+    tris.push({ v0: c[a], v1: c[b], v2: c[cc] })
+    tris.push({ v0: c[a], v1: c[cc], v2: c[d] })
+  }
+  return tris
+}
+
+// Helper: n-gon prism (circumradius r, height 2h) centered at origin.
+// With n divisible by 4 the vertices land on ±axes, so bbox == [-r,r]^2 x [-h,h]
+// (same bbox as boxTriangles(r)) while volume is smaller (inscribed polytope).
+function prismTriangles(n: number, r: number, h: number): StlTriangle[] {
+  const ring = (z: number) =>
+    Array.from({ length: n }, (_, i) => {
+      const th = (i * 2 * Math.PI) / n
+      return [r * Math.cos(th), r * Math.sin(th), z] as [number, number, number]
+    })
+  const top = ring(h)
+  const bottom = ring(-h)
+  const tris: StlTriangle[] = []
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n
+    tris.push({ v0: bottom[i], v1: bottom[j], v2: top[j] })
+    tris.push({ v0: bottom[i], v1: top[j], v2: top[i] })
+  }
+  // caps: triangle fans from center vertices (wound outward)
+  const topC: [number, number, number] = [0, 0, h]
+  const botC: [number, number, number] = [0, 0, -h]
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n
+    tris.push({ v0: topC, v1: top[i], v2: top[j] })
+    tris.push({ v0: botC, v1: bottom[j], v2: bottom[i] })
+  }
+  return tris
+}
+
 describe('classifyAnalytic', () => {
   it('no faceted primitives + metrics match → PASS', () => {
     const ref = computeMetrics([{ v0: [0, 0, 0], v1: [1, 0, 0], v2: [0, 1, 0] }])
@@ -33,17 +79,16 @@ describe('classifyAnalytic', () => {
   })
 
   it('low $fn + faceted volume < analytic → PASS-ANALYTIC', () => {
-    // Faceted (smaller volume) vs analytic (larger volume)
-    // Volume ratio: ref/cand ≈ 0.8 (faceted is smaller)
-    const ref = computeMetrics(facetedSphereTriangles)
-    // Make a "larger" candidate by scaling up slightly
-    const analyticTriangles = facetedSphereTriangles.map((t) => ({
-      v0: [t.v0[0] * 1.05, t.v0[1] * 1.05, t.v0[2] * 1.05] as const,
-      v1: [t.v1[0] * 1.05, t.v1[1] * 1.05, t.v1[2] * 1.05] as const,
-      v2: [t.v2[0] * 1.05, t.v2[1] * 1.05, t.v2[2] * 1.05] as const,
-    }))
-    const cand = computeMetrics(analyticTriangles)
+    // 参照（解析）：10³ 立方体；候选（刻面）：同 bbox 内接 12 边形棱柱
+    // （体积 750 < 1000）。bbox 完全一致（IoU=1）、质心都在原点，
+    // 仅体积/表面积差 25% —— 正是「BREP 解析 vs 内接多面体」的刻面差形态。
+    // （旧用例把候选整体放大 1.05 倍当「解析体」，bbox IoU=20³/21³≈0.864，
+    //  前提本身不成立，恒 FAIL；且 classifyAnalytic 从未使用 fn 参数。）
+    const ref = computeMetrics(boxTriangles(5))
+    const cand = computeMetrics(prismTriangles(12, 5, 5))
     const result = compareMetrics(ref, cand)
+    expect(result.verdict).toBe('FAIL') // 严格容差下不过（体积差 25%）
+    expect(result.bboxIoU).toBeGreaterThan(0.99)
     // hasFacetedPrimitives=true, fn=6 (< 32)
     expect(classifyAnalytic(result, true, 6)).toBe('PASS-ANALYTIC')
   })

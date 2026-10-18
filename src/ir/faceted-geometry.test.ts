@@ -93,22 +93,28 @@ describe('facetedSphereGeometry', () => {
     expect(faces).toHaveLength(36)
   })
 
-  it('all vertices are on the sphere surface', () => {
+  it('all ring vertices are on the sphere surface', () => {
     const r = 10
     const { vertices } = facetedSphereGeometry(r, 6)
-    for (const [x, y, z] of vertices) {
+    // 首/末为平顶封盖中心（z=±r·cos(π/n)，不在球面上），中间 n·rings 个为环顶点（在球面上）
+    const ringVerts = vertices.slice(1, -1)
+    expect(ringVerts).toHaveLength(6 * 3)
+    for (const [x, y, z] of ringVerts) {
       expect(Math.sqrt(x * x + y * y + z * z)).toBeCloseTo(r, 4)
     }
   })
 
-  it('top pole is at [0, 0, r]', () => {
-    const { vertices } = facetedSphereGeometry(10, 6)
-    expect(vertices[0]).toEqual([0, 0, 10])
-  })
-
-  it('bottom pole is at [0, 0, -r]', () => {
-    const { vertices } = facetedSphereGeometry(10, 6)
-    expect(vertices[vertices.length - 1]).toEqual([0, 0, -10])
+  it('caps are flat at z=±r·cos(π/n)（OpenSCAD 无真极点，实测参考 STL 标定）', () => {
+    const n = 6
+    const r = 10
+    const { vertices } = facetedSphereGeometry(r, n)
+    const capZ = r * Math.cos(Math.PI / n) // 8.6603
+    expect(vertices[0]).toEqual([0, 0, capZ])
+    expect(vertices[vertices.length - 1]).toEqual([0, 0, -capZ])
+    // OpenSCAD 刻面球最顶/底环即封盖所在，z 范围 [-r·cos(π/n), r·cos(π/n)]
+    const zs = vertices.map((v) => v[2])
+    expect(Math.max(...zs)).toBeCloseTo(capZ, 10)
+    expect(Math.min(...zs)).toBeCloseTo(-capZ, 10)
   })
 
   it('all face indices are valid', () => {

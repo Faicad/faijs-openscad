@@ -46,21 +46,21 @@ describe('emit: 3D 图元', () => {
     )
   })
 
-  it('sphere → cad.sphere(r, { segments })（球心在原点，与 OpenSCAD 同）', async () => {
+  it('sphere → openscad.sphere(r, { segments })（球心在原点，与 OpenSCAD 同）', async () => {
     const code = body(await transpile('sphere(r = 10);'))
-    expect(code).toContain('await cad.sphere(10 * MM')
+    expect(code).toContain('await openscad.sphere(10 * MM')
     expect(code).toContain('segments:')
   })
 
-  it('等半径 cylinder → cad.cylinder(r, h)；center 透传为 centered', async () => {
+  it('等半径 cylinder → openscad.cylinder(r, h)；center 透传为 centered', async () => {
     expect(body(await transpile('cylinder(h = 40, r1 = 5, r2 = 5, center = true);'))).toContain(
-      'await cad.cylinder(5 * MM, 40 * MM, { centered: true',
+      'await openscad.cylinder(5 * MM, 40 * MM, { centered: true',
     )
   })
 
-  it('变半径 cylinder → cad.cone(rBottom, rTop, h)（不交换 r1/r2）', async () => {
+  it('变半径 cylinder → openscad.cone(rBottom, rTop, h)（不交换 r1/r2）', async () => {
     expect(body(await transpile('cylinder(h = 30, r1 = 5, r2 = 0);'))).toContain(
-      'await cad.cone(5 * MM, 0 * MM, 30 * MM',
+      'await openscad.cone(5 * MM, 0 * MM, 30 * MM',
     )
   })
 

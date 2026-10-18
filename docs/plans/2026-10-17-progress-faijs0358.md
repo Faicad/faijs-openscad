@@ -1,17 +1,15 @@
 # 2026-10-17 进度：faijs 0.35.8 升级 + 字体跨平台修复 + DXF 链路打通
 
-> 状态（2026-10-18 刻面密度攻坚后，`parity-2026-10-18-facet2.json`）：
-> **PASS 18**（+8：6 例刻面基础体 example001/002/004/018/019/022
-> + logo/candleStand 两例 analytic→PASS），FAIL 20 → **14**，ERROR **10**
-> （hull/projection 回归已回退，无净损失），PASS-NT 8。代码生成 50/50，
-> 卡在执行/对账。
+> 状态（2026-10-18 球体拓扑再修正后，`parity-2026-10-18-facet3.json`）：
+> **PASS 20**（+2：Basics/CSG、Old/example012，球体平顶封盖拓扑修正），
+> FAIL 14 → **12**，ERROR **10**，PASS-NT 8。代码生成 50/50，卡在执行/对账。
 >
 > ## ⚡ 接手者快速导读（先读这里）
 >
 > **总目标**：50 个 OpenSCAD examples 全部转成 faijs 并在五维容差内对账
 > （口径见 `2026-10-10-progress-summary-and-roadmap.md` §0）。
 >
-> **当前战绩**：PASS 18 + PASS-NT 8 + FAIL 14 + ERROR 10（无 PASS-ANALYTIC
+> **当前战绩**：PASS 20 + PASS-NT 8 + FAIL 12 + ERROR 10（无 PASS-ANALYTIC
 > 分类——logo/candleStand 两例已并入 PASS）。代码生成 50/50 已达成，卡在执行/对账。
 >
 > **⚠️ 跑全量对账前必读**：`run-parity.ts` 的 `CRASH_SKIP` 现有两条
@@ -363,3 +361,53 @@ hull/projection 退化成 null 仅「跑过」为 FAIL）。
 → 刻面密度这一大类已彻底解决。剩余 5 个 sphere 相关 FAIL 的真实根因是
 hull/projection/boolean/revolve 等 **op 层缺陷**，属下一步「boolean/revolve/
 transform 类真·形状 bug」，与刻面密度无关，须单独攻。
+
+---
+
+## 11. 球体拓扑再修正：OpenSCAD 无真极点（平顶封盖）—— +2 PASS（2026-10-18 中午）
+
+### 11.1 现象
+
+§10 的「OpenSCAD 精确拓扑」修完刻面密度后，仍有两例卡在 bbox IoU：
+`Basics/CSG`（IoU=0.9945，vol/area/centroid 全过）与 `Old/example012`
+（IoU=0.9969）——都是「其余四维全过、唯独 bbox 微差」的形态。
+
+### 11.2 根因：OpenSCAD 的刻面球没有 ±r 顶点
+
+临时给 `run-parity.ts` 加 `BBOX_DEBUG` 逐轴对照（env 守卫，跑完已还原）：
+
+- candidate: z ∈ [-10, 10]（我们的封盖中心在 ±r）
+- reference: z ∈ [-9.9452, 9.9452]（= 10·cos(π/30)）
+
+解析参考 STL（ASCII）：`Basics/CSG.scad.stl` tris=3004，maxZ=9.945220，
+174 个顶点在 z=9.945，**无任何顶点在 z=10**。纬环序列 9.945(6°)、9.511(18°)、
+8.660(30°)… 确认环在奇倍数极角 φ=(2j+1)π/n，且**最顶/底环即封盖**——
+OpenSCAD 用位于 z=±r·cos(π/n) 的**平顶 n 边形**封盖，不是尖顶极点。
+§10 里「2 极点 + n·rings 环」的极点假设是自己的臆测，与真值不符。
+
+### 11.3 修法
+
+`facetedSphereGeometry`（src/ir）与 `oscSphereGeometry`（ext）的封盖中心
+从 `(0,0,±r)` 改为 `(0,0,±r·cos(π/n))`；面索引不变（仍指首/末顶点），
+三角数不变。单测改为断言平顶（`caps are flat at z=±r·cos(π/n)`），
+并删掉「顶点都在球面上」「极点在 ±r」等错误断言（环顶点才在球面上）。
+
+复跑（`parity-2026-10-18-facet3.json`）：**Basics/CSG、example012 FAIL→PASS**，
+`PASS 20 / FAIL 12 / ERROR 10`，零回归。
+
+### 11.4 顺带收拾的存量坏用例（本日测试全绿的前置）
+
+1. `src/emit/faijs.test.ts` 三例仍期望 `cad.sphere/cylinder/cone`——
+   §10 路由改 `openscad.*` 后未同步，更新期望。
+2. `faijsStaticCheck` 探针 `EXTRACT_OPTS.namespaces` 为空数组，把
+   `openscad` 当 SEC_FREE_IDENT 拒掉。补 `namespaces: ['openscad']`
+   （与 runtime 插件注册后的名单同形）；`tests/examples-transpile.test.ts`
+   的「extNs 必然失败」断言反转为「extNs 必须为空」。
+3. `src/parity/report.test.ts` 的 `classifyAnalytic` 用例前提不成立
+   （候选整体放大 1.05× 当「解析体」→ bbox IoU=0.864 恒 FAIL，且
+   `classifyAnalytic` 从未使用 `fn` 参数）。换成同 bbox 的「立方体 vs
+   内接 12 棱柱」（IoU=1、体积比 4/3、质心 0），真正复现
+   「BREP 解析 vs 内接多面体」的刻面差形态。
+
+**当前战绩：PASS 20 / PASS-NT 8 / FAIL 12 / ERROR 10**（基线 10/20/10）。
+测试 483 passed / 0 failed，typecheck 干净。

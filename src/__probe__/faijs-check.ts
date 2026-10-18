@@ -15,8 +15,15 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { faijsDistDir } from './faijs-static'
 
-/** 与 `runtime.execute` 内部调用 extractMetadata 的参数同形。 */
-const EXTRACT_OPTS = { defaultNs: 'cad', security: 'strict', namespaces: [] as string[] }
+/**
+ * 与 `runtime.execute` 内部调用 extractMetadata 的参数同形。
+ *
+ * `namespaces: ['openscad']`：emitter 把 sphere/cylinder/cone 路由到 ext 插件的
+ * `openscad.*` 命名空间（刻面密度类 FAIL 的修复，见 docs/plans/2026-10-17-progress
+ * §10）。faijs 的 security scanner 只放行已声明的命名空间，缺省为空数组时会把
+ * `openscad` 当 SEC_FREE_IDENT 拒掉——这里与 runtime（插件注册后同一名单）保持一致。
+ */
+const EXTRACT_OPTS = { defaultNs: 'cad', security: 'strict', namespaces: ['openscad'] }
 
 export interface StaticCheckResult {
   readonly ok: boolean

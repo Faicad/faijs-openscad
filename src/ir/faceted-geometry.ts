@@ -81,12 +81,13 @@ export function sphereFragments(
  *
  * **OpenSCAD 精确拓扑（2026-10-18 修正）**：
  * OpenSCAD 的 `sphere($fn=n)` 产出 n 条经线（经度分片）与 `floor(n/2)` 条纬环，
- * 纬环位于奇倍数极角 φ = (2j+1)·π/n（j = 0..rings-1），即均匀但错开半格分布。
- * 这样保证每片三角的极角跨度一致，体积/表面积与 OpenSCAD 的刻面球一致。
+ * 纬环位于奇倍数极角 φ = (2j+1)·π/n（j = 0..rings-1），**不含 0°/180° 真极点**；
+ * 顶/底用位于 z=±r·cos(π/n) 的平顶封盖闭合（故球体 z 向极值为 r·cos(π/n)，
+ * 如 n=30 → 10·cos(6°)=9.9452，而非 r）。参考 STL 实测 maxZ=9.9452 已证实。
  *
- * - 顶点：2 个极点 + n·rings 个环顶点
+ * - 顶点：2 个封盖中心（z=±r·cos(π/n)）+ n·rings 个环顶点
  * - 面：顶盖 n + 中间带 2·n·(rings-1) + 底盖 n = 2·n·rings
- * - 例：n=30 → rings=15 → 900 三角（旧实现用过满网格 n·(n-1)=870+极点，错误）
+ * - 例：n=30 → rings=15 → 900 三角
  *
  * @param radius - Sphere radius
  * @param segments - Number of longitude segments (from $fn or computed)
@@ -98,11 +99,12 @@ export function facetedSphereGeometry(
 ): { vertices: Array<[number, number, number]>; faces: Array<[number, number, number]> } {
   const n = Math.max(3, Math.floor(segments))
   const rings = Math.max(1, Math.floor(n / 2))
+  const cosHalf = Math.cos(Math.PI / n)
   const vertices: Array<[number, number, number]> = []
   const faces: Array<[number, number, number]> = []
 
-  // Top pole
-  vertices.push([0, 0, radius])
+  // Top cap center (flat cap at z = r·cos(π/n); OpenSCAD has no ±r pole)
+  vertices.push([0, 0, radius * cosHalf])
   // Latitude rings at odd-multiple polar angles: φ = (2j+1)·π/n
   for (let j = 0; j < rings; j++) {
     const phi = ((2 * j + 1) * Math.PI) / n
@@ -118,8 +120,8 @@ export function facetedSphereGeometry(
     }
   }
 
-  // Bottom pole
-  vertices.push([0, 0, -radius])
+  // Bottom cap center
+  vertices.push([0, 0, -radius * cosHalf])
 
   const topPole = 0
   const bottomPole = vertices.length - 1

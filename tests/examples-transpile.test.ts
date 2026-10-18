@@ -111,9 +111,9 @@ describe.skipIf(!hasCsg)('M2 门禁 A：P0-only example 全部转换成功', () 
     // 已知例外：
     // 1) Advanced/module_recursion 递归出的程序超过 faijs 静态校验器的 1 MiB 源码上限
     //    （`source too long`）。这是**输入规模**限制，不是转换错误。
-    // 2) 使用 openscad namespace（ext library）的 example 会报 SEC_FREE_IDENT
-    //    "unknown identifier openscad"——openscad 是运行时由 ext library 提供的，
-    //    不在 faijs 核心包的静态符号表里。这是**外部依赖**限制，不是转换错误。
+    // 2) `openscad` 是 ext library 在运行时注册的命名空间；faijs-check 探针的
+    //    EXTRACT_OPTS 已声明 namespaces: ['openscad']（与 runtime 一致），
+    //    因此正常情况下不再产生 SEC_FREE_IDENT。此过滤器仅作回归兜底。
     const oversized = failures.filter((f) => f.includes('source too long'))
     const extNs = failures.filter((f) => f.includes('unknown identifier \"openscad\"'))
     const real = failures.filter(
@@ -122,8 +122,8 @@ describe.skipIf(!hasCsg)('M2 门禁 A：P0-only example 全部转换成功', () 
     expect(oversized.map((f) => f.split(':')[0])).toEqual([
       'Advanced__module_recursion.scad.csg',
     ])
-    // ext namespace failures are expected for examples using hull/polyhedron/projection/etc.
-    expect(extNs.length).toBeGreaterThan(0)
+    // openscad 命名空间已由探针声明（与 runtime 同形），不应再出现此类失败
+    expect(extNs).toEqual([])
     expect(real).toEqual([])
   })
 })

@@ -19,13 +19,21 @@ import { polyhedron } from './polyhedron'
 
 type Vec3Arr = [number, number, number]
 
-/** OpenSCAD 精确拓扑的刻面球（n 经线 × floor(n/2) 奇倍数纬环）。 */
+/**
+ * OpenSCAD 精确拓扑的刻面球（n 经线 × floor(n/2) 奇倍数纬环）。
+ *
+ * 关键：OpenSCAD 的 `sphere($fn=n)` 纬环位于奇倍数极角 φ=(2j+1)·π/n（j=0..rings-1），
+ * **不含 0°/180° 真极点**；顶/底用位于 z=±r·cos(π/n) 的平顶封盖闭合。故球体在 z 向
+ * 的极值为 r·cos(π/n)（如 n=30 → 10·cos(6°)=9.9452），而非 r。参考 STL 实测
+ * maxZ=9.9452 已证实此拓扑（见 docs/plans/2026-10-17-progress 进度文档 §10.4）。
+ */
 function oscSphereGeometry(radius: number, segments: number): { vertices: Vec3Arr[]; faces: number[][] } {
   const n = Math.max(3, Math.floor(segments))
   const rings = Math.max(1, Math.floor(n / 2))
+  const cosHalf = Math.cos(Math.PI / n) // = cos(π/n)，顶/底封盖中心高度
   const vertices: Vec3Arr[] = []
   const faces: number[][] = []
-  vertices.push([0, 0, radius]) // 北极
+  vertices.push([0, 0, radius * cosHalf]) // 北极封盖中心（平顶，z=r·cos(π/n)，无 ±r 真极点）
   for (let j = 0; j < rings; j++) {
     const phi = ((2 * j + 1) * Math.PI) / n
     const z = radius * Math.cos(phi)
@@ -35,7 +43,7 @@ function oscSphereGeometry(radius: number, segments: number): { vertices: Vec3Ar
       vertices.push([rr * Math.cos(th), rr * Math.sin(th), z])
     }
   }
-  vertices.push([0, 0, -radius]) // 南极
+  vertices.push([0, 0, -radius * cosHalf]) // 南极封盖中心
   const top = 0
   const bot = vertices.length - 1
   for (let i = 0; i < n; i++) faces.push([top, 1 + i, 1 + ((i + 1) % n)])
