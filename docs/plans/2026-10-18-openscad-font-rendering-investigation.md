@@ -343,7 +343,7 @@ verdict: FAIL (volΔ=284.13, IoU=0.9587)
 | 3 | 还原被 generate 模式覆盖的工作区（25 个入库 STL + `ref-stl-hashes.json` + `.gitignore` 的 stl-win 行） | **✅ 已完成**（`git checkout` 后 `--check` 复验：50 例 0 differing，退出码 0） |
 | 4 | 无并发负载重渲 3 个超时例（`example006`/`example024`/`candleStand`） | **✅ 已完成**（三例均为"字节不同、**几何零差异**"，见 §2.1） |
 | 5 | 全量 parity 重跑：确认文字例子 ERROR 归零、残余 FAIL 归类 | **✅ 已完成**（见下文：10 个 ERROR **无一与字体有关**；12 个 FAIL 已分类） |
-| 6 | parity 报告层面对文字例子增加 known-difference 标注口径（可选，§8.3 备选项的轻量版） | 待议（暂不做：先修真 bug，见 §11.3） |
+| 6 | parity 报告层面对文字例子增加 known-difference 标注口径（可选，§8.3 备选项的轻量版） | **✅ 已完成**（2026-10-18：`src/parity/report.ts` 新增 `ParityEntry.knownDifference` 字段 + markdown 渲染 `⚠` 标记与 "Known Differences" 独立章节；`tests/run-parity.ts` 新增 `KNOWN_DIFFERENCE` 映射覆盖 6 个文字例子。严格判定仍为 FAIL，仅作标注，不动库） |
 | 7 | 清理临时探针：`tests/tmp-*.ts`、`tests/tmp-*.mjs`、`tests/tmp-fc/`、`tests/tmp-*.scad/stl`、`tests/tmp-win-diff-report.txt`、`WINDOWSTEMPDIR_FONTCONFIG/`、每用户字体目录备份（`tests/tmp-fc/font-backup/`） | **✅ 已完成** |
 | 8 | 文档合规：移除本文档对上游源码的引用（§5.1/§6.1/§10.4），改为黑盒行为口径 | **✅ 已完成**（AGENTS.md 禁止引用 OpenSCAD 源码） |
 

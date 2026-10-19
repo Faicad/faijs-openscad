@@ -27,6 +27,12 @@ export interface ParityEntry {
   readonly verdict: ParityVerdict
   /** Blocked-by reason (if not PASS). */
   readonly blockedBy?: string
+  /** Known upstream difference: a documented, quantified reason this example
+   *  deviates from strict parity (e.g. OpenSCAD 2021.01 text scaling). The
+   *  verdict still reflects the strict comparison; this only annotates it so
+   *  it is not mistaken for an unknown bug. Report-only (see font
+   *  investigation §8.3 / conefix §7). */
+  readonly knownDifference?: string
   /** Comparison result (if computed). */
   readonly comparison?: ComparisonResult
   /** Five-dimension comparison result (if computed). */
@@ -246,7 +252,8 @@ export function renderMarkdown(report: ParityReport): string {
     const cent = c ? c.centroidDistance.toFixed(6) : '—'
     const haus = c ? c.hausdorffDistance.toFixed(6) : '—'
     const tess = e.segments !== undefined ? `seg=${e.segments}` : (e.fn !== undefined ? `fn=${e.fn}` : 'default')
-    lines.push(`| ${e.name} | ${e.verdict} | ${vol} | ${area} | ${iou} | ${cent} | ${haus} | ${tess} | ${e.stepExport} |`)
+    const verdictCell = e.knownDifference ? `${e.verdict} ⚠` : e.verdict
+    lines.push(`| ${e.name} | ${verdictCell} | ${vol} | ${area} | ${iou} | ${cent} | ${haus} | ${tess} | ${e.stepExport} |`)
   }
   lines.push('')
 
@@ -271,8 +278,25 @@ export function renderMarkdown(report: ParityReport): string {
       lines.push(`### ${e.name} — ${e.verdict}`)
       lines.push('')
       lines.push(`> ${msg}`)
+      if (e.knownDifference) {
+        lines.push('')
+        lines.push(`> **Known difference:** ${e.knownDifference}`)
+      }
       lines.push('')
     }
+  }
+
+  // Known differences (documented upstream quirks, report-only)
+  const known = report.entries.filter((e) => e.knownDifference)
+  if (known.length > 0) {
+    lines.push('## Known Differences')
+    lines.push('')
+    lines.push('Examples flagged below fail (or would fail) strict parity by a **documented, quantified upstream difference** — not an unknown bug. The strict verdict still stands; this section only labels them so they are excluded from the "unexplained failure" signal.')
+    lines.push('')
+    for (const e of known) {
+      lines.push(`- **${e.name}** (${e.verdict}): ${e.knownDifference}`)
+    }
+    lines.push('')
   }
 
   return lines.join('\n')

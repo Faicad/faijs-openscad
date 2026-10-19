@@ -21,7 +21,7 @@
  * Environment variables:
  *   OPENSCAD_BIN   OpenSCAD executable (not needed if CSG files are cached)
  */
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, mkdirSync, writeFileSync, cpSync } from 'node:fs'
 import { join, resolve, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { emitFaijs, lowerCsg, parseCsg } from '../src/index'
@@ -83,6 +83,39 @@ const mdOut = process.argv.includes('--md')
 const only = process.argv.includes('--only')
   ? process.argv[process.argv.indexOf('--only') + 1]
   : undefined
+// `--dump-stl <dir>`: write candidate STL + copy reference STL into <dir> for
+// manual inspection (the runner otherwise only keeps meshes in memory).
+const dumpStl = process.argv.includes('--dump-stl')
+  ? process.argv[process.argv.indexOf('--dump-stl') + 1]
+  : undefined
+
+/** Encode triangles as a binary STL (80-byte header, uint32 tri count, 50B/tri). */
+function encodeBinaryStl(tris: StlTriangle[]): Buffer {
+  const buf = Buffer.alloc(84 + tris.length * 50)
+  buf.writeUInt32LE(tris.length, 80)
+  for (let i = 0; i < tris.length; i++) {
+    const t = tris[i]
+    const o = 84 + i * 50
+    // face normal (recomputed)
+    const ux = t.v1[0] - t.v0[0], uy = t.v1[1] - t.v0[1], uz = t.v1[2] - t.v0[2]
+    const vx = t.v2[0] - t.v0[0], vy = t.v2[1] - t.v0[1], vz = t.v2[2] - t.v0[2]
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx
+    buf.writeFloatLE(nx, o)
+    buf.writeFloatLE(ny, o + 4)
+    buf.writeFloatLE(nz, o + 8)
+    buf.writeFloatLE(t.v0[0], o + 12)
+    buf.writeFloatLE(t.v0[1], o + 16)
+    buf.writeFloatLE(t.v0[2], o + 20)
+    buf.writeFloatLE(t.v1[0], o + 24)
+    buf.writeFloatLE(t.v1[1], o + 28)
+    buf.writeFloatLE(t.v1[2], o + 32)
+    buf.writeFloatLE(t.v2[0], o + 36)
+    buf.writeFloatLE(t.v2[1], o + 40)
+    buf.writeFloatLE(t.v2[2], o + 44)
+    buf.writeUInt16LE(0, o + 48)
+  }
+  return buf
+}
 
 // ── Manifest ────────────────────────────────────────────────────────────────
 
@@ -283,6 +316,61 @@ async function main() {
     'Old__example010.scad.csg',
   ])
 
+  // Known upstream differences — documented, quantified deviations that are
+  // intentionally NOT reproduced by faijs (the converter targets correct
+  // geometry, not OpenSCAD 2021.01 quirks). These annotations are report-only
+  // (see font investigation §8.3 / conefix §7): the strict verdict still
+  // stands, but the failure is labelled so it is not mistaken for an unknown
+  // bug. See docs/plans/2026-10-18-openscad-font-rendering-investigation.md §5.
+  const TEXT_KNOWN_DIFF =
+    'OpenSCAD 2021.01 text rendering scales glyph outlines by 100/72 and ' +
+    'advances by (100/72)/1.024 — a known upstream quirk not reproduced by ' +
+    'faijs. Candidate vs reference differ by 1/1.3581 (horizontal) and ' +
+    '1/1.3888 (vertical). Documented in font investigation §8.3.'
+  // Facet-density / revolve: the candidate is a BREP surface tessellated by
+  // inferred $fn/$fa/$fs, while OpenSCAD 2021.01 emits its own inscribed
+  // polytope. The differing triangle density accumulates into a small
+  // systematic volume/surface gap, but the bounding boxes still coincide — so
+  // the shape is right and only the tessellation density differs. This is a
+  // structural divergence, not a geometry bug. See conefix plan §7.
+  const FACET_DENSITY_KNOWN_DIFF =
+    'Facet-density / revolve divergence: candidate BREP tessellation vs ' +
+    'OpenSCAD inscribed polytope; differing triangle density accumulates into ' +
+    'a small systematic volume/surface gap while the bounding box still ' +
+    'coincides. Documented in conefix plan §7.'
+  // Old/example006 is a die: a rounded cube (hull of eight corner spheres)
+  // minus 21 spheres.  `hull()` builds the rounded cube as an exact BREP
+  // fillet, so the candidate's bounding box is exactly 100^3 and its volume is
+  // the analytic 931 604.7 (measured OCCT solid).  OpenSCAD instead hulls its
+  // own *faceted* spheres, which yields an inscribed polytope: bbox
+  // 100 x 99.8904^2 and volume 930 475.8, i.e. 0.12 % under the exact solid.
+  // The candidate is therefore ~0.14 % *over* the reference — the same
+  // structural divergence as FACET_DENSITY_KNOWN_DIFF, except here the
+  // bounding boxes differ too (exact fillet vs inscribed hull), which is what
+  // costs the last 0.002 of IoU.  Geometry is correct: all 21 dimples are
+  // present (the 5-pip face used to be dropped entirely).  Documented in
+  // conefix plan §7.2.
+  const ROUNDED_CUBE_KNOWN_DIFF =
+    'Smooth BREP fillet vs OpenSCAD inscribed faceted hull: hull() of the ' +
+    'eight corner spheres is built as an exact BREP fillet, so the candidate ' +
+    'is the true rounded cube (bbox exactly 100^3, volume = analytic ' +
+    '931 604.7) while OpenSCAD hulls its own faceted spheres and lands 0.12 % ' +
+    'under it (bbox 100 x 99.8904^2). The boxes therefore differ as well as ' +
+    'the volume. Geometry verified correct (all 21 dimples present). ' +
+    'Documented in conefix plan §7.2.'
+  const KNOWN_DIFFERENCE = new Map<string, string>([
+    ['Old/example006.scad', ROUNDED_CUBE_KNOWN_DIFF],
+    ['Functions/functions.scad', FACET_DENSITY_KNOWN_DIFF],
+    ['Old/example017.scad', FACET_DENSITY_KNOWN_DIFF],
+    ['Old/example021.scad', FACET_DENSITY_KNOWN_DIFF],
+    ['Advanced/children.scad', TEXT_KNOWN_DIFF],
+    ['Advanced/children_indexed.scad', TEXT_KNOWN_DIFF],
+    ['Basics/LetterBlock.scad', TEXT_KNOWN_DIFF],
+    ['Basics/text_on_cube.scad', TEXT_KNOWN_DIFF],
+    ['Basics/rotate_extrude.scad', TEXT_KNOWN_DIFF],
+    ['Parametric/sign.scad', TEXT_KNOWN_DIFF],
+  ])
+
   const entries: ParityEntry[] = []
   const failures: Array<{ name: string; error: string }> = []
 
@@ -357,8 +445,10 @@ async function main() {
     if (CRASH_SKIP.has(entry.id)) {
       console.log(`    CRASH SKIP: known segfault (twistExtrude)`)
       entries.push({
-        ...entry,
+        name: entry.source,
         verdict: 'ERROR',
+        hasFacetedPrimitives: false,
+        stepExport: 'n/a',
         error: 'CRASH SKIP: known segfault in twistExtrude/sweepFull — process would terminate',
       })
       continue
@@ -404,6 +494,20 @@ async function main() {
     const refMetrics = readStlMetrics(new Uint8Array(refBuffer).buffer)
     console.log(`    reference: ${refMetrics.triangleCount} tris, vol=${refMetrics.volume.toFixed(4)}`)
 
+    // ── Optional STL dump for manual inspection ──
+    if (dumpStl) {
+      mkdirSync(dumpStl, { recursive: true })
+      const base = entry.source.replace(/[\\/]/g, '__')
+      const candFile = join(dumpStl, `candidate__${base}.stl`)
+      writeFileSync(candFile, encodeBinaryStl(candTriangles))
+      console.log(`    dumped candidate STL → ${relative(ROOT, candFile)}`)
+      if (existsSync(stlPath)) {
+        const refFile = join(dumpStl, `reference__${base}.stl`)
+        cpSync(stlPath, refFile)
+        console.log(`    copied reference STL → ${relative(ROOT, refFile)}`)
+      }
+    }
+
     // 6. Compare — use analytic-aware classification for faceted primitives
     const comparison = compareMetrics(refMetrics, candMetrics)
     // When faceted primitives are present, OpenSCAD produces inscribed polytopes
@@ -419,6 +523,9 @@ async function main() {
       comparison,
       hasFacetedPrimitives: hasFaceted,
       stepExport: 'exact',
+      ...(KNOWN_DIFFERENCE.get(entry.source) !== undefined
+        ? { knownDifference: KNOWN_DIFFERENCE.get(entry.source) }
+        : {}),
       ...(tessellation.fn !== undefined ? { fn: tessellation.fn } : {}),
       ...(tessellation.segments !== undefined ? { segments: tessellation.segments } : {}),
     })

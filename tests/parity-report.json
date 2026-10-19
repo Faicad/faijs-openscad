@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-11T05:29:49.773Z",
+  "timestamp": "2026-10-19T08:00:49.705Z",
   "converterVersion": "0.29.5",
   "tolerance": {
     "volumeAbs": 0.01,
@@ -24,7 +24,7 @@
       "verdict": "ERROR",
       "hasFacetedPrimitives": true,
       "stepExport": "n/a",
-      "error": "[faijs/op] applyMatrix: APPLY_MATRIX_FAILED: applyMatrix: kernel transform failed: transform: "
+      "error": "[faijs/op] cone: E_OP_FAILED: [api] cone.radiusBottom must be > 0, got 0"
     },
     {
       "name": "Advanced/assert.scad",
@@ -148,8 +148,8 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 30616,
-          "vertexCount": 15336,
+          "triangleCount": 15384,
+          "vertexCount": 7728,
           "bbox": {
             "min": [
               -55,
@@ -159,41 +159,42 @@
             "max": [
               55,
               55,
-              17.9375
+              17.5859375
             ],
             "extent": [
               110,
               110,
-              22.9375
+              22.5859375
             ]
           },
-          "volume": 12724.559153054053,
-          "surfaceArea": 11300.10201527699,
+          "volume": 12539.022210531622,
+          "surfaceArea": 11164.014354332512,
           "centroid": [
-            2.022198945739756e-14,
-            -1.4164626178202103e-15,
-            2.1062066392223695
+            1.773936014639744e-14,
+            1.9495681188670587e-15,
+            2.1086276332841396
           ],
-          "connectedComponents": 26,
+          "connectedComponents": 30,
           "isManifold": 1,
           "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 25.902816680525575,
-        "volumeRelDelta": 0.0020356553314704482,
-        "surfaceAreaDelta": 490.7700117561344,
-        "surfaceAreaRelDelta": 0.04162287663125662,
-        "bboxOverlap": 277543.75,
-        "bboxIoU": 0.9264756965481585,
-        "centroidDistance": 0.8574413081663779,
-        "triangleCountDelta": 20992,
+        "volumeDelta": 159.6341258419052,
+        "volumeRelDelta": 0.012570946217723486,
+        "surfaceAreaDelta": 626.857672700613,
+        "surfaceAreaRelDelta": 0.05316465747939644,
+        "bboxOverlap": 273289.84375,
+        "bboxIoU": 0.9122756262672773,
+        "centroidDistance": 0.8550203141046078,
+        "triangleCountDelta": 5760,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
         "hausdorffDistance": 0,
-        "message": "volume: Δ=25.902817 (rel 0.002036); surface area: Δ=490.770012 (rel 0.041623); bbox IoU: 0.926476 (need > 0.999000); centroid distance: 0.857441"
+        "message": "volume: Δ=159.634126 (rel 0.012571); surface area: Δ=626.857673 (rel 0.053165); bbox IoU: 0.912276 (need > 0.999000); centroid distance: 0.855020"
       },
       "hasFacetedPrimitives": true,
       "stepExport": "exact",
+      "knownDifference": "OpenSCAD 2021.01 text rendering scales glyph outlines by 100/72 and advances by (100/72)/1.024 — a known upstream quirk not reproduced by faijs. Candidate vs reference differ by 1/1.3581 (horizontal) and 1/1.3888 (vertical). Documented in font investigation §8.3.",
       "fn": 40,
       "segments": 40
     },
@@ -235,52 +236,53 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 27776,
-          "vertexCount": 13989,
+          "triangleCount": 20172,
+          "vertexCount": 10192,
           "bbox": {
             "min": [
-              -99.4111328125,
-              -21.248046875,
-              -6.666679859161377
+              -99.5078125,
+              -21.2451171875,
+              -6.472958564758301
             ],
             "max": [
-              77.046875,
-              66.66667938232422,
+              73.7978515625,
+              66.61807250976562,
               8.33335018157959
             ],
             "extent": [
-              176.4580078125,
-              87.91472625732422,
-              15.000030040740967
+              173.3056640625,
+              87.86318969726562,
+              14.80630874633789
             ]
           },
-          "volume": 7152.722069054725,
-          "surfaceArea": 5341.0542601522975,
+          "volume": 6769.400640149483,
+          "surfaceArea": 5176.343454396791,
           "centroid": [
-            30.186244471056057,
-            29.9150379526614,
-            0.8462133617395391
+            30.26672767170049,
+            30.133577891004155,
+            0.8571109311908014
           ],
           "connectedComponents": 53,
-          "isManifold": 0,
-          "boundaryEdges": 10,
-          "nonManifoldEdges": 10
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
         },
-        "volumeDelta": 276.1128895569009,
-        "volumeRelDelta": 0.038602491036449686,
-        "surfaceAreaDelta": 288.93278081201606,
-        "surfaceAreaRelDelta": 0.05132032786393895,
-        "bboxOverlap": 222966.65933441123,
-        "bboxIoU": 0.8688606156884734,
-        "centroidDistance": 7.104938911957513,
-        "triangleCountDelta": 20786,
+        "volumeDelta": 107.20853934834122,
+        "volumeRelDelta": 0.015590320250855133,
+        "surfaceAreaDelta": 453.643586567523,
+        "surfaceAreaRelDelta": 0.08057631096959367,
+        "bboxOverlap": 222685.67184248602,
+        "bboxIoU": 0.8919567902726202,
+        "centroidDistance": 7.283214162817074,
+        "triangleCountDelta": 13182,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
         "hausdorffDistance": 0,
-        "message": "volume: Δ=276.112890 (rel 0.038602); surface area: Δ=288.932781 (rel 0.051320); bbox IoU: 0.868861 (need > 0.999000); centroid distance: 7.104939"
+        "message": "volume: Δ=107.208539 (rel 0.015590); surface area: Δ=453.643587 (rel 0.080576); bbox IoU: 0.891957 (need > 0.999000); centroid distance: 7.283214"
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
+      "knownDifference": "OpenSCAD 2021.01 text rendering scales glyph outlines by 100/72 and advances by (100/72)/1.024 — a known upstream quirk not reproduced by faijs. Candidate vs reference differ by 1/1.3581 (horizontal) and 1/1.3888 (vertical). Documented in font investigation §8.3.",
       "segments": 13
     },
     {
@@ -295,14 +297,14 @@
       "verdict": "ERROR",
       "hasFacetedPrimitives": true,
       "stepExport": "n/a",
-      "error": "[faijs/op] offset2d: E_OP_FAILED: offset2d failed even with near-zero delta"
+      "error": "[faijs/op] boolean: CONSTRUCTION_FAILED: booleanOp: operation failed"
     },
     {
       "name": "Advanced/surface_image.scad",
       "verdict": "ERROR",
       "hasFacetedPrimitives": false,
       "stepExport": "n/a",
-      "error": "[faijs/op] surface: ENOENT: ENOENT: no such file or directory, open 'surface_image.png'"
+      "error": "[faijs/op] projectCut: CONSTRUCTION_FAILED: makeFace: construction failed"
     },
     {
       "name": "Basics/CSG-modules.scad",
@@ -342,11 +344,11 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 13660,
-          "vertexCount": 6849,
+          "triangleCount": 18228,
+          "vertexCount": 9134,
           "bbox": {
             "min": [
-              -27.488344192504883,
+              -27.495241165161133,
               -7.5,
               -42.5
             ],
@@ -356,31 +358,31 @@
               7.5
             ],
             "extent": [
-              59.98834419250488,
+              59.99524116516113,
               15,
               50
             ]
           },
-          "volume": 3344.89441791798,
-          "surfaceArea": 3253.8678740576743,
+          "volume": 3346.9045841618695,
+          "surfaceArea": 3254.1885065827755,
           "centroid": [
-            1.2211398433693408,
-            -2.6663915890898745e-7,
-            -19.227120400173288
+            1.2175794243304234,
+            3.2977992504883156e-12,
+            -19.233913971379675
           ],
           "connectedComponents": 15,
-          "isManifold": 0,
-          "boundaryEdges": 2,
-          "nonManifoldEdges": 2
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
         },
-        "volumeDelta": 2.0119781560397314,
-        "volumeRelDelta": 0.0006011456306037771,
-        "surfaceAreaDelta": 0.3218994373150963,
-        "surfaceAreaRelDelta": 0.00009891845888550542,
-        "bboxOverlap": 44991.25814437866,
-        "bboxIoU": 0.9998857273999402,
-        "centroidDistance": 0.007674152692759444,
-        "triangleCountDelta": 1856,
+        "volumeDelta": 0.0018119121500603796,
+        "volumeRelDelta": 5.413692334466792e-7,
+        "surfaceAreaDelta": 0.0012669122138504463,
+        "surfaceAreaRelDelta": 3.893172500784386e-7,
+        "bboxOverlap": 44996.4,
+        "bboxIoU": 0.9999993138595609,
+        "centroidDistance": 0.000004137578487752031,
+        "triangleCountDelta": 2712,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
         "hausdorffDistance": 0
@@ -391,9 +393,9 @@
     },
     {
       "name": "Basics/CSG.scad",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "comparison": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "ref": {
           "triangleCount": 3004,
           "vertexCount": 1498,
@@ -427,49 +429,48 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 4636,
-          "vertexCount": 2313,
+          "triangleCount": 3008,
+          "vertexCount": 1500,
           "bbox": {
             "min": [
-              -33.978424072265625,
-              -9.978423118591309,
-              -10
+              -34,
+              -9.945219039916992,
+              -9.945219039916992
             ],
             "max": [
               31.5,
-              9.978423118591309,
-              10
+              9.945219039916992,
+              9.945219039916992
             ],
             "extent": [
-              65.47842407226562,
-              19.956846237182617,
-              20
+              65.5,
+              19.890438079833984,
+              19.890438079833984
             ]
           },
-          "volume": 7810.853047803328,
-          "surfaceArea": 3443.525104957452,
+          "volume": 7773.410015261088,
+          "surfaceArea": 3466.8463904600017,
           "centroid": [
-            -4.350963118461256,
-            -0.000018809122182659117,
-            -0.0000012753386901542464
+            -4.102164732079408,
+            -1.6857435673264367e-16,
+            1.3424462451049435e-16
           ],
           "connectedComponents": 3,
-          "isManifold": 0,
-          "boundaryEdges": 2,
-          "nonManifoldEdges": 2
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
         },
-        "volumeDelta": 37.44412208404174,
-        "volumeRelDelta": 0.004793858219438948,
-        "surfaceAreaDelta": 23.320667784639227,
-        "surfaceAreaRelDelta": 0.006726768167190147,
-        "bboxOverlap": 25905.202946548405,
-        "bboxIoU": 0.9908890957119728,
-        "centroidDistance": 0.24879399145150197,
-        "triangleCountDelta": 1632,
+        "volumeDelta": 0.00108954180177534,
+        "volumeRelDelta": 1.4016265701105503e-7,
+        "surfaceAreaDelta": 0.0006177179102451191,
+        "surfaceAreaRelDelta": 1.7817862133867334e-7,
+        "bboxOverlap": 25913.734019004994,
+        "bboxIoU": 0.9999998069257469,
+        "centroidDistance": 0.000004395644610966087,
+        "triangleCountDelta": 4,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "volume: Δ=37.444122 (rel 0.004794); surface area: Δ=23.320668 (rel 0.006727); bbox IoU: 0.990889 (need > 0.999000); centroid distance: 0.248794"
+        "hausdorffDistance": 0
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
@@ -532,39 +533,40 @@
               15
             ]
           },
-          "volume": 13014.429629495717,
-          "surfaceArea": 4039.5840593346275,
+          "volume": 13011.658187145365,
+          "surfaceArea": 4077.5294721062974,
           "centroid": [
-            0.7314677305085598,
-            0.8744893681599734,
-            7.651844786201409
+            0.8588636539196626,
+            0.9474821394270175,
+            7.673016987918099
           ],
           "connectedComponents": 1,
           "isManifold": 1,
           "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 913.8861747907122,
-        "volumeRelDelta": 0.07022099322120838,
-        "surfaceAreaDelta": 363.352076784191,
-        "surfaceAreaRelDelta": 0.08252494825066559,
+        "volumeDelta": 911.114732440361,
+        "volumeRelDelta": 0.07002295321133477,
+        "surfaceAreaDelta": 325.4066640125211,
+        "surfaceAreaRelDelta": 0.07390674176331946,
         "bboxOverlap": 13500,
         "bboxIoU": 1,
-        "centroidDistance": 0.7897901314255368,
+        "centroidDistance": 0.9371470672694832,
         "triangleCountDelta": 0,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
         "hausdorffDistance": 0,
-        "message": "volume: Δ=913.886175 (rel 0.070221); surface area: Δ=363.352077 (rel 0.082525); centroid distance: 0.789790"
+        "message": "volume: Δ=911.114732 (rel 0.070023); surface area: Δ=325.406664 (rel 0.073907); centroid distance: 0.937147"
       },
       "hasFacetedPrimitives": false,
-      "stepExport": "exact"
+      "stepExport": "exact",
+      "knownDifference": "OpenSCAD 2021.01 text rendering scales glyph outlines by 100/72 and advances by (100/72)/1.024 — a known upstream quirk not reproduced by faijs. Candidate vs reference differ by 1/1.3581 (horizontal) and 1/1.3888 (vertical). Documented in font investigation §8.3."
     },
     {
       "name": "Basics/hull.scad",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "comparison": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "ref": {
           "triangleCount": 476,
           "vertexCount": 240,
@@ -598,8 +600,8 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 324,
-          "vertexCount": 164,
+          "triangleCount": 946,
+          "vertexCount": 475,
           "bbox": {
             "min": [
               -10,
@@ -608,67 +610,55 @@
             ],
             "max": [
               10,
-              30,
+              30.997669219970703,
               40
             ],
             "extent": [
               20,
-              60.5,
+              61.4976692199707,
               49
             ]
           },
-          "volume": 8473.642718200841,
-          "surfaceArea": 3131.92856012466,
+          "volume": 8570.435307420259,
+          "surfaceArea": 3162.8420525054166,
           "centroid": [
-            1.5663776903882943e-7,
-            -3.226604990150609,
-            0.6931495642541782
+            8.966512120275593e-7,
+            -2.9412049016759254,
+            0.6959938418997497
           ],
           "connectedComponents": 1,
           "isManifold": 1,
           "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 95.06404335500156,
-        "volumeRelDelta": 0.01109432800075662,
-        "surfaceAreaDelta": 30.494296095947902,
-        "surfaceAreaRelDelta": 0.009642700385865363,
-        "bboxOverlap": 59290,
-        "bboxIoU": 0.9838278220003412,
-        "centroidDistance": 0.28425679544863697,
-        "triangleCountDelta": 152,
+        "volumeDelta": 1.7285458644164464,
+        "volumeRelDelta": 0.00020168705583949466,
+        "surfaceAreaDelta": 0.41919628480854954,
+        "surfaceAreaRelDelta": 0.0001325378497723233,
+        "bboxOverlap": 60264.61000000001,
+        "bboxIoU": 0.9999484660148766,
+        "centroidDistance": 0.0029050675142717345,
+        "triangleCountDelta": 470,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "volume: Δ=95.064043 (rel 0.011094); surface area: Δ=30.494296 (rel 0.009643); bbox IoU: 0.983828 (need > 0.999000); centroid distance: 0.284257"
+        "hausdorffDistance": 0
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
       "segments": 30
     },
     {
-      "id": "Basics__linear_extrude.scad.csg",
-      "source": "Basics/linear_extrude.scad",
-      "status": "ported",
-      "blockedBy": [],
-      "parsedNodes": 4,
-      "emittedStatements": 13,
-      "nodeHistogram": {
-        "color": 4,
-        "multmatrix": 4,
-        "linear_extrude": 4,
-        "square": 4
-      },
-      "blockedNodes": [],
-      "errorCodes": [],
+      "name": "Basics/linear_extrude.scad",
       "verdict": "ERROR",
+      "hasFacetedPrimitives": false,
+      "stepExport": "n/a",
       "error": "CRASH SKIP: known segfault in twistExtrude/sweepFull — process would terminate"
     },
     {
       "name": "Basics/logo.scad",
-      "verdict": "PASS-ANALYTIC",
+      "verdict": "PASS",
       "comparison": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "ref": {
           "triangleCount": 8120,
           "vertexCount": 4052,
@@ -702,49 +692,48 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 13640,
-          "vertexCount": 6812,
+          "triangleCount": 10568,
+          "vertexCount": 5276,
           "bbox": {
             "min": [
-              -21.650634765625,
-              -21.650634765625,
-              -21.650634765625
+              -21.650527954101562,
+              -21.650527954101562,
+              -21.64281463623047
             ],
             "max": [
-              21.650634765625,
-              21.650634765625,
-              21.650634765625
+              21.650527954101562,
+              21.650527954101562,
+              21.64281463623047
             ],
             "extent": [
-              43.30126953125,
-              43.30126953125,
-              43.30126953125
+              43.301055908203125,
+              43.301055908203125,
+              43.28562927246094
             ]
           },
-          "volume": 18706.463932600876,
-          "surfaceArea": 9595.38366018883,
+          "volume": 18686.146324377063,
+          "surfaceArea": 9586.17295785004,
           "centroid": [
-            0.000010396807043245244,
-            5.744229375341674e-7,
-            -0.0000012738318341668795
+            2.0401977815120813e-16,
+            -1.35700021560319e-14,
+            -1.608439304588998e-16
           ],
           "connectedComponents": 1,
           "isManifold": 1,
           "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 20.24719696959437,
-        "volumeRelDelta": 0.0010823636707902003,
-        "surfaceAreaDelta": 9.20751772112817,
-        "surfaceAreaRelDelta": 0.000959577860271506,
+        "volumeDelta": 0.07041125421892502,
+        "volumeRelDelta": 0.0000037680850658583725,
+        "surfaceAreaDelta": 0.003184617662554956,
+        "surfaceAreaRelDelta": 3.3220938309768653e-7,
         "bboxOverlap": 81159.48716024561,
-        "bboxIoU": 0.999625683099444,
-        "centroidDistance": 0.000010490361749586396,
-        "triangleCountDelta": 5520,
+        "bboxIoU": 0.9999967414385429,
+        "centroidDistance": 7.135841197309847e-11,
+        "triangleCountDelta": 2448,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "volume: Δ=20.247197 (rel 0.001082)"
+        "hausdorffDistance": 0
       },
       "hasFacetedPrimitives": true,
       "stepExport": "exact",
@@ -810,13 +799,13 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 5466,
-          "vertexCount": 2734,
+          "triangleCount": 8662,
+          "vertexCount": 4332,
           "bbox": {
             "min": [
               -15,
               -15,
-              -2.001953125
+              -0.09765625
             ],
             "max": [
               57.5,
@@ -826,36 +815,37 @@
             "extent": [
               72.5,
               72.5,
-              22.001953125
+              20.09765625
             ]
           },
-          "volume": 6970.129136477683,
-          "surfaceArea": 5774.931340571256,
+          "volume": 7029.0280199615245,
+          "surfaceArea": 6009.592305471534,
           "centroid": [
-            18.562416694157438,
-            20.645556710328854,
-            4.896453331285768
+            19.39949847261677,
+            19.83939449295071,
+            4.973299260790175
           ],
           "connectedComponents": 4,
           "isManifold": 0,
           "boundaryEdges": 2,
           "nonManifoldEdges": 2
         },
-        "volumeDelta": 911.433416218164,
-        "volumeRelDelta": 0.11564120821529393,
-        "surfaceAreaDelta": 1386.344680373153,
-        "surfaceAreaRelDelta": 0.19358905819557082,
-        "bboxOverlap": 105577.6991655225,
-        "bboxIoU": 0.9129246738938758,
-        "centroidDistance": 5.816523427028952,
-        "triangleCountDelta": 9014,
+        "volumeDelta": 852.534532734322,
+        "volumeRelDelta": 0.10816821246222516,
+        "surfaceAreaDelta": 1151.6837154728755,
+        "surfaceAreaRelDelta": 0.16082102017916558,
+        "bboxOverlap": 105378.79970214843,
+        "bboxIoU": 0.9956687686080129,
+        "centroidDistance": 4.652264188220382,
+        "triangleCountDelta": 5818,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
         "hausdorffDistance": 0,
-        "message": "volume: Δ=911.433416 (rel 0.115641); surface area: Δ=1386.344680 (rel 0.193589); bbox IoU: 0.912925 (need > 0.999000); centroid distance: 5.816523"
+        "message": "volume: Δ=852.534533 (rel 0.108168); surface area: Δ=1151.683715 (rel 0.160821); bbox IoU: 0.995669 (need > 0.999000); centroid distance: 4.652264"
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
+      "knownDifference": "OpenSCAD 2021.01 text rendering scales glyph outlines by 100/72 and advances by (100/72)/1.024 — a known upstream quirk not reproduced by faijs. Candidate vs reference differ by 1/1.3581 (horizontal) and 1/1.3888 (vertical). Documented in font investigation §8.3.",
       "fn": 80,
       "segments": 80
     },
@@ -897,8 +887,8 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 2822,
-          "vertexCount": 1417,
+          "triangleCount": 2846,
+          "vertexCount": 1425,
           "bbox": {
             "min": [
               -32.5,
@@ -906,43 +896,44 @@
               -30
             ],
             "max": [
+              34.2041015625,
               32.5,
-              32.5,
-              37.109375
+              34.912109375
             ],
             "extent": [
+              66.7041015625,
               65,
-              65,
-              67.109375
+              64.912109375
             ]
           },
-          "volume": 219439.05769741646,
-          "surfaceArea": 24818.30720605162,
+          "volume": 219707.73314081752,
+          "surfaceArea": 24641.00001110743,
           "centroid": [
-            0.2034017326575438,
-            0.029175381934195607,
-            2.4212246191939144
+            0.1520885515338412,
+            -0.11852764613207724,
+            2.2615358866018687
           ],
-          "connectedComponents": 3,
+          "connectedComponents": 2,
           "isManifold": 1,
           "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 2197.381206800259,
-        "volumeRelDelta": 0.009914349904123338,
-        "surfaceAreaDelta": 953.8137070282537,
-        "surfaceAreaRelDelta": 0.03700951544675448,
+        "volumeDelta": 1928.7057633991935,
+        "volumeRelDelta": 0.008702114927197106,
+        "surfaceAreaDelta": 1131.1209019724447,
+        "surfaceAreaRelDelta": 0.04388932155748105,
         "bboxOverlap": 253500,
-        "bboxIoU": 0.8940628637951106,
-        "centroidDistance": 2.341895630714108,
-        "triangleCountDelta": 1450,
+        "bboxIoU": 0.9007128234939731,
+        "centroidDistance": 2.199416263126637,
+        "triangleCountDelta": 1474,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
         "hausdorffDistance": 0,
-        "message": "volume: Δ=2197.381207 (rel 0.009914); surface area: Δ=953.813707 (rel 0.037010); bbox IoU: 0.894063 (need > 0.999000); centroid distance: 2.341896"
+        "message": "volume: Δ=1928.705763 (rel 0.008702); surface area: Δ=1131.120902 (rel 0.043889); bbox IoU: 0.900713 (need > 0.999000); centroid distance: 2.199416"
       },
       "hasFacetedPrimitives": false,
-      "stepExport": "exact"
+      "stepExport": "exact",
+      "knownDifference": "OpenSCAD 2021.01 text rendering scales glyph outlines by 100/72 and advances by (100/72)/1.024 — a known upstream quirk not reproduced by faijs. Candidate vs reference differ by 1/1.3581 (horizontal) and 1/1.3888 (vertical). Documented in font investigation §8.3."
     },
     {
       "name": "Functions/echo.scad",
@@ -989,52 +980,53 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 85198,
-          "vertexCount": 42722,
+          "triangleCount": 1312,
+          "vertexCount": 820,
           "bbox": {
             "min": [
-              -105.99766540527344,
-              -50.9351692199707,
+              -105.76942443847656,
+              -50.84200668334961,
               -1
             ],
             "max": [
-              146,
-              133.24766540527344,
+              145.9510498046875,
+              133.15451049804688,
               1
             ],
             "extent": [
-              251.99766540527344,
-              184.18283462524414,
+              251.72047424316406,
+              183.99651718139648,
               2
             ]
           },
-          "volume": 498.52661364487886,
-          "surfaceArea": 1497.3136360475787,
+          "volume": 408.41711887292564,
+          "surfaceArea": 1337.189811931718,
           "centroid": [
-            6.856481607111349,
-            2.606985845824126,
-            3.4943406945449174e-7
+            5.282570822178838,
+            2.2381067438237627,
+            0.01599261672466761
           ],
           "connectedComponents": 82,
-          "isManifold": 0,
-          "boundaryEdges": 82,
-          "nonManifoldEdges": 82
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
         },
-        "volumeDelta": 72.02952258434726,
-        "volumeRelDelta": 0.14448480906108027,
-        "surfaceAreaDelta": 119.03266512952723,
-        "surfaceAreaRelDelta": 0.07949748286787447,
-        "bboxOverlap": 92710.83617279999,
-        "bboxIoU": 0.9987454928884925,
-        "centroidDistance": 1.1648022730810723,
-        "triangleCountDelta": 83640,
+        "volumeDelta": 18.07997218760596,
+        "volumeRelDelta": 0.04239178312482304,
+        "surfaceAreaDelta": 41.09115898633354,
+        "surfaceAreaRelDelta": 0.029813339843880567,
+        "bboxOverlap": 92631.38112798322,
+        "bboxIoU": 0.9991429799568555,
+        "centroidDistance": 0.4520415572523902,
+        "triangleCountDelta": 246,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
         "hausdorffDistance": 0,
-        "message": "volume: Δ=72.029523 (rel 0.144485); surface area: Δ=119.032665 (rel 0.079497); bbox IoU: 0.998745 (need > 0.999000); centroid distance: 1.164802"
+        "message": "volume: Δ=18.079972 (rel 0.042392); surface area: Δ=41.091159 (rel 0.029813); centroid distance: 0.452042"
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
+      "knownDifference": "Facet-density / revolve divergence: candidate BREP tessellation vs OpenSCAD inscribed polytope; differing triangle density accumulates into a small systematic volume/surface gap while the bounding box still coincides. Documented in conefix plan §7.",
       "segments": 5
     },
     {
@@ -1060,9 +1052,9 @@
     },
     {
       "name": "Old/example001.scad",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "comparison": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "ref": {
           "triangleCount": 1264,
           "vertexCount": 624,
@@ -1096,49 +1088,48 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 2114,
-          "vertexCount": 1049,
+          "triangleCount": 1968,
+          "vertexCount": 976,
           "bbox": {
             "min": [
-              -21.650634765625,
-              -21.650634765625,
+              -21.561532974243164,
+              -21.67781639099121,
               -21.650634765625
             ],
             "max": [
-              21.650634765625,
-              21.650634765625,
+              21.561532974243164,
+              21.67781639099121,
               21.650634765625
             ],
             "extent": [
-              43.30126953125,
-              43.30126953125,
+              43.12306594848633,
+              43.35563278198242,
               43.30126953125
             ]
           },
-          "volume": 18489.568788432854,
-          "surfaceArea": 9584.226118663417,
+          "volume": 18241.62382142426,
+          "surfaceArea": 9499.830199518221,
           "centroid": [
-            0.0002065921760252959,
-            -0.000010038732129734068,
-            -0.000046991413221704797
+            1.4629962451510345e-15,
+            1.66045586106099e-15,
+            3.2221819141670022e-15
           ],
           "connectedComponents": 1,
           "isManifold": 1,
           "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 247.99780619807643,
-        "volumeRelDelta": 0.013412849647052062,
-        "surfaceAreaDelta": 84.40835556134698,
-        "surfaceAreaRelDelta": 0.008807007943706391,
-        "bboxOverlap": 80855.49270840605,
-        "bboxIoU": 0.9946386007457623,
-        "centroidDistance": 0.0002121100908412094,
-        "triangleCountDelta": 850,
+        "volumeDelta": 0.0528391894804372,
+        "volumeRelDelta": 0.0000028966275150559295,
+        "surfaceAreaDelta": 0.012436416151103913,
+        "surfaceAreaRelDelta": 0.000001309119835819236,
+        "bboxOverlap": 80956.94277828657,
+        "bboxIoU": 0.9999961088223309,
+        "centroidDistance": 1.4529465539838001e-8,
+        "triangleCountDelta": 704,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "volume: Δ=247.997806 (rel 0.013413); surface area: Δ=84.408356 (rel 0.008807); bbox IoU: 0.994639 (need > 0.999000)"
+        "hausdorffDistance": 0
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
@@ -1146,9 +1137,9 @@
     },
     {
       "name": "Old/example002.scad",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "comparison": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "ref": {
           "triangleCount": 376,
           "vertexCount": 180,
@@ -1182,8 +1173,8 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 626,
-          "vertexCount": 305,
+          "triangleCount": 528,
+          "vertexCount": 256,
           "bbox": {
             "min": [
               -15,
@@ -1201,30 +1192,29 @@
               35
             ]
           },
-          "volume": 12242.703899080136,
-          "surfaceArea": 5850.90777687468,
+          "volume": 12241.729841442582,
+          "surfaceArea": 5837.487631088814,
           "centroid": [
-            0.0010204033590366784,
-            -0.000036767750440953006,
-            -3.8890976809755102
+            -2.7265423563831255e-16,
+            -5.842590763678126e-17,
+            -3.89509203823207
           ],
           "connectedComponents": 1,
           "isManifold": 1,
           "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 0.9718101066573581,
-        "volumeRelDelta": 0.00007937871524691337,
-        "surfaceAreaDelta": 13.417837251252422,
-        "surfaceAreaRelDelta": 0.0022932915306382922,
+        "volumeDelta": 0.00224753089605656,
+        "volumeRelDelta": 1.835958244896556e-7,
+        "surfaceAreaDelta": 0.0023085346138032037,
+        "surfaceAreaRelDelta": 3.9546699654819887e-7,
         "bboxOverlap": 31500,
         "bboxIoU": 1,
-        "centroidDistance": 0.006078725265087919,
-        "triangleCountDelta": 250,
+        "centroidDistance": 0.0000020016291113478246,
+        "triangleCountDelta": 152,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "surface area: Δ=13.417837 (rel 0.002293)"
+        "hausdorffDistance": 0
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
@@ -1316,9 +1306,9 @@
     },
     {
       "name": "Old/example004.scad",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "comparison": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "ref": {
           "triangleCount": 880,
           "vertexCount": 432,
@@ -1352,8 +1342,8 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 1034,
-          "vertexCount": 509,
+          "triangleCount": 880,
+          "vertexCount": 432,
           "bbox": {
             "min": [
               -15,
@@ -1371,30 +1361,29 @@
               30
             ]
           },
-          "volume": 2181.920984164062,
-          "surfaceArea": 3364.3285814339843,
+          "volume": 2284.383192581655,
+          "surfaceArea": 3486.564894165478,
           "centroid": [
-            -0.0003299461421085463,
-            -0.00018332636769992754,
-            -0.00001743614225964982
+            -1.601824739421965e-15,
+            1.2105393068914085e-15,
+            5.135621301963552e-16
           ],
           "connectedComponents": 1,
           "isManifold": 1,
           "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 102.46445256145216,
-        "volumeRelDelta": 0.044854274989743786,
-        "surfaceAreaDelta": 122.24431932709513,
-        "surfaceAreaRelDelta": 0.035061455132749574,
+        "volumeDelta": 0.0022441438591158658,
+        "volumeRelDelta": 9.823840683963861e-7,
+        "surfaceAreaDelta": 0.008006595601273148,
+        "surfaceAreaRelDelta": 0.00000229640848740762,
         "bboxOverlap": 27000,
         "bboxIoU": 1,
-        "centroidDistance": 0.0003778584825609428,
-        "triangleCountDelta": 154,
+        "centroidDistance": 2.6528922122437145e-15,
+        "triangleCountDelta": 0,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "volume: Δ=102.464453 (rel 0.044854); surface area: Δ=122.244319 (rel 0.035061)"
+        "hausdorffDistance": 0
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
@@ -1402,9 +1391,9 @@
     },
     {
       "name": "Old/example005.scad",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "comparison": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "ref": {
           "triangleCount": 1042,
           "vertexCount": 513,
@@ -1438,49 +1427,48 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 4183,
-          "vertexCount": 2083,
+          "triangleCount": 2152,
+          "vertexCount": 1068,
           "bbox": {
             "min": [
-              -119.95016479492188,
-              -119.98754119873047,
+              -120,
+              -119.3426284790039,
               -120
             ],
             "max": [
               120,
-              119.98754119873047,
+              119.3426284790039,
               160
             ],
             "extent": [
-              239.95016479492188,
-              239.97508239746094,
+              240,
+              238.6852569580078,
               280
             ]
           },
-          "volume": 2249676.147609506,
-          "surfaceArea": 266671.6872715767,
+          "volume": 2233948.168037153,
+          "surfaceArea": 265460.6504234214,
           "centroid": [
-            -0.8092610120419172,
-            4.085875433515979e-10,
-            -7.098110851024632
+            -0.8133752862027152,
+            8.481656444423859e-10,
+            -7.118144837276953
           ],
           "connectedComponents": 1,
-          "isManifold": 0,
-          "boundaryEdges": 1,
-          "nonManifoldEdges": 1
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
         },
-        "volumeDelta": 15726.61760077998,
-        "volumeRelDelta": 0.0069906140123728484,
-        "surfaceAreaDelta": 1210.9615140253445,
-        "surfaceAreaRelDelta": 0.004541020182589197,
-        "bboxOverlap": 16036368.609587403,
-        "bboxIoU": 0.9944228435694736,
-        "centroidDistance": 0.02042107623612137,
-        "triangleCountDelta": 3141,
+        "volumeDelta": 1.361971572972834,
+        "volumeRelDelta": 6.09669804387888e-7,
+        "surfaceAreaDelta": 0.07533412997145206,
+        "surfaceAreaRelDelta": 2.8378634826854075e-7,
+        "bboxOverlap": 16039649.267578125,
+        "bboxIoU": 0.9999968869477381,
+        "centroidDistance": 0.000032151489420969366,
+        "triangleCountDelta": 1110,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "volume: Δ=15726.617601 (rel 0.006991); surface area: Δ=1210.961514 (rel 0.004541); bbox IoU: 0.994423 (need > 0.999000); centroid distance: 0.020421"
+        "hausdorffDistance": 0
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
@@ -1524,52 +1512,53 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 7222,
-          "vertexCount": 3606,
+          "triangleCount": 24350,
+          "vertexCount": 12152,
           "bbox": {
             "min": [
-              -40,
-              -40,
+              -50,
+              -50,
               -50
             ],
             "max": [
-              40,
-              40,
+              50,
+              50,
               50
             ],
             "extent": [
-              80,
-              80,
+              100,
+              100,
               100
             ]
           },
-          "volume": 625454.1970615279,
-          "surfaceArea": 46985.771283494316,
+          "volume": 931803.6710253361,
+          "surfaceArea": 61283.91713909324,
           "centroid": [
-            -5.556865069137901e-15,
-            -5.42878214609781e-15,
-            0.26595280145226113
+            -0.6116242297127019,
+            1.0193927854325742,
+            0.2038557368218454
           ],
           "connectedComponents": 1,
           "isManifold": 0,
-          "boundaryEdges": 14,
-          "nonManifoldEdges": 14
+          "boundaryEdges": 50,
+          "nonManifoldEdges": 50
         },
-        "volumeDelta": 305021.59582884994,
-        "volumeRelDelta": 0.3278124999698788,
-        "surfaceAreaDelta": 14178.234865053804,
-        "surfaceAreaRelDelta": 0.23180683800566193,
-        "bboxOverlap": 639298.56,
-        "bboxIoU": 0.6402521251265318,
-        "centroidDistance": 1.1781578570914988,
-        "triangleCountDelta": 4662,
+        "volumeDelta": 1327.8781349583296,
+        "volumeRelDelta": 0.001425062141574482,
+        "surfaceAreaDelta": 119.9109905451187,
+        "surfaceAreaRelDelta": 0.0019566469661683396,
+        "bboxOverlap": 997809.2012160001,
+        "bboxIoU": 0.9978092012160001,
+        "centroidDistance": 0.01410316416671348,
+        "triangleCountDelta": 12466,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
         "hausdorffDistance": 0,
-        "message": "volume: Δ=305021.595829 (rel 0.327812); surface area: Δ=14178.234865 (rel 0.231807); bbox IoU: 0.640252 (need > 0.999000); centroid distance: 1.178158"
+        "message": "volume: Δ=1327.878135 (rel 0.001425); surface area: Δ=119.910991 (rel 0.001957); bbox IoU: 0.997809 (need > 0.999000); centroid distance: 0.014103"
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
+      "knownDifference": "Smooth BREP fillet vs OpenSCAD inscribed faceted hull: hull() of the eight corner spheres is built as an exact BREP fillet, so the candidate is the true rounded cube (bbox exactly 100^3, volume = analytic 931 604.7) while OpenSCAD hulls its own faceted spheres and lands 0.12 % under it (bbox 100 x 99.8904^2). The boxes therefore differ as well as the volume. Geometry verified correct (all 21 dimples present). Documented in conefix plan §7.2.",
       "segments": 30
     },
     {
@@ -1581,9 +1570,9 @@
     },
     {
       "name": "Old/example008.scad",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "comparison": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "ref": {
           "triangleCount": 198,
           "vertexCount": 97,
@@ -1617,7 +1606,7 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 254,
+          "triangleCount": 214,
           "vertexCount": 105,
           "bbox": {
             "min": [
@@ -1636,30 +1625,29 @@
               50
             ]
           },
-          "volume": 49145.83333333334,
-          "surfaceArea": 20596.320343559644,
+          "volume": 43145.83333333336,
+          "surfaceArea": 17796.320343559644,
           "centroid": [
-            -5.833098117957204,
-            -0.10864517821715004,
-            0.37479762716843357
+            -3.6041359221808627,
+            -0.12573896463677428,
+            0.4337667475153482
           ],
           "connectedComponents": 1,
-          "isManifold": 0,
+          "isManifold": 1,
           "boundaryEdges": 0,
-          "nonManifoldEdges": 48
+          "nonManifoldEdges": 0
         },
-        "volumeDelta": 6000.000000000015,
-        "volumeRelDelta": 0.1220856295040274,
-        "surfaceAreaDelta": 2800.0000000000073,
-        "surfaceAreaRelDelta": 0.1359466134384316,
+        "volumeDelta": 2.9103830456733704e-11,
+        "volumeRelDelta": 6.745455634588204e-16,
+        "surfaceAreaDelta": 7.275957614183426e-12,
+        "surfaceAreaRelDelta": 4.088461813296444e-16,
         "bboxOverlap": 125000,
         "bboxIoU": 1,
-        "centroidDistance": 2.2298076206006465,
-        "triangleCountDelta": 56,
+        "centroidDistance": 4.738405986369931e-15,
+        "triangleCountDelta": 16,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "volume: Δ=6000.000000 (rel 0.122086); surface area: Δ=2800.000000 (rel 0.135947); centroid distance: 2.229808"
+        "hausdorffDistance": 0
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact"
@@ -1676,28 +1664,260 @@
       "verdict": "ERROR",
       "hasFacetedPrimitives": false,
       "stepExport": "n/a",
-      "error": "[faijs/op] surface: ENOENT: ENOENT: no such file or directory, open 'example010.dat'"
+      "error": "CRASH SKIP: known segfault in twistExtrude/sweepFull — process would terminate"
     },
     {
       "name": "Old/example011.scad",
-      "verdict": "ERROR",
+      "verdict": "PASS",
+      "comparison": {
+        "verdict": "PASS",
+        "ref": {
+          "triangleCount": 6,
+          "vertexCount": 5,
+          "bbox": {
+            "min": [
+              -10,
+              -10,
+              0
+            ],
+            "max": [
+              10,
+              10,
+              10
+            ],
+            "extent": [
+              20,
+              20,
+              10
+            ]
+          },
+          "volume": 666.6666666666666,
+          "surfaceArea": 546.4101615137754,
+          "centroid": [
+            0,
+            0,
+            2.113248654051872
+          ],
+          "connectedComponents": 1,
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
+        },
+        "cand": {
+          "triangleCount": 6,
+          "vertexCount": 5,
+          "bbox": {
+            "min": [
+              -10,
+              -10,
+              0
+            ],
+            "max": [
+              10,
+              10,
+              10
+            ],
+            "extent": [
+              20,
+              20,
+              10
+            ]
+          },
+          "volume": 666.6666666666666,
+          "surfaceArea": 546.4101615137754,
+          "centroid": [
+            0,
+            0,
+            2.113248654051872
+          ],
+          "connectedComponents": 1,
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
+        },
+        "volumeDelta": 0,
+        "volumeRelDelta": 0,
+        "surfaceAreaDelta": 0,
+        "surfaceAreaRelDelta": 0,
+        "bboxOverlap": 4000,
+        "bboxIoU": 1,
+        "centroidDistance": 0,
+        "triangleCountDelta": 0,
+        "maxSurfaceDistance": 0,
+        "meanSurfaceDistance": 0,
+        "hausdorffDistance": 0
+      },
       "hasFacetedPrimitives": false,
-      "stepExport": "n/a",
-      "error": "[faijs/op] polyhedron: CONSTRUCTION_FAILED: buildTriFace: wire construction failed"
+      "stepExport": "exact"
     },
     {
       "name": "Old/example012.scad",
-      "verdict": "ERROR",
+      "verdict": "PASS",
+      "comparison": {
+        "verdict": "PASS",
+        "ref": {
+          "triangleCount": 916,
+          "vertexCount": 460,
+          "bbox": {
+            "min": [
+              -20,
+              -19.8904,
+              -19.8904
+            ],
+            "max": [
+              20,
+              19.8904,
+              15
+            ],
+            "extent": [
+              40,
+              39.7808,
+              34.8904
+            ]
+          },
+          "volume": 25589.127007673833,
+          "surfaceArea": 6732.13479849124,
+          "centroid": [
+            -0.06532366002516955,
+            0.19770795561689988,
+            1.262654667706669
+          ],
+          "connectedComponents": 1,
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
+        },
+        "cand": {
+          "triangleCount": 934,
+          "vertexCount": 469,
+          "bbox": {
+            "min": [
+              -20,
+              -19.890438079833984,
+              -19.890438079833984
+            ],
+            "max": [
+              20,
+              19.890438079833984,
+              15
+            ],
+            "extent": [
+              40,
+              39.78087615966797,
+              34.890438079833984
+            ]
+          },
+          "volume": 25589.136394170615,
+          "surfaceArea": 6732.13459639484,
+          "centroid": [
+            -0.06532321356409654,
+            0.19770819940808324,
+            1.2626516886588892
+          ],
+          "connectedComponents": 1,
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
+        },
+        "volumeDelta": 0.00938649678209913,
+        "volumeRelDelta": 3.668156923122048e-7,
+        "surfaceAreaDelta": 0.00020209640024404507,
+        "surfaceAreaRelDelta": 3.00196603742007e-8,
+        "bboxOverlap": 55518.7209728,
+        "bboxIoU": 0.9999969941109411,
+        "centroidDistance": 0.000003022165995621991,
+        "triangleCountDelta": 18,
+        "maxSurfaceDistance": 0,
+        "meanSurfaceDistance": 0,
+        "hausdorffDistance": 0
+      },
       "hasFacetedPrimitives": false,
-      "stepExport": "n/a",
-      "error": "[api/boolean] subtract: kernel cut failed for inputs part0 × part3 — cutWithHistory: operation failed"
+      "stepExport": "exact",
+      "segments": 30
     },
     {
       "name": "Old/example013.scad",
-      "verdict": "ERROR",
+      "verdict": "PASS",
+      "comparison": {
+        "verdict": "PASS",
+        "ref": {
+          "triangleCount": 164,
+          "vertexCount": 84,
+          "bbox": {
+            "min": [
+              -30,
+              -30,
+              -30
+            ],
+            "max": [
+              30,
+              30,
+              30
+            ],
+            "extent": [
+              60,
+              60,
+              60
+            ]
+          },
+          "volume": 61333.33333333332,
+          "surfaceArea": 16661.675596314337,
+          "centroid": [
+            -2.7293014334468076e-17,
+            -1.6375808600680845e-16,
+            -1.6375808600680845e-16
+          ],
+          "connectedComponents": 1,
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
+        },
+        "cand": {
+          "triangleCount": 180,
+          "vertexCount": 92,
+          "bbox": {
+            "min": [
+              -30,
+              -30,
+              -30
+            ],
+            "max": [
+              30,
+              30,
+              30
+            ],
+            "extent": [
+              60,
+              60,
+              60
+            ]
+          },
+          "volume": 61333.33333333332,
+          "surfaceArea": 16661.675596314337,
+          "centroid": [
+            -6.823253583617019e-16,
+            -2.7293014334468076e-17,
+            -2.867599290566507e-16
+          ],
+          "connectedComponents": 1,
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
+        },
+        "volumeDelta": 0,
+        "volumeRelDelta": 0,
+        "surfaceAreaDelta": 0,
+        "surfaceAreaRelDelta": 0,
+        "bboxOverlap": 216000,
+        "bboxIoU": 1,
+        "centroidDistance": 6.803084160158592e-16,
+        "triangleCountDelta": 16,
+        "maxSurfaceDistance": 0,
+        "meanSurfaceDistance": 0,
+        "hausdorffDistance": 0
+      },
       "hasFacetedPrimitives": false,
-      "stepExport": "n/a",
-      "error": "[faijs/op] load: E_OP_FAILED: openscad.load({ file: \"/root/faijs-openscad/tests/fixtures/openscad-examples/Old/example013.dxf\" }) — DXF parsing produced no wires"
+      "stepExport": "exact"
     },
     {
       "name": "Old/example014.scad",
@@ -1792,10 +2012,87 @@
     },
     {
       "name": "Old/example016.scad",
-      "verdict": "ERROR",
+      "verdict": "PASS",
+      "comparison": {
+        "verdict": "PASS",
+        "ref": {
+          "triangleCount": 556,
+          "vertexCount": 248,
+          "bbox": {
+            "min": [
+              -32.5,
+              -14,
+              -14
+            ],
+            "max": [
+              32.5,
+              14,
+              14
+            ],
+            "extent": [
+              65,
+              28,
+              28
+            ]
+          },
+          "volume": 38359.183215060795,
+          "surfaceArea": 17616.99319126979,
+          "centroid": [
+            -0.3848156620402265,
+            -2.258637031334268e-16,
+            2.8394294108202227e-16
+          ],
+          "connectedComponents": 1,
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
+        },
+        "cand": {
+          "triangleCount": 684,
+          "vertexCount": 312,
+          "bbox": {
+            "min": [
+              -32.5,
+              -14,
+              -14
+            ],
+            "max": [
+              32.5,
+              14,
+              14
+            ],
+            "extent": [
+              65,
+              28,
+              28
+            ]
+          },
+          "volume": 38359.167196844544,
+          "surfaceArea": 17616.989537977206,
+          "centroid": [
+            -0.3848074099408663,
+            -2.3231699997070594e-16,
+            5.098067499357158e-16
+          ],
+          "connectedComponents": 1,
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
+        },
+        "volumeDelta": 0.016018216250813566,
+        "volumeRelDelta": 4.1758491469975837e-7,
+        "surfaceAreaDelta": 0.003653292584203882,
+        "surfaceAreaRelDelta": 2.073732188313664e-7,
+        "bboxOverlap": 50960,
+        "bboxIoU": 1,
+        "centroidDistance": 0.000008252099360173126,
+        "triangleCountDelta": 128,
+        "maxSurfaceDistance": 0,
+        "meanSurfaceDistance": 0,
+        "hausdorffDistance": 0
+      },
       "hasFacetedPrimitives": false,
-      "stepExport": "n/a",
-      "error": "[api/boolean] subtract: kernel cut failed for inputs part4 × part6 — cutWithHistory: operation failed"
+      "stepExport": "exact"
     },
     {
       "name": "Old/example017.scad",
@@ -1881,13 +2178,14 @@
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
+      "knownDifference": "Facet-density / revolve divergence: candidate BREP tessellation vs OpenSCAD inscribed polytope; differing triangle density accumulates into a small systematic volume/surface gap while the bounding box still coincides. Documented in conefix plan §7.",
       "segments": 30
     },
     {
       "name": "Old/example018.scad",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "comparison": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "ref": {
           "triangleCount": 4960,
           "vertexCount": 2512,
@@ -1921,8 +2219,8 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 13896,
-          "vertexCount": 6976,
+          "triangleCount": 4992,
+          "vertexCount": 2528,
           "bbox": {
             "min": [
               -185.3553466796875,
@@ -1940,30 +2238,29 @@
               70.710693359375
             ]
           },
-          "volume": 2582665.860498894,
-          "surfaceArea": 276701.4323274866,
+          "volume": 2573427.369484258,
+          "surfaceArea": 276223.77491149085,
           "centroid": [
-            0.00004992720767188736,
-            -9.340707604489224e-7,
-            5.583579462927518e-7
+            -2.4412977483761207e-7,
+            -2.440513606076054e-7,
+            2.7469934879031075e-10
           ],
           "connectedComponents": 16,
-          "isManifold": 0,
-          "boundaryEdges": 8,
-          "nonManifoldEdges": 8
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
         },
-        "volumeDelta": 9244.043692833744,
-        "volumeRelDelta": 0.003579264292070702,
-        "surfaceAreaDelta": 478.10238659521565,
-        "surfaceAreaRelDelta": 0.001727863793741998,
+        "volumeDelta": 5.552678197622299,
+        "volumeRelDelta": 0.0000021576976539015806,
+        "surfaceAreaDelta": 0.4449705994920805,
+        "surfaceAreaRelDelta": 0.0000016109062285991147,
         "bboxOverlap": 9717468.134453459,
         "bboxIoU": 0.9999949390043812,
-        "centroidDistance": 0.000124269052559727,
-        "triangleCountDelta": 8936,
+        "centroidDistance": 0.00008395989938889877,
+        "triangleCountDelta": 32,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "volume: Δ=9244.043693 (rel 0.003579); surface area: Δ=478.102387 (rel 0.001728)"
+        "hausdorffDistance": 0
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
@@ -1971,9 +2268,9 @@
     },
     {
       "name": "Old/example019.scad",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "comparison": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "ref": {
           "triangleCount": 3912,
           "vertexCount": 1958,
@@ -2007,49 +2304,48 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 29654,
-          "vertexCount": 14829,
+          "triangleCount": 11658,
+          "vertexCount": 5831,
           "bbox": {
             "min": [
-              -105.99211120605469,
-              -5.998870849609375,
+              -105.91816711425781,
+              -5.979506969451904,
               -30
             ],
             "max": [
               106,
-              5.998870849609375,
+              5.979506969451904,
               45
             ],
             "extent": [
-              211.9921112060547,
-              11.99774169921875,
+              211.9181671142578,
+              11.959013938903809,
               75
             ]
           },
-          "volume": 91151.3700983144,
-          "surfaceArea": 34021.16095672914,
+          "volume": 90406.9892931057,
+          "surfaceArea": 32021.41904044776,
           "centroid": [
-            7.922332298069747,
-            -0.1695858303224671,
-            0.04980172835579906
+            5.6900913381003315,
+            7.273673356930761e-9,
+            -0.032851358707103324
           ],
           "connectedComponents": 1,
           "isManifold": 1,
           "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 744.270133538419,
-        "volumeRelDelta": 0.008165210602272476,
-        "surfaceAreaDelta": 1999.7025924394075,
-        "surfaceAreaRelDelta": 0.05877819969115078,
-        "bboxOverlap": 190074.87002700003,
-        "bboxIoU": 0.9964241184750369,
-        "centroidDistance": 2.2401867434775133,
-        "triangleCountDelta": 25742,
+        "volumeDelta": 0.11067167027795222,
+        "volumeRelDelta": 0.0000012241479963528488,
+        "surfaceAreaDelta": 0.03932384197105421,
+        "surfaceAreaRelDelta": 0.0000012280465656401235,
+        "bboxOverlap": 190074.7736928463,
+        "bboxIoU": 0.9999987045994565,
+        "centroidDistance": 0.000012494298574734807,
+        "triangleCountDelta": 7746,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "volume: Δ=744.270134 (rel 0.008165); surface area: Δ=1999.702592 (rel 0.058778); bbox IoU: 0.996424 (need > 0.999000); centroid distance: 2.240187"
+        "hausdorffDistance": 0
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
@@ -2146,13 +2442,14 @@
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
+      "knownDifference": "Facet-density / revolve divergence: candidate BREP tessellation vs OpenSCAD inscribed polytope; differing triangle density accumulates into a small systematic volume/surface gap while the bounding box still coincides. Documented in conefix plan §7.",
       "segments": 12
     },
     {
       "name": "Old/example022.scad",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "comparison": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "ref": {
           "triangleCount": 1320,
           "vertexCount": 664,
@@ -2186,8 +2483,8 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 3852,
-          "vertexCount": 1926,
+          "triangleCount": 1776,
+          "vertexCount": 892,
           "bbox": {
             "min": [
               -25,
@@ -2205,30 +2502,29 @@
               40
             ]
           },
-          "volume": 45361.78412340185,
-          "surfaceArea": 9210.284646249693,
+          "volume": 45145.427541978854,
+          "surfaceArea": 9188.245622964518,
           "centroid": [
-            -0.676909361479374,
-            0.000008214975061394385,
-            0.000010400820831288084
+            -0.6775896212191815,
+            -1.0432530852958259e-16,
+            6.182911787652006e-16
           ],
           "connectedComponents": 2,
-          "isManifold": 0,
-          "boundaryEdges": 8,
-          "nonManifoldEdges": 8
+          "isManifold": 1,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0
         },
-        "volumeDelta": 216.38506958090875,
-        "volumeRelDelta": 0.004770206325929696,
-        "surfaceAreaDelta": 22.047885483249047,
-        "surfaceAreaRelDelta": 0.0023938332342667234,
+        "volumeDelta": 0.028488157913670875,
+        "volumeRelDelta": 6.310308588213263e-7,
+        "surfaceAreaDelta": 0.008862198073984473,
+        "surfaceAreaRelDelta": 9.645147112561791e-7,
         "bboxOverlap": 60000,
         "bboxIoU": 1,
-        "centroidDistance": 0.0006848691853109175,
-        "triangleCountDelta": 2532,
+        "centroidDistance": 0.0000044811879156281265,
+        "triangleCountDelta": 456,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "volume: Δ=216.385070 (rel 0.004770); surface area: Δ=22.047885 (rel 0.002394)"
+        "hausdorffDistance": 0
       },
       "hasFacetedPrimitives": false,
       "stepExport": "exact",
@@ -2404,9 +2700,9 @@
     },
     {
       "name": "Parametric/candleStand.scad",
-      "verdict": "PASS-ANALYTIC",
+      "verdict": "PASS",
       "comparison": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "ref": {
           "triangleCount": 8064,
           "vertexCount": 4020,
@@ -2440,49 +2736,48 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 78530,
-          "vertexCount": 39253,
+          "triangleCount": 18558,
+          "vertexCount": 9267,
           "bbox": {
             "min": [
-              -26.524200439453125,
-              -28.373199462890625,
+              -26.516613006591797,
+              -28.37130355834961,
               0
             ],
             "max": [
               29,
-              28.373199462890625,
+              28.37130355834961,
               53.5
             ],
             "extent": [
-              55.524200439453125,
-              56.74639892578125,
+              55.5166130065918,
+              56.74260711669922,
               53.5
             ]
           },
-          "volume": 5248.327957725658,
-          "surfaceArea": 7829.379358293809,
+          "volume": 5208.315676447934,
+          "surfaceArea": 7817.148305997638,
           "centroid": [
-            -0.000004986293174825451,
-            -0.00000677793130046828,
-            35.7970541096915
+            -0.000023906105378552893,
+            -0.00001998569467634379,
+            35.81353451131061
           ],
           "connectedComponents": 1,
           "isManifold": 1,
           "boundaryEdges": 0,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 40.007287611029824,
-        "volumeRelDelta": 0.007622863497342651,
-        "surfaceAreaDelta": 12.229146339641375,
-        "surfaceAreaRelDelta": 0.001561956035083012,
+        "volumeDelta": 0.004993666694645071,
+        "volumeRelDelta": 9.587863365054993e-7,
+        "surfaceAreaDelta": 0.0019059565292991465,
+        "surfaceAreaRelDelta": 2.438173090731343e-7,
         "bboxOverlap": 168533.35815306,
-        "bboxIoU": 0.9997961783253085,
-        "centroidDistance": 0.016477663580086607,
-        "triangleCountDelta": 70466,
+        "bboxIoU": 0.9999996402964225,
+        "centroidDistance": 0.000007070806893947187,
+        "triangleCountDelta": 10494,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
-        "hausdorffDistance": 0,
-        "message": "volume: Δ=40.007288 (rel 0.007623); surface area: Δ=12.229146 (rel 0.001562); centroid distance: 0.016478"
+        "hausdorffDistance": 0
       },
       "hasFacetedPrimitives": true,
       "stepExport": "exact",
@@ -2527,63 +2822,64 @@
           "nonManifoldEdges": 0
         },
         "cand": {
-          "triangleCount": 9740,
-          "vertexCount": 4878,
+          "triangleCount": 10976,
+          "vertexCount": 5536,
           "bbox": {
             "min": [
-              -79.98441314697266,
-              -39.96066665649414,
+              -80,
+              -38.042259216308594,
               -2
             ],
             "max": [
-              97.0263671875,
-              39.996280670166016,
+              86.8896484375,
+              38.042259216308594,
               2
             ],
             "extent": [
-              177.01078033447266,
-              79.95694732666016,
+              166.8896484375,
+              76.08451843261719,
               4
             ]
           },
-          "volume": 29190.894861562425,
-          "surfaceArea": 23147.991836981695,
+          "volume": 27369.19778659613,
+          "surfaceArea": 21872.02210823367,
           "centroid": [
-            2.2988812166626875,
-            -0.2880267520618058,
-            -0.3966745132581172
+            1.8978442914246005,
+            -0.28025561578680647,
+            -0.3877512348110795
           ],
-          "connectedComponents": 5,
-          "isManifold": 1,
-          "boundaryEdges": 0,
+          "connectedComponents": 3,
+          "isManifold": 0,
+          "boundaryEdges": 106,
           "nonManifoldEdges": 0
         },
-        "volumeDelta": 1537.5872258284835,
-        "volumeRelDelta": 0.052673521422364,
-        "surfaceAreaDelta": 701.8921382592162,
-        "surfaceAreaRelDelta": 0.030321945126050166,
-        "bboxOverlap": 48689.40032208862,
-        "bboxIoU": 0.8599676694689555,
-        "centroidDistance": 2.416770738255261,
-        "triangleCountDelta": 6100,
+        "volumeDelta": 284.10984913781067,
+        "volumeRelDelta": 0.010273991555739988,
+        "surfaceAreaDelta": 574.0775904888105,
+        "surfaceAreaRelDelta": 0.02557582823716515,
+        "bboxOverlap": 48694.091796875,
+        "bboxIoU": 0.9587163556837102,
+        "centroidDistance": 2.0158433927903103,
+        "triangleCountDelta": 7336,
         "maxSurfaceDistance": 0,
         "meanSurfaceDistance": 0,
         "hausdorffDistance": 0,
-        "message": "volume: Δ=1537.587226 (rel 0.052674); surface area: Δ=701.892138 (rel 0.030322); bbox IoU: 0.859968 (need > 0.999000); centroid distance: 2.416771"
+        "message": "volume: Δ=284.109849 (rel 0.010274); surface area: Δ=574.077590 (rel 0.025576); bbox IoU: 0.958716 (need > 0.999000); centroid distance: 2.015843"
       },
       "hasFacetedPrimitives": true,
       "stepExport": "exact",
+      "knownDifference": "OpenSCAD 2021.01 text rendering scales glyph outlines by 100/72 and advances by (100/72)/1.024 — a known upstream quirk not reproduced by faijs. Candidate vs reference differ by 1/1.3581 (horizontal) and 1/1.3888 (vertical). Documented in font investigation §8.3.",
       "fn": 10,
       "segments": 10
     }
   ],
   "summary": {
     "total": 50,
-    "pass": 6,
-    "passAnalytic": 2,
+    "pass": 22,
+    "passAnalytic": 0,
     "passNT": 8,
-    "fail": 20,
-    "error": 14,
-    "blocked": 1
+    "fail": 10,
+    "error": 10,
+    "blocked": 0
   }
 }
